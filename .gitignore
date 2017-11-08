@@ -14,3 +14,7 @@ server.pid
 *.eml
 /dist/
 .cache
+# IntelliJ
+.idea/
+# Configuration files
+conf/application.conf
