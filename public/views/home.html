@@ -1,7 +1,18 @@
 <md-toolbar layout-align="center start">Obras - PB</md-toolbar>
 
-<md-content>
-    <div ng-repeat="obra in homeCtrl.obras">
-        <p>{{obra.de_Sucinta}}</p>
-    </div>
-</md-content>
+
+<div layout="row">
+    <md-card ng-repeat="obra in homeCtrl.obras" md-whiteframe="3">
+        <md-card-header>
+            <md-card-header-text>
+                <p class="md-title">
+                    {{obra.de_Localizacao}}
+                </p>
+
+                <p class="md-subhead">
+                    {{obra.de_Sucinta}}
+                </p>
+            </md-card-header-text>
+        </md-card-header>
+    </md-card>
+</div>

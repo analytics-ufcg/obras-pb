@@ -1,3 +1,4 @@
 angular.module('obrasPb').controller('HomeController', ['obras', function (obras) {
-    console.log(obras);
+    var self = this;
+    this.obras = obras;
 }]);
