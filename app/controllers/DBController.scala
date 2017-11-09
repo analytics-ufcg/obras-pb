@@ -5,7 +5,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.db._
 import play.api.mvc._
 import anorm._
-import models.Build
+import models.Building
 import play.api.libs.json._
 import ai.x.play.json.Jsonx
 
@@ -13,17 +13,17 @@ import ai.x.play.json.Jsonx
 class DBController @Inject()(dbapi: DBApi) extends Controller {
 
   private val db = dbapi.database("default")
-  val parser: RowParser[Build] = Macro.namedParser[Build]
+  val parser: RowParser[Building] = Macro.namedParser[Building]
 
-  def testQuery = Action {
+  def getBuildings(limit: Int, offset: Int) = Action {
     db.withConnection { implicit connection =>
-      val result: List[Build] = SQL("SELECT * FROM Obras LIMIT 10").as(parser.*)
+      val result: List[Building] = SQL("SELECT * FROM Obras LIMIT {limit} OFFSET {offset}")
+        .on("limit" -> limit, "offset" -> offset)
+        .as(parser.*)
 
-      implicit val jsonExampleFormat = Jsonx.formatCaseClass[Build]
+      implicit val jsonExampleFormat = Jsonx.formatCaseClass[Building]
 
-      val json = result.map(build => Json.toJson(build))
-
-      println(json)
+      val json = result.map(building => Json.toJson(building))
 
       Ok(Json.toJson(json))
     }
