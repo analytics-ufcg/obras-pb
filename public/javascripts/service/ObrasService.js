@@ -1,7 +1,7 @@
 angular.module('obrasPb').service('ObrasService', ['$http', '$q', function ($http, $q) {
 
     var self = this;
-    const API_ENDPOINT = "";
+    const API_ENDPOINT = "/buildings";
 
 
     /**
@@ -107,12 +107,14 @@ angular.module('obrasPb').service('ObrasService', ['$http', '$q', function ($htt
 
     /**
      * Obtém todas as obras do servidor.
+     * @param {limit} Inteiro, é o número de observações que serão retornadas.
+     * @param {offset} Inteiro, é o numero da primeira observação que será buscada.
      * @returns {HttpPromise} Promise da requisição.
      */
-    this.getObras = function () {
+    this.getObras = function (limit, offset) {
         /* Usar esse aqui quando tivermos servidor */
-        /* return $http.get(API_ENDPOINT); */
-        return $q.resolve(obrasMock);
+        return $http.get(API_ENDPOINT + '?limit=' + limit + '&offset=' + offset);
+        /* return $q.resolve(obrasMock); */
     };
 
 }]);

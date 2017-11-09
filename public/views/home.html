@@ -1,18 +1,24 @@
 <md-toolbar layout-align="center start">Obras - PB</md-toolbar>
 
+<md-table-container md-whiteframe="3" style="margin: 10px 10px 0px 10px; max-height: 80%;">
+    <table md-table md-row-select multiple ng-model="homeCtrl.selectedObras" md-progress="homeCtrl.obrasPromise">
+        <thead md-head md-order="homeCtrl.tableQuery.order" md-on-reorder="homeCtrl.getObras">
+        <tr md-row layout-align="space-around center">
+            <th md-column md-numeric md-order-by="dt_Ano" style="text-align: center"><span>Ano</span></th>
+            <th md-column style="text-align: center"><span>Local</span></th>
+            <th md-column style="text-align: center"><span>Descrição</span></th>
+            <th md-column style="text-align: center"><span>Valor em R$</span></th>
+        </tr>
+        </thead>
+        <tbody md-body>
+        <tr md-row md-select="obra" md-select-id="dt_Ano" md-auto-select ng-repeat="obra in homeCtrl.obras">
+            <td md-cell style="text-align: center; width: 10%;">{{obra.dt_Ano}}</td>
+            <td md-cell style="text-align: center; width: 30%;">{{obra.de_Localizacao}}</td>
+            <td md-cell style="text-align: center; width: 40%;">{{obra.de_Sucinta}}</td>
+            <td md-cell style="text-align: center; width: 20%;">{{obra.vl_Obra}}</td>
+        </tr>
+        </tbody>
+    </table>
+</md-table-container>
 
-<div layout="row">
-    <md-card ng-repeat="obra in homeCtrl.obras" md-whiteframe="3">
-        <md-card-header>
-            <md-card-header-text>
-                <p class="md-title">
-                    {{obra.de_Localizacao}}
-                </p>
-
-                <p class="md-subhead">
-                    {{obra.de_Sucinta}}
-                </p>
-            </md-card-header-text>
-        </md-card-header>
-    </md-card>
-</div>
+<md-table-pagination md-limit="homeCtrl.tableQuery.limit" md-limit-options="[5, 10, 50, 100]" md-page="homeCtrl.tableQuery.page" md-total="28589" md-on-paginate="homeCtrl.getObras" md-page-select></md-table-pagination>
