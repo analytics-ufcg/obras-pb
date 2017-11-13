@@ -12,13 +12,22 @@
         </thead>
         <tbody md-body>
         <tr md-row md-select="obra" md-select-id="dt_Ano" md-auto-select ng-repeat="obra in homeCtrl.obras">
-            <td md-cell style="text-align: center; width: 10%;">{{obra.dt_Ano}}</td>
-            <td md-cell style="text-align: center; width: 30%;">{{obra.de_Localizacao}}</td>
-            <td md-cell style="text-align: center; width: 40%;">{{obra.de_Sucinta}}</td>
-            <td md-cell style="text-align: center; width: 20%;">{{obra.vl_Obra}}</td>
+            <td md-cell style="text-align: center; width: 10%;" ng-if="obra.dt_Ano">{{obra.dt_Ano}}</td>
+            <td md-cell style="text-align: center; width: 10%; color: grey;" ng-if="!obra.dt_Ano">Não há dados</td>
+
+            <td md-cell style="text-align: center; width: 30%;" ng-if="obra.de_Localizacao">{{obra.de_Localizacao}}</td>
+            <td md-cell style="text-align: center; width: 30%; color: grey;" ng-if="!obra.de_Localizacao">Não há dados</td>
+
+            <td md-cell style="text-align: center; width: 40%;" ng-if="obra.de_Sucinta">{{obra.de_Sucinta}}</td>
+            <td md-cell style="text-align: center; width: 40%; color: grey;" ng-if="!obra.de_Sucinta">Não há dados</td>
+
+
+            <td md-cell style="text-align: center; width: 20%;"ng-if="obra.vl_Obra">{{obra.vl_Obra}}</td>
+            <td md-cell style="text-align: center; width: 20%; color: grey;"ng-if="!obra.vl_Obra">Não há dados</td>
+
         </tr>
         </tbody>
     </table>
 </md-table-container>
 
-<md-table-pagination md-limit="homeCtrl.tableQuery.limit" md-limit-options="[5, 10, 50, 100]" md-page="homeCtrl.tableQuery.page" md-total="28589" md-on-paginate="homeCtrl.getObras" md-page-select></md-table-pagination>
+<md-table-pagination md-limit="homeCtrl.tableQuery.limit" md-limit-options="[5, 10, 50, 100]" md-page="homeCtrl.tableQuery.page" md-total="{{homeCtrl.numberOfBuildings}}" md-on-paginate="homeCtrl.getObras" md-page-select></md-table-pagination>

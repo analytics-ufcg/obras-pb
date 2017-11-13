@@ -9,7 +9,14 @@ angular.module('obrasPb').config(['$stateProvider', '$urlRouterProvider', functi
         .state('home', {
             url: '/home',
             templateUrl: '/assets/views/home.html',
-            controller: 'HomeController as homeCtrl'
+            controller: 'HomeController as homeCtrl',
+            resolve : {
+                numberOfBuildings : function (ObrasService) {
+                    return ObrasService.getNumberOfBuildings().then(function (result) {
+                        return result.data.total;
+                    });
+                }
+            }
         })
 
 }]);

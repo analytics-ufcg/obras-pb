@@ -1,7 +1,8 @@
-angular.module('obrasPb').controller('HomeController', ['ObrasService', function (ObrasService) {
+angular.module('obrasPb').controller('HomeController', ['ObrasService', 'numberOfBuildings', function (ObrasService, numberOfBuildings) {
     var self = this;
 
     this.selectedObras = {};
+    this.numberOfBuildings = numberOfBuildings;
 
 
     this.tableQuery = {
@@ -15,19 +16,17 @@ angular.module('obrasPb').controller('HomeController', ['ObrasService', function
     };
 
     this.getObras = function () {
-        console.log('chamous');
         self.obrasPromise = ObrasService.getObras(
             self.tableQuery.limit,
             self.getStartElement(self.tableQuery.page, self.tableQuery.limit)
         ).then(function (data) {
-            console.log(data);
             self.obras = data.data;
         }).
           catch(function (err) {
             console.log(err);
         })
-
     };
+
 
     self.getObras();
 
