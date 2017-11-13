@@ -18,3 +18,9 @@ server.pid
 .idea/
 # Configuration files
 conf/application.conf
+# R
+*.Rhistory
+*.Rproj.user
+# private data
+analysis/data/
+analysis/data
