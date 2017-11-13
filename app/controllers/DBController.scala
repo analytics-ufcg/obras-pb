@@ -60,7 +60,7 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
 
       if (metadata.equals(INCLUDE_METADATA)) {
         val myMetaData = getMetaData(limit, offset)
-        Ok(Json.obj("metadata" -> myMetaData, "list" -> buildingsList))
+        Ok(Json.obj("metadata" -> myMetaData, "lista" -> buildingsList))
       }
       else {
         Ok(Json.obj("lista" -> buildingsList))
