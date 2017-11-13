@@ -30,4 +30,4 @@
     </table>
 </md-table-container>
 
-<md-table-pagination md-limit="homeCtrl.tableQuery.limit" md-limit-options="[5, 10, 50, 100]" md-page="homeCtrl.tableQuery.page" md-total="28589" md-on-paginate="homeCtrl.getObras" md-page-select></md-table-pagination>
+<md-table-pagination md-limit="homeCtrl.tableQuery.limit" md-limit-options="[5, 10, 50, 100]" md-page="homeCtrl.tableQuery.page" md-total="{{homeCtrl.numberOfBuildings}}" md-on-paginate="homeCtrl.getObras" md-page-select></md-table-pagination>
