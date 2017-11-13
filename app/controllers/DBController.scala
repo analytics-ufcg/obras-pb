@@ -19,15 +19,13 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
 
 
   /************* UTILITY FUNCTIONS *************/
-  def getMetaData(limit: Int, offset: Int) = {
-    val numberOfEntries = countBuildings
-    Json.obj(
-      "count"    -> JsNumber(countBuildings),
-      "first"    -> "/buildings?limit=%d&offset=%d&metadata=%d".format(limit, FIRST_PAGE, INCLUDE_METADATA),
-      "last"     -> "/buildings?limit=%d&offset=%d&metadata=%d".format(limit, numberOfEntries - limit, INCLUDE_METADATA),
-      "next"     -> "/buildings?limit=%d&offset=%d&metadata=%d".format(limit,getNextPageOffset(limit, offset, numberOfEntries),INCLUDE_METADATA),
-      "previous" -> "/buildings?limit=%d&offset=%d&metadata=%d".format(limit,getPreviousPageOffset(limit, offset),INCLUDE_METADATA)
-    )
+  def getLinkHeaderString(limit: Int, offset: Int, hostName : String) = {
+      val numberOfEntries = countBuildings()
+      "<http://" + hostName + "/buildings?limit=%d&offset=%d&metadata=%d".format(limit, FIRST_PAGE, INCLUDE_METADATA) + ">; rel=\"first\"," +
+      "<http://" + hostName + "/buildings?limit=%d&offset=%d&metadata=%d".format(limit, numberOfEntries - limit, INCLUDE_METADATA) + ">; rel=\"last\"," +
+      "<http://" + hostName + "/buildings?limit=%d&offset=%d&metadata=%d".format(limit,getNextPageOffset(limit, offset, numberOfEntries), INCLUDE_METADATA) + ">; rel=\"next\"," +
+      "<http://" + hostName + "/buildings?limit=%d&offset=%d&metadata=%d".format(limit,getPreviousPageOffset(limit, offset),INCLUDE_METADATA) + ">; rel=\"prev\""
+
   }
 
   private def getPreviousPageOffset(limit: Int, offset: Int) = {
@@ -48,7 +46,8 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
 
 
   /************* API *************/
-  def getBuildings(limit: Int, offset: Int, metadata: Int) = Action {
+  def getBuildings(limit: Int, offset: Int, metadata: Int) = Action { implicit request =>
+    println(request.host)
     val parser: RowParser[Building] = Macro.namedParser[Building]
     db.withConnection { implicit connection =>
       val result: List[Building] = SQL("SELECT * FROM Obras LIMIT {limit} OFFSET {offset}")
@@ -59,11 +58,11 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
       val buildingsList = result.map(building => Json.toJson(building))
 
       if (metadata.equals(INCLUDE_METADATA)) {
-        val myMetaData = getMetaData(limit, offset)
-        Ok(Json.obj("metadata" -> myMetaData, "lista" -> buildingsList))
+        val linkString = getLinkHeaderString(limit, offset, request.host)
+        Ok(Json.obj("count" -> JsNumber(countBuildings), "lista" -> buildingsList)).withHeaders("Link" -> linkString)
       }
       else {
-        Ok(Json.obj("lista" -> buildingsList))
+        Ok(Json.obj("count" -> JsNumber(countBuildings), "lista" -> buildingsList))
       }
 
     }

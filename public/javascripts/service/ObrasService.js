@@ -19,7 +19,7 @@ angular.module('obrasPb').service('ObrasService', ['$http', '$q', function ($htt
      */
     this.getNumberOfBuildings = function (callback) {
         return $http.get(API_ENDPOINT + '?limit=1&offset=0&metadata=1').then(function (result) {
-            return callback(result.data.metadata.count);
+            return callback(result.data.count);
         })
     };
 
