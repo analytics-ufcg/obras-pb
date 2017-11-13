@@ -10,7 +10,7 @@ angular.module('obrasPb').service('ObrasService', ['$http', '$q', function ($htt
      * @returns {HttpPromise} Promise da requisição.
      */
     this.getObras = function (limit, offset) {
-        return $http.get(API_ENDPOINT + '?limit=' + limit + '&offset=' + offset);
+        return $http.get(API_ENDPOINT + '?limit=' + limit + '&offset=' + offset + '&metadata=0');
     };
 
     /**

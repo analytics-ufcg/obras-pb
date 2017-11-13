@@ -19,8 +19,9 @@ angular.module('obrasPb').controller('HomeController', ['ObrasService', 'numberO
         self.obrasPromise = ObrasService.getObras(
             self.tableQuery.limit,
             self.getStartElement(self.tableQuery.page, self.tableQuery.limit)
-        ).then(function (data) {
-            self.obras = data.data;
+        ).then(function (result) {
+            console.log(result);
+            self.obras = result.data.lista;
         }).
           catch(function (err) {
             console.log(err);
