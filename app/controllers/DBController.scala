@@ -60,11 +60,11 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
 
   /************* API *************/
 
-  def getBuildings(limit: Int, offset: Int, metadata: Int) = Action { implicit request =>
+  def getBuildings(limit: Int, offset: Int, metadata: Int, orderingField: String) = Action { implicit request =>
     val parser: RowParser[Building] = Macro.namedParser[Building]
     db.withConnection { implicit connection =>
-      val result: List[Building] = SQL("SELECT * FROM Obras LIMIT {limit} OFFSET {offset}")
-        .on("limit" -> limit, "offset" -> offset)
+
+      val result: List[Building] = SQL(s"SELECT * FROM Obras ORDER BY $orderingField LIMIT $limit OFFSET $offset")
         .as(parser.*)
 
       implicit val jsonExampleFormat = Jsonx.formatCaseClass[Building]
@@ -72,7 +72,8 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
 
       if (metadata.equals(INCLUDE_METADATA)) {
         val linkString = getLinkHeaderString(limit, offset, request.host)
-        Ok(Json.obj("lista" -> buildingsList)).withHeaders("Link" -> linkString, "X-total-count" -> countBuildings().toString)
+        Ok(Json.obj("lista" -> buildingsList))
+          .withHeaders("Link" -> linkString, "X-total-count" -> countBuildings().toString)
       }
 
       else {
