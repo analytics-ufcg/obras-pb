@@ -12,8 +12,8 @@ angular.module('obrasPb').config(['$stateProvider', '$urlRouterProvider', functi
             controller: 'HomeController as homeCtrl',
             resolve : {
                 numberOfBuildings : function (ObrasService) {
-                    return ObrasService.getNumberOfBuildings().then(function (result) {
-                        return result.data.total;
+                    return ObrasService.getNumberOfBuildings(function (count) {
+                        return count;
                     });
                 }
             }
