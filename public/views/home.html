@@ -4,10 +4,9 @@
     <table md-table md-row-select multiple ng-model="homeCtrl.selectedObras" md-progress="homeCtrl.obrasPromise">
         <thead md-head md-order="homeCtrl.tableQuery.order" md-on-reorder="homeCtrl.getObras">
         <tr md-row layout-align="space-around center">
-            <th md-column md-numeric md-order-by="dt_Ano" style="text-align: center"><span>Ano</span></th>
-            <th md-column style="text-align: center"><span>Local</span></th>
-            <th md-column style="text-align: center"><span>Descrição</span></th>
-            <th md-column style="text-align: center"><span>Valor em R$</span></th>
+            <th md-column style="text-align: center" ng-repeat="field in homeCtrl.fields">
+                <span> {{ field.description }} </span>
+            </th>
         </tr>
         </thead>
         <tbody md-body>
