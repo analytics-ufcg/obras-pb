@@ -6,6 +6,7 @@ function HomeController(ObrasService, numberOfBuildings) {
     var self = this;
 
     self.fields = [
+        {name: 'cd_UGestora', description: 'Id'},
         {name: 'dt_Ano', description: "Ano"},
         {name: 'de_Localizacao', description: "Local"},
         {name: 'de_Sucinta', description: "Descrição"},
@@ -16,8 +17,7 @@ function HomeController(ObrasService, numberOfBuildings) {
     const DEFAULT_START_PAGE = 1;
     const SHOWN_FIELDS = self.fields.map(field => field.name);
 
-    var ORDER_BY_FIELD = 'cd_Ugestora';
-    this.selectedObras = {};
+    var ORDER_BY_FIELD = 'cd_UGestora';
 
     this.numberOfBuildings = numberOfBuildings;
 
@@ -29,7 +29,7 @@ function HomeController(ObrasService, numberOfBuildings) {
     };
 
     this.getStartElement = function (page, limit) {
-        return page * limit - limit + 1;
+        return page * limit - limit;
     };
 
     this.getObras = function () {
@@ -49,6 +49,14 @@ function HomeController(ObrasService, numberOfBuildings) {
                 console.log(err);
             })
     };
+
+    this.setOrderingField = function(field) {
+        if (self.tableQuery.order == field && self.tableQuery.order[0] != "-") {
+            self.tableQuery.order = "-" + field;
+        } else {
+            self.tableQuery.order = field;
+        }
+    }
 
 
     self.getObras();
