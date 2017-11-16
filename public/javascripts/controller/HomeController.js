@@ -40,6 +40,10 @@ function HomeController(ObrasService, numberOfBuildings) {
             self.tableQuery.fields
         ).then(function (result) {
                 self.obras = result.data.lista;
+                self.obras = self.obras.map(function(obra) {
+                    obra.fields = SHOWN_FIELDS;
+                    return obra;
+                });
             }).
             catch(function (err) {
                 console.log(err);
