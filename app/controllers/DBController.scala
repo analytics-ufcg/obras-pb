@@ -15,7 +15,7 @@ import ai.x.play.json.Jsonx
 class DBController @Inject()(dbapi: DBApi) extends Controller {
 
   private val db = dbapi.database("default")
-  private val FIRST_PAGE = 0
+  private val FIRST_PAGE = 1
   private val INCLUDE_METADATA = 1
 
 
@@ -24,33 +24,54 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
   /**
     * Gera a string para o Header 'Link' da resposta seguindo a especificação do RFC 5988.
     */
-  def getLinkHeaderString(limit: Int, offset: Int, hostName : String) = {
+  private def getLinkHeaderString(limit: Int, page: Int, hostName : String) = {
       val numberOfEntries = countBuildings()
-      "<http://" + hostName + "/buildings?limit=%d&offset=%d&metadata=%d".format(limit, FIRST_PAGE, INCLUDE_METADATA) + ">; rel=\"first\"," +
-      "<http://" + hostName + "/buildings?limit=%d&offset=%d&metadata=%d".format(limit, numberOfEntries - limit, INCLUDE_METADATA) + ">; rel=\"last\"," +
-      "<http://" + hostName + "/buildings?limit=%d&offset=%d&metadata=%d".format(limit,getNextPageOffset(limit, offset, numberOfEntries), INCLUDE_METADATA) + ">; rel=\"next\"," +
-      "<http://" + hostName + "/buildings?limit=%d&offset=%d&metadata=%d".format(limit,getPreviousPageOffset(limit, offset),INCLUDE_METADATA) + ">; rel=\"prev\""
+      "<http://" + hostName + "/buildings?limit=%d&page=%d&metadata=%d".format(limit, FIRST_PAGE, INCLUDE_METADATA) + ">; rel=\"first\"," +
+      "<http://" + hostName + "/buildings?limit=%d&page=%d&metadata=%d".format(limit, getLastPage(limit, numberOfEntries), INCLUDE_METADATA) + ">; rel=\"last\"," +
+      "<http://" + hostName + "/buildings?limit=%d&page=%d&metadata=%d".format(limit, getNextPage(limit, page, numberOfEntries), INCLUDE_METADATA) + ">; rel=\"next\"," +
+      "<http://" + hostName + "/buildings?limit=%d&page=%d&metadata=%d".format(limit, getPreviousPage(page),INCLUDE_METADATA) + ">; rel=\"prev\""
   }
 
   /**
-    * Obtém o offset da pagina interior.
+    * Obtém o número da ultima pagina.
     */
-  private def getPreviousPageOffset(limit: Int, offset: Int) = {
-    if (offset - limit < 0) FIRST_PAGE else offset - limit
+  private def getLastPage(limit: Int, numberOfEntries: Int) = {
+    val lastPageRoundedUp = math.ceil(numberOfEntries.toFloat/limit).toInt
+    lastPageRoundedUp
+  }
+
+
+  /**
+    * Obtem o numero da pagina seguinte.
+    */
+  private def getNextPage(limit: Int, page: Int, numberOfEntries: Int) = {
+    val entriesUpToThisPage = limit * page
+    if(entriesUpToThisPage >= numberOfEntries) page else page + 1
   }
 
   /**
-    * Obtém o offset da pagina seguinte.
+    * Obtem o numero da pagina anterior.
     */
-  private def getNextPageOffset(limit: Int, offset: Int, numberOfEntries: Int) = {
-    if (offset + limit >= numberOfEntries) numberOfEntries - 1 else offset + limit
+  private def getPreviousPage(page: Int) = {
+    val previous = page - 1
+    if(previous >= 1) previous else FIRST_PAGE
+  }
+
+
+  /**
+    * Retorna o indice do primeiro elemento da pagina
+    * dado o número da página e o limite de observações.
+    */
+  private def getPageOffset(page :Int, limit: Int) = {
+    val firstElementIndex = page * limit - limit
+    firstElementIndex
   }
 
 
   /**
     * Conta o numero de observações.
     */
-  def countBuildings() = {
+  private def countBuildings() = {
     val rowParser = scalar[Long]
     db.withConnection { implicit connection =>
       val result: Int = SQL("SELECT COUNT(*) FROM Obras").as(scalar[Int].single)
@@ -61,7 +82,7 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
 
   /************* API *************/
 
-  def getBuildings(limit: Int, offset: Int, metadata: Int, orderingField: String, fields: String) = Action { implicit request =>
+  def getBuildings(limit: Int, page: Int, metadata: Int, orderingField: String, fields: String) = Action { implicit request =>
     val parser = {
       get[Int]("cd_UGestora").? ~
       get[Int]("dt_Ano").? ~
@@ -104,6 +125,7 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
     }
 
     db.withConnection { implicit connection =>
+      val offset = getPageOffset(page, limit)
       val result: List[Building] = SQL(s"SELECT $fields FROM Obras WHERE $orderingField IS NOT NULL " +
         s"ORDER BY $orderingField LIMIT $limit OFFSET $offset")
         .as(parser.*)
@@ -112,7 +134,7 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
       val buildingsList = result.map(building => Json.toJson(building))
 
       if (metadata.equals(INCLUDE_METADATA)) {
-        val linkString = getLinkHeaderString(limit, offset, request.host)
+        val linkString = getLinkHeaderString(limit, page, request.host)
         Ok(Json.obj("lista" -> buildingsList))
           .withHeaders("Link" -> linkString, "X-total-count" -> countBuildings().toString)
       }
