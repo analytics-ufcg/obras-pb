@@ -10,7 +10,7 @@ case class Building(cd_UGestora: Option[Int], dt_Ano: Option[Int], nu_Obra: Opti
                     dimensao: Option[BigDecimal], tp_naturezaObra: Option[Int], tp_naturezaObra_c: Option[Int],
                     tp_Obra_c: Option[Int], de_Sucinta_c: Option[String], pop_beneficiada: Option[String],
                     foto: Option[String], foto_c: Option[String], dimensao_c: Option[BigDecimal], cei: Option[String],
-                    crea: Option[String], obs: Option[String])
+                    crea: Option[String], obs: Option[String], de_UGestora: Option[String])
 
 
 

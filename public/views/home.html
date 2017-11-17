@@ -12,10 +12,10 @@
         </thead>
         <tbody md-body>
             <tr md-row md-select-id="name" md-auto-select ng-repeat="obra in homeCtrl.obras">
-                <td md-cell style="text-align: center; width: 10%;" ng-repeat-start="field in obra.fields" ng-if="obra[field]">
+                <td md-cell style="text-align: center; width: 10%;" ng-repeat-start="field in obra.fields" ng-if="obra[field] != null">
                     {{obra[field]}}
                 </td>
-                <td md-cell style="text-align: center; width: 10%; color: grey;" ng-repeat-end ng-if="!obra[field]">
+                <td md-cell style="text-align: center; width: 10%; color: grey;" ng-repeat-end ng-if="obra[field] == null">
                     Não há dados
                 </td>
             </tr>
