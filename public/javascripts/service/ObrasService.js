@@ -10,8 +10,9 @@ angular.module('obrasPb').service('ObrasService', ['$http', '$q', function ($htt
      * @param {offset} Inteiro, é o numero da primeira observação que será buscada.
      * @returns {HttpPromise} Promise da requisição.
      */
-    this.getObras = function (limit, offset) {
-        return $http.get(API_ENDPOINT + '?limit=' + limit + '&offset=' + offset + '&metadata=1');
+    this.getObras = function (limit, offset, orderingField, fields) {
+        return $http.get(API_ENDPOINT + '?limit=' + limit + '&offset=' + offset + '&metadata=1' + "&orderingField=" +
+        orderingField + "&fields=" + fields.join(","));
     };
 
     /**

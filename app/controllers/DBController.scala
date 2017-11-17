@@ -1,5 +1,6 @@
 package controllers
 
+import java.util.Date
 import javax.inject.{Inject, Singleton}
 
 import play.api.db._
@@ -60,11 +61,50 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
 
   /************* API *************/
 
-  def getBuildings(limit: Int, offset: Int, metadata: Int, orderingField: String) = Action { implicit request =>
-    val parser: RowParser[Building] = Macro.namedParser[Building]
-    db.withConnection { implicit connection =>
+  def getBuildings(limit: Int, offset: Int, metadata: Int, orderingField: String, fields: String) = Action { implicit request =>
+    val parser = {
+      get[Int]("cd_UGestora").? ~
+      get[Int]("dt_Ano").? ~
+      get[String]("nu_Obra").? ~
+      get[Date]("dt_Cadastro").? ~
+      get[String]("tp_Patrimonio").? ~
+      get[String]("de_Localizacao").? ~
+      get[String]("de_Sucinta").? ~
+      get[Int]("tp_Obra").? ~
+      get[Int]("tp_CategoriaObra").? ~
+      get[String]("tp_Previsto").? ~
+      get[Date]("dt_Inicio").? ~
+      get[Date]("dt_Conclusao").? ~
+      get[Date]("dt_Recebimento").? ~
+      get[Int]("tp_FonteObra").? ~
+      get[BigDecimal]("vl_Obra").? ~
+      get[String]("dt_MesAno").? ~
+      get[BigDecimal]("dimensao").? ~
+      get[Int]("tp_naturezaObra").? ~
+      get[Int]("tp_naturezaObra_c").? ~
+      get[Int]("tp_Obra_c").? ~
+      get[String]("de_Sucinta_c").? ~
+      get[String]("pop_beneficiada").? ~
+      get[String]("foto").? ~
+      get[String]("foto_c").? ~
+      get[BigDecimal]("dimensao_c").? ~
+      get[String]("cei").? ~
+      get[String]("crea").? ~
+      get[String]("obs").? map {
+        case cd_UGestora ~
+          dt_Ano ~ nu_Obra ~ dt_Cadastro ~ tp_Patrimonio ~ de_Localizacao ~ de_Sucinta ~ tp_Obra ~  tp_CategoriaObra ~
+          tp_Previsto ~  dt_Inicio ~ dt_Conclusao ~ dt_Recebimento ~ tp_FonteObra ~ vl_Obra ~ dt_MesAno ~ dimensao ~
+          tp_naturezaObra ~ tp_naturezaObra_c ~ tp_Obra_c ~ de_Sucinta_c ~ pop_beneficiada ~ foto ~ foto_c ~
+          dimensao_c ~ cei ~ crea ~ obs =>
+          Building(cd_UGestora, dt_Ano, nu_Obra, dt_Cadastro, tp_Patrimonio, de_Localizacao, de_Sucinta, tp_Obra,
+            tp_CategoriaObra, tp_Previsto, dt_Inicio, dt_Conclusao, dt_Recebimento, tp_FonteObra, vl_Obra, dt_MesAno,
+            dimensao, tp_naturezaObra, tp_naturezaObra_c, tp_Obra_c, de_Sucinta_c, pop_beneficiada, foto, foto_c,
+            dimensao_c, cei, crea, obs)
+      }
+    }
 
-      val result: List[Building] = SQL(s"SELECT * FROM Obras ORDER BY $orderingField LIMIT $limit OFFSET $offset")
+    db.withConnection { implicit connection =>
+      val result: List[Building] = SQL(s"SELECT $fields FROM Obras ORDER BY $orderingField LIMIT $limit OFFSET $offset")
         .as(parser.*)
 
       implicit val jsonExampleFormat = Jsonx.formatCaseClass[Building]
