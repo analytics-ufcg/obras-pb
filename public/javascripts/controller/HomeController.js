@@ -28,14 +28,10 @@ function HomeController(ObrasService, numberOfBuildings) {
         fields: SHOWN_FIELDS
     };
 
-    this.getStartElement = function (page, limit) {
-        return page * limit - limit;
-    };
-
     this.getObras = function () {
         self.obrasPromise = ObrasService.getObras(
             self.tableQuery.limit,
-            self.getStartElement(self.tableQuery.page, self.tableQuery.limit),
+            self.tableQuery.page,
             self.tableQuery.order,
             self.tableQuery.fields
         ).then(function (result) {
@@ -47,7 +43,7 @@ function HomeController(ObrasService, numberOfBuildings) {
             }).
             catch(function (err) {
                 console.log(err);
-            })
+            });
     };
 
     this.setOrderingField = function(field) {
@@ -56,7 +52,7 @@ function HomeController(ObrasService, numberOfBuildings) {
         } else {
             self.tableQuery.order = field;
         }
-    }
+    };
 
 
     self.getObras();

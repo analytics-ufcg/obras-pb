@@ -10,8 +10,8 @@ angular.module('obrasPb').service('ObrasService', ['$http', '$q', function ($htt
      * @param {offset} Inteiro, é o numero da primeira observação que será buscada.
      * @returns {HttpPromise} Promise da requisição.
      */
-    this.getObras = function (limit, offset, orderingField, fields) {
-        return $http.get(API_ENDPOINT + '?limit=' + limit + '&offset=' + offset + '&metadata=1' + "&orderingField=" +
+    this.getObras = function (limit, page, orderingField, fields) {
+        return $http.get(API_ENDPOINT + '?limit=' + limit + '&page=' + page + '&metadata=1' + "&orderingField=" +
         orderingField + "&fields=" + fields.join(","));
     };
 
@@ -21,7 +21,7 @@ angular.module('obrasPb').service('ObrasService', ['$http', '$q', function ($htt
      * @returns {HttpPromise} Promise da requisição
      */
     this.getNumberOfBuildings = function (callback) {
-        return $http.get(API_ENDPOINT + '?limit=1&offset=0&metadata=1').then(function (result) {
+        return $http.get(API_ENDPOINT).then(function (result) {
             return callback(result.headers(COUNT_BUILDINGS_HEADER));
         })
     };

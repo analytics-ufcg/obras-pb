@@ -6,8 +6,8 @@
 GET     /                           controllers.HomeController.index
 
 # Gets buildings based on limit and offset
-# Example http://<application-ip>:<application-port>/buildings?limit=<limit-value>&offset=<offset-value>&metadata=<true/false>&orderingField=<ordering-field>&fields=<field1,field2,...>
-GET     /buildings                  controllers.DBController.getBuildings(limit: Int ?= 5, offset: Int ?= 0, metadata : Int ?= 1, orderingField: String ?= "cd_Ugestora", fields: String ?= "*")
+# Example http://<application-ip>:<application-port>/buildings?limit=<limit-value>&page=<page-number>&metadata=<true/false>&orderingField=<ordering-field>&fields=<field1,field2,...>
+GET     /buildings                  controllers.DBController.getBuildings(limit: Int ?= 5, page: Int ?= 1, metadata : Int ?= 1, orderingField: String ?= "cd_Ugestora", fields: String ?= "*")
 
 
 # Map static resources from the /public folder to the /assets URL path
