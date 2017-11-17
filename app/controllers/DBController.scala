@@ -60,7 +60,6 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
 
 
   /************* API *************/
-
   def getBuildings(limit: Int, offset: Int, metadata: Int, orderingField: String, fields: String) = Action { implicit request =>
     val parser = {
       get[Int]("cd_UGestora").? ~
@@ -90,22 +89,45 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
       get[BigDecimal]("dimensao_c").? ~
       get[String]("cei").? ~
       get[String]("crea").? ~
-      get[String]("obs").? map {
+      get[String]("obs").? ~
+      get[String]("de_UGestora").? map {
         case cd_UGestora ~
           dt_Ano ~ nu_Obra ~ dt_Cadastro ~ tp_Patrimonio ~ de_Localizacao ~ de_Sucinta ~ tp_Obra ~  tp_CategoriaObra ~
           tp_Previsto ~  dt_Inicio ~ dt_Conclusao ~ dt_Recebimento ~ tp_FonteObra ~ vl_Obra ~ dt_MesAno ~ dimensao ~
           tp_naturezaObra ~ tp_naturezaObra_c ~ tp_Obra_c ~ de_Sucinta_c ~ pop_beneficiada ~ foto ~ foto_c ~
-          dimensao_c ~ cei ~ crea ~ obs =>
+          dimensao_c ~ cei ~ crea ~ obs ~ de_UGestora =>
           Building(cd_UGestora, dt_Ano, nu_Obra, dt_Cadastro, tp_Patrimonio, de_Localizacao, de_Sucinta, tp_Obra,
             tp_CategoriaObra, tp_Previsto, dt_Inicio, dt_Conclusao, dt_Recebimento, tp_FonteObra, vl_Obra, dt_MesAno,
             dimensao, tp_naturezaObra, tp_naturezaObra_c, tp_Obra_c, de_Sucinta_c, pop_beneficiada, foto, foto_c,
-            dimensao_c, cei, crea, obs)
+            dimensao_c, cei, crea, obs, de_UGestora)
       }
     }
 
+    def putTableAlias(field: String, uGestoraAlias: String, obrasAlias: String) : String = {
+      var alias = ""
+      var tableField = field.stripPrefix("-")
+      if (field(0) == '-'){
+        alias = "-"
+      }
+      if (tableField == "de_UGestora") {
+        alias = alias.concat(uGestoraAlias)
+      } else {
+        alias = alias.concat(obrasAlias)
+      }
+      alias.concat(".").concat(tableField)
+    }
+
     db.withConnection { implicit connection =>
-      val result: List[Building] = SQL(s"SELECT $fields FROM Obras WHERE $orderingField IS NOT NULL " +
-        s"ORDER BY $orderingField LIMIT $limit OFFSET $offset")
+      val obrasAlias = "o"
+      val uGestoraAlias = "ug"
+      val obrasFields = fields.split(",").map(
+        e => putTableAlias(e, uGestoraAlias, obrasAlias)
+      ).mkString(",")
+      val obrasOrderingField = putTableAlias(orderingField, uGestoraAlias, obrasAlias)
+      val uGestora: String = "SELECT DISTINCT cd_UGestora, de_UGestora FROM Acumulacao_Total"
+      val result: List[Building] = SQL(s"SELECT $obrasFields FROM Obras $obrasAlias, ($uGestora) $uGestoraAlias " +
+        s"WHERE $obrasOrderingField IS NOT NULL AND $obrasAlias.cd_UGestora = $uGestoraAlias.cd_UGestora " +
+        s"ORDER BY $obrasOrderingField LIMIT $limit OFFSET $offset")
         .as(parser.*)
 
       implicit val jsonExampleFormat = Jsonx.formatCaseClass[Building]
