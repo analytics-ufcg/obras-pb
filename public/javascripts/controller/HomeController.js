@@ -16,6 +16,7 @@ function HomeController(ObrasService, numberOfBuildings) {
     const DEFAULT_PAGE_SIZE = 5;
     const DEFAULT_START_PAGE = 1;
     const SHOWN_FIELDS = self.fields.map(field => field.name);
+    const COUNT_BUILDINGS_HEADER = "x-total-count";
 
     var ORDER_BY_FIELD = 'cd_UGestora';
 
@@ -36,6 +37,7 @@ function HomeController(ObrasService, numberOfBuildings) {
             self.tableQuery.fields
         ).then(function (result) {
                 self.obras = result.data.lista;
+                self.numberOfBuildings = result.headers(COUNT_BUILDINGS_HEADER);
                 self.obras = self.obras.map(function(obra) {
                     obra.fields = SHOWN_FIELDS;
                     return obra;

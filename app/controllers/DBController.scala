@@ -71,10 +71,10 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
   /**
     * Conta o numero de observações.
     */
-  private def countBuildings() = {
+  private def countBuildings(orderingField : String = "cd_UGestora") = {
     val rowParser = scalar[Long]
     db.withConnection { implicit connection =>
-      val result: Int = SQL("SELECT COUNT(*) FROM Obras").as(scalar[Int].single)
+      val result: Int = SQL(s"SELECT COUNT(*) FROM Obras WHERE $orderingField IS NOT NULL").as(scalar[Int].single)
       result
     }
   }
@@ -158,7 +158,7 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
       if (metadata.equals(INCLUDE_METADATA)) {
         val linkString = getLinkHeaderString(limit, page, request.host)
         Ok(Json.obj("lista" -> buildingsList))
-          .withHeaders("Link" -> linkString, "X-total-count" -> countBuildings().toString)
+          .withHeaders("Link" -> linkString, "X-total-count" -> countBuildings(orderingField).toString)
       }
 
       else {
