@@ -104,7 +104,8 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
     }
 
     db.withConnection { implicit connection =>
-      val result: List[Building] = SQL(s"SELECT $fields FROM Obras ORDER BY $orderingField LIMIT $limit OFFSET $offset")
+      val result: List[Building] = SQL(s"SELECT $fields FROM Obras WHERE $orderingField IS NOT NULL " +
+        s"ORDER BY $orderingField LIMIT $limit OFFSET $offset")
         .as(parser.*)
 
       implicit val jsonExampleFormat = Jsonx.formatCaseClass[Building]

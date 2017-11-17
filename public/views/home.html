@@ -1,23 +1,24 @@
 <md-toolbar layout-align="center start">Obras - PB</md-toolbar>
 
 <md-table-container md-whiteframe="3" style="margin: 10px 10px 0px 10px; max-height: 80%;">
-    <table md-table md-row-select multiple ng-model="homeCtrl.selectedObras" md-progress="homeCtrl.obrasPromise">
-        <thead md-head md-order="homeCtrl.tableQuery.order" md-on-reorder="homeCtrl.getObras">
+    <table md-table md-row-select multiple md-progress="homeCtrl.obrasPromise">
+        <thead md-head md-order="homeCtrl.tableQuery.orderMode" md-on-reorder="homeCtrl.getObras">
         <tr md-row layout-align="space-around center">
-            <th md-column style="text-align: center" ng-repeat="field in homeCtrl.fields">
+            <th ng-click="homeCtrl.setOrderingField(field.name)" ng-repeat="field in homeCtrl.fields" md-column style="text-align: center"
+                md-order-by="{{field.name}}">
                 <span> {{ field.description }} </span>
             </th>
         </tr>
         </thead>
         <tbody md-body>
-        <tr md-row md-select-id="dt_Ano" md-auto-select ng-repeat="obra in homeCtrl.obras">
-            <td md-cell style="text-align: center; width: 10%;" ng-repeat="field in obra.fields" ng-if="obra[field]">
-                {{obra[field]}}
-            </td>
-            <td md-cell style="text-align: center; width: 10%; color: grey;" ng-repeat="field in obra.fields" ng-if="!obra[field]">
-                Não há dados
-            </td>
-        </tr>
+            <tr md-row md-select-id="name" md-auto-select ng-repeat="obra in homeCtrl.obras">
+                <td md-cell style="text-align: center; width: 10%;" ng-repeat-start="field in obra.fields" ng-if="obra[field]">
+                    {{obra[field]}}
+                </td>
+                <td md-cell style="text-align: center; width: 10%; color: grey;" ng-repeat-end ng-if="!obra[field]">
+                    Não há dados
+                </td>
+            </tr>
         </tbody>
     </table>
 </md-table-container>
