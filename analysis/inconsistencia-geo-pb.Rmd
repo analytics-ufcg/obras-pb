@@ -1,0 +1,32 @@
+---
+title: "Inconsistência Geo-PB"
+date: "November 20, 2017"
+output: html_document
+---
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(RPostgreSQL)
+library(config)
+```
+
+Importando os dados:
+
+```{r}
+drv <- DBI::dbDriver("PostgreSQL")
+
+con <- DBI::dbConnect(drv, 
+  host = config::get("host"),
+  port = config::get("port"),
+  user = config::get("user"),
+  password = config::get("password"),
+  dbname = config::get("dbname1")
+)
+
+data <- dbGetQuery(con, "select * from t_Obra")
+```
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+dbDisconnect(con)
+```
+
