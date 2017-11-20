@@ -1,11 +1,14 @@
-<md-toolbar layout-align="center start">Obras - PB</md-toolbar>
+<md-toolbar layout="row" layout-align="start center" class="md-hue-2">
+    <img src="assets/resources/images/tce_128.png" height="50px;" layout-margin>
+    <h3>Obras - PB</h3>
+</md-toolbar>
 
 <md-table-container md-whiteframe="3" style="margin: 10px 10px 0px 10px; max-height: 80%;">
     <table md-table md-row-select multiple md-progress="homeCtrl.obrasPromise">
         <thead md-head md-order="homeCtrl.tableQuery.orderMode" md-on-reorder="homeCtrl.getObras">
         <tr md-row layout-align="space-around center">
-            <th ng-click="homeCtrl.setOrderingField(field.name)" ng-repeat="field in homeCtrl.fields" md-column style="text-align: center"
-                md-order-by="{{field.name}}">
+            <th ng-click="homeCtrl.setOrderingField(field.name)" ng-repeat="field in homeCtrl.fields" style="text-align: center; padding-left: 32px;"
+                md-column md-order-by="{{field.name}}">
                 <span> {{ field.description }} </span>
             </th>
         </tr>
