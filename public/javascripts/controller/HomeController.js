@@ -6,8 +6,8 @@ function HomeController(ObrasService) {
     var self = this;
 
     self.fields = [
-        {name: 'cd_UGestora', description: 'Id'},
-        {name: 'de_UGestora', description : "Jurisdicionado"},
+        {name: 'cd_UGestora', description: 'Id Unidade Gestora'},
+        {name: 'de_UGestora', description : "Unidade Gestora"},
         {name: 'dt_Ano', description: "Ano"},
         {name: 'de_Localizacao', description: "Local"},
         {name: 'de_Sucinta', description: "Descrição"},
