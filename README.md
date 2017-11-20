@@ -11,7 +11,7 @@ Para replicar e rodar esta aplicação será necessário ter instalado em seu co
 $ git clone https://github.com/analytics-ufcg/obras-pb.git
 
 # Copie o arquivo de configuração para a pasta adequada
-$ cp <caminho-para-o-arquivo>/application.conf conf/application.conf
+$ cp <caminho-para-o-arquivo>/application.conf obras-pb/conf/application.conf
 
 # Entre no repositório
 $ cd obras-pb
