@@ -1,8 +1,8 @@
 angular.module('obrasPb').controller('HomeController', HomeController);
 
-HomeController.$inject = ['ObrasService', 'numberOfBuildings'];
+HomeController.$inject = ['ObrasService'];
 
-function HomeController(ObrasService, numberOfBuildings) {
+function HomeController(ObrasService) {
     var self = this;
 
     self.fields = [
@@ -19,8 +19,6 @@ function HomeController(ObrasService, numberOfBuildings) {
     const COUNT_BUILDINGS_HEADER = "x-total-count";
 
     var ORDER_BY_FIELD = 'cd_UGestora';
-
-    this.numberOfBuildings = numberOfBuildings;
 
     self.tableQuery = {
         order : ORDER_BY_FIELD,
@@ -48,6 +46,7 @@ function HomeController(ObrasService, numberOfBuildings) {
             });
     };
 
+
     this.setOrderingField = function(field) {
         if (self.tableQuery.order == field && self.tableQuery.order[0] != "-") {
             self.tableQuery.order = "-" + field;
@@ -58,6 +57,5 @@ function HomeController(ObrasService, numberOfBuildings) {
 
 
     self.getObras();
-
 
 }

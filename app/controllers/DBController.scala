@@ -24,8 +24,7 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
   /**
     * Gera a string para o Header 'Link' da resposta seguindo a especificação do RFC 5988.
     */
-  private def getLinkHeaderString(limit: Int, page: Int, hostName : String) = {
-      val numberOfEntries = countBuildings()
+  private def getLinkHeaderString(limit: Int, page: Int, hostName : String, numberOfEntries : Int) = {
       "<http://" + hostName + "/buildings?limit=%d&page=%d&metadata=%d".format(limit, FIRST_PAGE, INCLUDE_METADATA) + ">; rel=\"first\"," +
       "<http://" + hostName + "/buildings?limit=%d&page=%d&metadata=%d".format(limit, getLastPage(limit, numberOfEntries), INCLUDE_METADATA) + ">; rel=\"last\"," +
       "<http://" + hostName + "/buildings?limit=%d&page=%d&metadata=%d".format(limit, getNextPage(limit, page, numberOfEntries), INCLUDE_METADATA) + ">; rel=\"next\"," +
@@ -71,10 +70,10 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
   /**
     * Conta o numero de observações.
     */
-  private def countBuildings(orderingField : String = "cd_UGestora") = {
-    val rowParser = scalar[Long]
+  private def countBuildings(countQuery : String) = {
+    val rowParser = scalar[Int]
     db.withConnection { implicit connection =>
-      val result: Int = SQL(s"SELECT COUNT(*) FROM Obras WHERE $orderingField IS NOT NULL").as(scalar[Int].single)
+      val result: Int = SQL(countQuery).as(rowParser.single)
       result
     }
   }
@@ -152,13 +151,18 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
         s"ORDER BY $obrasOrderingField LIMIT $limit OFFSET $offset")
         .as(parser.*)
 
+      val countQuery = s"SELECT COUNT(*) FROM Obras $obrasAlias, ($uGestora) $uGestoraAlias " +
+        s"WHERE $obrasOrderingField IS NOT NULL AND $obrasAlias.cd_UGestora = $uGestoraAlias.cd_UGestora " +
+        s"ORDER BY $obrasOrderingField"
+      val totalEntries = countBuildings(countQuery)
+
       implicit val jsonExampleFormat = Jsonx.formatCaseClass[Building]
       val buildingsList = result.map(building => Json.toJson(building))
 
       if (metadata.equals(INCLUDE_METADATA)) {
-        val linkString = getLinkHeaderString(limit, page, request.host)
+        val linkString = getLinkHeaderString(limit, page, request.host, totalEntries)
         Ok(Json.obj("lista" -> buildingsList))
-          .withHeaders("Link" -> linkString, "X-total-count" -> countBuildings(orderingField).toString)
+          .withHeaders("Link" -> linkString, "X-total-count" -> totalEntries.toString)
       }
 
       else {
