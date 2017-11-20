@@ -1,6 +1,6 @@
-name := """play-scala"""
+name := """obras-pb"""
 
-version := "1.0-SNAPSHOT"
+version := "1.0"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
@@ -15,8 +15,8 @@ libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.41"
 libraryDependencies += "ai.x" %% "play-json-extensions" % "0.10.0"
 
 libraryDependencies ++= Seq(
-    jdbc,
-    "com.typesafe.play" %% "anorm" % "2.5.1"
+  jdbc,
+  "com.typesafe.play" %% "anorm" % "2.5.1"
 )
 
 
