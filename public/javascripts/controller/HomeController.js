@@ -7,6 +7,7 @@ function HomeController(ObrasService) {
 
     self.fields = [
         {name: 'cd_UGestora', description: 'Id'},
+        {name: 'de_UGestora', description : "Jurisdicionado"},
         {name: 'dt_Ano', description: "Ano"},
         {name: 'de_Localizacao', description: "Local"},
         {name: 'de_Sucinta', description: "Descrição"},
