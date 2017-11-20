@@ -15,15 +15,4 @@ angular.module('obrasPb').service('ObrasService', ['$http', '$q', function ($htt
         orderingField + "&fields=" + fields.join(","));
     };
 
-    /**
-     * Obtém o número total de obras cadastradas.
-     * @param {callback} Função que será chamada com o total de observações quando a promise for resolvida.
-     * @returns {HttpPromise} Promise da requisição
-     */
-    this.getNumberOfBuildings = function (callback) {
-        return $http.get(API_ENDPOINT).then(function (result) {
-            return callback(result.headers(COUNT_BUILDINGS_HEADER));
-        })
-    };
-
 }]);
