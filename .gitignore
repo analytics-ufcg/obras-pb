@@ -24,3 +24,4 @@ analysis/config.yml
 # R
 *.Rhistory
 *.Rproj.user
+.Rproj.user

@@ -10,7 +10,7 @@ library(RPostgreSQL)
 library(config)
 ```
 
-Importando os dados:
+Criando conexão:
 
 ```{r}
 drv <- DBI::dbDriver("PostgreSQL")
@@ -22,8 +22,38 @@ con <- DBI::dbConnect(drv,
   password = config::get("password"),
   dbname = config::get("dbname1")
 )
+```
 
-data <- dbGetQuery(con, "select * from t_Obra")
+Importando dados:
+
+```{r}
+t_acompanhamento <- dbGetQuery(con, "select * from t_acompanhamento") 
+t_complexo <- dbGetQuery(con, "select * from t_complexo")       
+t_convenio <- dbGetQuery(con, "select * from t_convenio")         
+t_empenhos_medicao <- dbGetQuery(con, "select * from t_empenhos_medicao")
+t_endereco <- dbGetQuery(con, "select * from t_endereco")    
+t_ente <- dbGetQuery(con, "select * from t_ente")         
+t_evolucao <- dbGetQuery(con, "select * from t_evolucao")
+t_foto_acompanhamento <- dbGetQuery(con, "select * from t_foto_acompanhamento")
+t_foto_medicao <- dbGetQuery(con, "select * from t_foto_medicao")
+t_jurisdicionado <- dbGetQuery(con, "select * from t_jurisdicionado")     
+t_medicao <- dbGetQuery(con, "select * from t_medicao")   
+t_municipio <- dbGetQuery(con, "select * from t_municipio")          
+t_obra <- dbGetQuery(con, "select * from t_obra")        
+t_origem <- dbGetQuery(con, "select * from t_origem")             
+t_parameter <- dbGetQuery(con, "select * from t_parameter")
+t_permission <- dbGetQuery(con, "select * from t_permission")        
+t_pessoa <- dbGetQuery(con, "select * from t_pessoa")      
+t_pessoafisica <- dbGetQuery(con, "select * from t_pessoafisica")     
+t_pessoajuridica <- dbGetQuery(con, "select * from t_pessoajuridica")     
+t_profile <- dbGetQuery(con, "select * from t_profile")   
+t_profile_permission <- dbGetQuery(con, "select * from t_profile_permission")
+t_recurso_proprio <- dbGetQuery(con, "select * from t_recurso_proprio")
+t_regularidade <- dbGetQuery(con, "select * from t_regularidade")  
+t_tipo_jurisdicionado <- dbGetQuery(con, "select * from t_tipo_jurisdicionado")
+t_user <- dbGetQuery(con, "select * from t_user")
+t_user_api <- dbGetQuery(con, "select * from t_user_api")
+t_user_profile <- dbGetQuery(con, "select * from t_user_profile")
 ```
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
