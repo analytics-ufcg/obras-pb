@@ -80,7 +80,7 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
 
 
   /************* API *************/
-  def getBuildings(limit: Int, page: Int, metadata: Int, orderingField: String, fields: String) = Action { implicit request =>
+  def getBuildings(limit: Int, page: Int, metadata: Int, orderingField: String, fields: String, filterBy: String) = Action { implicit request =>
     val parser = {
       get[Int]("cd_UGestora").? ~
       get[Int]("dt_Ano").? ~
@@ -148,11 +148,13 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
       val uGestora: String = "SELECT DISTINCT cd_UGestora, de_UGestora FROM Acumulacao_Total"
       val result: List[Building] = SQL(s"SELECT $obrasFields FROM Obras $obrasAlias, ($uGestora) $uGestoraAlias " +
         s"WHERE $obrasOrderingField IS NOT NULL AND $obrasAlias.cd_UGestora = $uGestoraAlias.cd_UGestora " +
+        s"AND CONCAT_WS('', $obrasFields) LIKE '%$filterBy%' " +
         s"ORDER BY $obrasOrderingField LIMIT $limit OFFSET $offset")
         .as(parser.*)
 
       val countQuery = s"SELECT COUNT(*) FROM Obras $obrasAlias, ($uGestora) $uGestoraAlias " +
         s"WHERE $obrasOrderingField IS NOT NULL AND $obrasAlias.cd_UGestora = $uGestoraAlias.cd_UGestora " +
+        s"AND CONCAT_WS('', $obrasFields) LIKE '%$filterBy%' " +
         s"ORDER BY $obrasOrderingField"
       val totalEntries = countBuildings(countQuery)
 
