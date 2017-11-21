@@ -25,7 +25,8 @@ function HomeController(ObrasService) {
         order : ORDER_BY_FIELD,
         limit : DEFAULT_PAGE_SIZE,
         page : DEFAULT_START_PAGE,
-        fields: SHOWN_FIELDS
+        fields: SHOWN_FIELDS,
+        filterBy: ""
     };
 
     this.getObras = function () {
@@ -33,7 +34,8 @@ function HomeController(ObrasService) {
             self.tableQuery.limit,
             self.tableQuery.page,
             self.tableQuery.order,
-            self.tableQuery.fields
+            self.tableQuery.fields,
+            self.tableQuery.filterBy
         ).then(function (result) {
                 self.obras = result.data.lista;
                 self.numberOfBuildings = result.headers(COUNT_BUILDINGS_HEADER);
