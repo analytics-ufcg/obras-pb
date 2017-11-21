@@ -145,16 +145,17 @@ class DBController @Inject()(dbapi: DBApi) extends Controller {
         e => putTableAlias(e, uGestoraAlias, obrasAlias)
       ).mkString(",")
       val obrasOrderingField = putTableAlias(orderingField, uGestoraAlias, obrasAlias)
+      val filterPattern: String = filterBy.replace(' ', '%')
       val uGestora: String = "SELECT DISTINCT cd_UGestora, de_UGestora FROM Acumulacao_Total"
       val result: List[Building] = SQL(s"SELECT $obrasFields FROM Obras $obrasAlias, ($uGestora) $uGestoraAlias " +
         s"WHERE $obrasOrderingField IS NOT NULL AND $obrasAlias.cd_UGestora = $uGestoraAlias.cd_UGestora " +
-        s"AND CONCAT_WS('', $obrasFields) LIKE '%$filterBy%' " +
+        s"AND CONCAT_WS('', $obrasFields) LIKE '%$filterPattern%' " +
         s"ORDER BY $obrasOrderingField LIMIT $limit OFFSET $offset")
         .as(parser.*)
 
       val countQuery = s"SELECT COUNT(*) FROM Obras $obrasAlias, ($uGestora) $uGestoraAlias " +
         s"WHERE $obrasOrderingField IS NOT NULL AND $obrasAlias.cd_UGestora = $uGestoraAlias.cd_UGestora " +
-        s"AND CONCAT_WS('', $obrasFields) LIKE '%$filterBy%' " +
+        s"AND CONCAT_WS('', $obrasFields) LIKE '%$filterPattern%' " +
         s"ORDER BY $obrasOrderingField"
       val totalEntries = countBuildings(countQuery)
 
