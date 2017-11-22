@@ -8,6 +8,8 @@ output: html_document
 library(tidyverse)
 library(RPostgreSQL)
 library(config)
+#devtools::install_github("sicarul/xray")
+library(xray)
 ```
 
 Importando os dados:
@@ -23,10 +25,205 @@ con <- DBI::dbConnect(drv,
   dbname = config::get("dbname1")
 )
 
-data <- dbGetQuery(con, "select * from t_Obra")
+con2 <- DBI::dbConnect(drv, 
+  host = config::get("host"),
+  port = config::get("port"),
+  user = config::get("user"),
+  password = config::get("password"),
+  dbname = config::get("dbname2")
+)
+
+```
+
+Importando dados:
+
+```{r}
+acompanhamento <- dbGetQuery(con1, "select * from t_acompanhamento")
+complexo <- dbGetQuery(con1, "select * from t_complexo")       
+convenio <- dbGetQuery(con1, "select * from t_convenio")         
+empenhos_medicao <- dbGetQuery(con1, "select * from t_empenhos_medicao")
+endereco <- dbGetQuery(con1, "select * from t_endereco")    
+ente <- dbGetQuery(con1, "select * from t_ente")         
+evolucao <- dbGetQuery(con1, "select * from t_evolucao")
+foto_acompanhamento <- dbGetQuery(con1, "select * from t_foto_acompanhamento")
+foto_medicao <- dbGetQuery(con1, "select * from t_foto_medicao")
+jurisdicionado_db1 <- dbGetQuery(con1, "select * from t_jurisdicionado")     
+medicao <- dbGetQuery(con1, "select * from t_medicao")   
+municipio <- dbGetQuery(con1, "select * from t_municipio")          
+obra <- dbGetQuery(con1, "select * from t_obra")        
+origem <- dbGetQuery(con1, "select * from t_origem")             
+parameter_db1 <- dbGetQuery(con1, "select * from t_parameter")
+permission_db1 <- dbGetQuery(con1, "select * from t_permission")        
+pessoa_db1 <- dbGetQuery(con1, "select * from t_pessoa")      
+pessoafisica_db1 <- dbGetQuery(con1, "select * from t_pessoafisica")     
+pessoajuridica_db1 <- dbGetQuery(con1, "select * from t_pessoajuridica")     
+profile_db1 <- dbGetQuery(con1, "select * from t_profile")   
+profile_permission_db1 <- dbGetQuery(con1, "select * from t_profile_permission")
+recurso_proprio <- dbGetQuery(con1, "select * from t_recurso_proprio")
+regularidade <- dbGetQuery(con1, "select * from t_regularidade")  
+tipo_jurisdicionado_db1 <- dbGetQuery(con1, "select * from t_tipo_jurisdicionado")
+user_db1 <- dbGetQuery(con1, "select * from t_user")
+user_api_db1 <- dbGetQuery(con1, "select * from t_user_api")
+user_profile_db1 <- dbGetQuery(con1, "select * from t_user_profile")
+
+play_evolutions <- dbGetQuery(con2, "select * from play_evolutions")
+contato <- dbGetQuery(con2, "select * from t_contato")
+endereco <- dbGetQuery(con2, "select * from t_endereco")
+gestao <- dbGetQuery(con2, "select * from t_gestao")
+jurisdicionado_db2 <- dbGetQuery(con2, "select * from t_jurisdicionado")
+localidade <- dbGetQuery(con2, "select * from t_localidade")
+parameter_db2 <- dbGetQuery(con2, "select * from t_parameter")
+periodoresponsabilidade <- dbGetQuery(con2, "select * from t_periodoresponsabilidade")
+permission_db2 <- dbGetQuery(con2, "select * from t_permission")
+pessoa_db2 <- dbGetQuery(con2, "select * from t_pessoa")
+pessoafisica_db2 <- dbGetQuery(con2, "select * from t_pessoafisica")
+pessoajuridica_db2 <- dbGetQuery(con2, "select * from t_pessoajuridica")
+profile_db2 <- dbGetQuery(con2, "select * from t_profile")
+profile_permission_db2 <- dbGetQuery(con2, "select * from t_profile_permission")
+resto_a_pagar_temp <- dbGetQuery(con2, "select * from t_resto_a_pagar_temp")
+tipo_jurisdicionado_db2 <- dbGetQuery(con2, "select * from t_tipo_jurisdicionado")
+user_db2 <- dbGetQuery(con2, "select * from t_user")
+user_api_db2 <- dbGetQuery(con2, "select * from t_user_api")
+user_profile_db2 <- dbGetQuery(con2, "select * from t_user_profile")
+
+```
+
+Destas tabelas, apenas a de acompanhamento tem dados geo-referenciados, mas a principal tabela é a de obras, visto que estamos no escopo do GeoPB.
+
+Vejamos a tabela de obras:
+
+```{r}
+obra %>% 
+    str()
+```
+
+Vemos que existe uma foreign key para o jurisdicionado, mas a tabela de jurisdicionado do db1 é vazia.
+
+```{r}
+jurisdicionado_db1 %>% count()
+```
+
+Com isso, ela provavelmente se refere à tabela do db2, visto que existem observações no segundo.
+
+```{r}
+jurisdicionado_db2 %>% count()
+```
+
+A chave estrangeira fk_tipo_obra não é encontrada em nenhuma outra tabela, assim como fk_tipo_execucao.
+
+Vejamos a tabela de localidade, referente a chave estrangeira de obras:
+
+```{r}
+localidade %>% 
+    str()
+```
+
+Vemos que a tabela de localidades é referente à cidade, mas também contém informações de unidade federativa, mesoregião, microregião, etc.
+
+Vejamos a tabela de jurisdicionados, referente à chave estrangeira de obras:
+
+```{r}
+jurisdicionado_db2 %>% 
+    str()
+```
+
+Esta contém informações referentes ao jurisdicionado, onde o nome parece coincidir com a unidade gestora do banco de dados do SAGRES.
+
+Vejamos a tabela de complexos, referente à chave estrangeira de obras:
+
+```{r}
+complexo %>% 
+    str()
+```
+
+Podemos ver que a tabela de complexo complementa a de obra, visto que tem o tipo da obra.
+
+Vejamos a tabela de acompanhamento, a que de fato contém os pontos georeferenciados.
+
+```{r}
+acompanhamento %>% 
+    str()
+
+acompanhamento %>% 
+    filter(tipo_georeferenciamento == 1) %>% 
+    head()
+
+acompanhamento %>% 
+    filter(tipo_georeferenciamento == 2) %>% 
+    head()
+
+acompanhamento %>% 
+    filter(tipo_georeferenciamento == 3) %>% 
+    head()
+```
+
+Vemos que a geolocalização pode ser de três tipos, onde o 1 é uma lista de pares latitude e longitude, o tipo 2 é uma referência para um arquivo KML e o tipo 3 é apenas um par de latitude e longitude.
+
+```{r}
+# obra <- obra %>% 
+#     mutate_all(
+#         funs(na_if(., "-"))
+#     )
+# 
+# localidade <- localidade %>% 
+#     mutate_all(
+#         funs(na_if(., "-"))
+#     )
+# 
+# jurisdicionado_db2 <- jurisdicionado_db2 %>% 
+#     mutate_all(
+#         funs(na_if(., "-"))
+#     )
+# 
+# complexo <- complexo %>% 
+#     mutate_all(
+#         funs(na_if(., "-"))
+#     )
+# 
+# acompanhamento <- acompanhamento %>% 
+#     mutate_at(
+#         vars(-data_cadastro),
+#         funs(na_if(., "-"))
+#     )
+```
+
+Vejamos os dados faltantes na tabela de obras:
+
+```{r}
+anomalies(obra)
+```
+
+Vemos que exceto o numero do protocolo tramita que 0.05% das observações são nulas, nenhuma outra coluna tem observações nulas, porém a porcentagem de zeros chega a 97,36% em dimensão e 79,06% no valor da obra. Apesar de acusar 99,1% de zeros na coluna de obras canceladas, é uma coluna com tipo lógico, faz sentido que a maioria das obras não sejam canceladas, o que também acontece na coluna de obras incorporáveis ao patrimônio, onde acusa que 91,29% das obras tem valor zero.
+
+Apesar da maioria das colunas 
+
+```{r}
+
+```
+
+
+```{r}
+obra %>% 
+    summarise_all(
+        funs(sum(ifelse(is.na(.), 1, 0)) / n())
+        ) %>% 
+    t() %>% 
+    data.frame() %>% 
+    rename_all(valor = .)
+
+```
+
+
+```{r}
+# obra %>% 
+#     filter_all(
+#         any_vars(nchar(.) < 5)
+#     )
 ```
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
-dbDisconnect(con)
+dbDisconnect(con1)
+dbDisconnect(con2)
 ```
+
 
