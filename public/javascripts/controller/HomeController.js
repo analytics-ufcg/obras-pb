@@ -1,17 +1,17 @@
 angular.module('obrasPb').controller('HomeController', HomeController);
 
-HomeController.$inject = ['ObrasService'];
+HomeController.$inject = ['ObrasService', "$filter"];
 
-function HomeController(ObrasService) {
+function HomeController(ObrasService, $filter) {
     var self = this;
 
     self.fields = [
         {name: 'cd_UGestora', description: 'Id Unidade Gestora'},
         {name: 'de_UGestora', description : "Unidade Gestora"},
-        {name: 'dt_Ano', description: "Ano"},
-        {name: 'de_Localizacao', description: "Local"},
-        {name: 'de_Sucinta', description: "Descrição"},
-        {name: 'vl_Obra', description: "Valor em R$"}
+        {name: 'dt_Ano', description: "Ano" },
+        {name: 'de_Localizacao', description: "Local" },
+        {name: 'de_Sucinta', description: "Descrição" },
+        {name: 'vl_Obra', description: "Valor em R$" }
     ];
 
     const DEFAULT_PAGE_SIZE = 5;
@@ -40,9 +40,11 @@ function HomeController(ObrasService) {
                 self.obras = result.data.lista;
                 self.numberOfBuildings = result.headers(COUNT_BUILDINGS_HEADER);
                 self.obras = self.obras.map(function(obra) {
+                    obra.vl_Obra = $filter('currency')(obra.vl_Obra, "R$");
                     obra.fields = SHOWN_FIELDS;
                     return obra;
                 });
+                
             }).
             catch(function (err) {
                 console.log(err);
