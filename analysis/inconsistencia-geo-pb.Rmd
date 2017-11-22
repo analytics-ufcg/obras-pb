@@ -5,9 +5,12 @@ output: html_document
 ---
 
 ```{r, message=FALSE, warning=FALSE}
+library(knitr)
 library(tidyverse)
 library(RPostgreSQL)
 library(config)
+#devtools::install_github("sicarul/xray")
+library(xray)
 ```
 
 Criando conexão:
@@ -36,7 +39,7 @@ con2 <- DBI::dbConnect(drv,
 Importando dados:
 
 ```{r}
-acompanhamento <- dbGetQuery(con1, "select * from t_acompanhamento") 
+acompanhamento <- dbGetQuery(con1, "select * from t_acompanhamento")
 complexo <- dbGetQuery(con1, "select * from t_complexo")       
 convenio <- dbGetQuery(con1, "select * from t_convenio")         
 empenhos_medicao <- dbGetQuery(con1, "select * from t_empenhos_medicao")
@@ -156,6 +159,89 @@ acompanhamento %>%
 ```
 
 Vemos que a geolocalização pode ser de três tipos, onde o 1 é uma lista de pares latitude e longitude, o tipo 2 é uma referência para um arquivo KML e o tipo 3 é apenas um par de latitude e longitude.
+
+Vejamos os dados faltantes na tabela de obras:
+
+```{r}
+anomalies(obra)
+```
+
+Vemos que exceto o numero do protocolo tramita que 0.05% das observações são nulas, nenhuma outra coluna tem observações nulas, porém a porcentagem de zeros chega a 97,36% em dimensão e 79,06% no valor da obra. Apesar de acusar 99,1% de zeros na coluna de obras canceladas, é uma coluna com tipo lógico, faz sentido que a maioria das obras não sejam canceladas, o que também acontece na coluna de obras incorporáveis ao patrimônio, onde acusa que 91,29% das obras tem valor zero.
+
+Apesar da maioria das colunas não apresentarem valores nulos ou zeros, muitas delas possuem valores sem significado, por exemplo:
+
+```{r}
+obra %>% 
+    group_by(numero_contrato) %>% 
+    summarise(quantidade = n()) %>% 
+    arrange(-quantidade)
+```
+
+Existem 18567 números de contrato 0000, assim como 30 com valor "-".
+
+Do mesmo modo, a coluna referente à descrição sucinta da obra tem alguns valores não nulos, mas sem significado:
+```{r}
+obras.sem.descricao <- obra %>% 
+    filter(str_count(descricao_sucinta_obra, "[:alpha:]|[:blank:]") / nchar(descricao_sucinta_obra) < 0.6)
+
+obras.sem.descricao %>% 
+    head()
+
+(obras.sem.descricao %>% count()) / (obra %>% count()) * 100
+```
+
+Onde existem 1.5% de dados com mais de 40% da palavra composta por caracteres diferente do alfabeto.
+
+Da mesma forma, a descrição da localidade tem vários valores sem significados:
+
+```{r}
+obras.sem.localidade <- obra %>% 
+    filter(str_count(descricao_localidade, "[:alpha:]|[:blank:]") / nchar(descricao_localidade) < 0.6)
+
+obras.sem.localidade %>% 
+    head()
+
+(obras.sem.localidade %>% count()) / (obra %>% count()) * 100
+```
+
+É possível ver que 1,58% das obras tem localidade composta por mais de 40% de caracteres diferente do alfabeto.
+
+Vejamos os dados faltantes de jurisdicionados:
+
+```{r}
+anomalies(jurisdicionado_db2)
+```
+
+Vemos que em 28,24% dos dados, o código do sagres é vazio e em 9,73% dos dados a esfera é nula.
+
+Vejamos agora os dados das localidades:
+
+```{r}
+anomalies(localidade)
+```
+
+Vemos que várias colunas da localidade tem 95,98% dos valores faltantes, como codigo_ibge, esfera, bandeira, brasao, link_ibge e link_wikipedia.
+
+Agora pelo complexo:
+
+```{r}
+anomalies(complexo)
+```
+
+Vemos que os dados de complexo parecem ser bem completos, não tendo dados faltantes, visto que a coluna cancelled é um boolean, onde nenhum complexo foi cancelado. Apesar disso, duas descrições não fazem sentido: 
+
+```{r}
+complexo %>% 
+    filter(str_count(descricao, "[:alpha:]|[:blank:]") / nchar(descricao) < 0.6)
+```
+
+Por último, vejamos os dados faltantes da tabela de acompanhamento:
+
+```{r}
+anomalies(acompanhamento)
+```
+
+Vemos que tanto o tipo do georeferenciamento, quanto o valor do mesmo em 98,9% das linhas tem valor igual a zero.
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 dbDisconnect(con1)
