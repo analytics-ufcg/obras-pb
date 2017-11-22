@@ -161,3 +161,129 @@ Vemos que a geolocalização pode ser de três tipos, onde o 1 é uma lista de p
 dbDisconnect(con1)
 dbDisconnect(con2)
 ```
+
+
+
+```{r}
+
+######################################TRATANDO OS DADOS E JUNTANDO AS TABELAS######################################
+
+jurisdicionado_db2_filtrado <- 
+    jurisdicionado_db2 %>% 
+    select(id, nome)
+
+
+localidade_filtrado <-
+    localidade %>% 
+    select(mesoregiao, microregiao, nome, id) %>%
+    mutate(municipio = nome) %>%
+    select(-nome)
+
+obra_filtrado <- 
+    obra %>%
+    select(fk_jurisdicionado, fk_localidade, descricao_localidade, descricao_sucinta_obra, valor_obra)
+
+
+join_obras_jurisdicionado <- 
+    base::merge(x = obra_filtrado, y = jurisdicionado_db2_filtrado, by.x = "fk_jurisdicionado", by.y = "id") %>%
+    select(-fk_jurisdicionado)
+
+join_obras_jurisdicionado <-
+    base::merge(join_obras_jurisdicionado, localidade_filtrado, by.x="fk_localidade", by.y="id") %>%
+    select(-fk_localidade)
+
+######################################CRIANDO OS DATASETS QUE SERÃO PLOTADOS######################################
+
+obras_por_mesoregiao <-
+    join_obras_jurisdicionado %>% 
+    group_by(mesoregiao) %>% 
+    summarize(total_obras = sum(valor_obra))
+
+
+obras_por_microregiao <-
+    join_obras_jurisdicionado %>% 
+    group_by(microregiao) %>% 
+    summarize(total_obras = sum(valor_obra))
+
+obras_por_municipio_top20 <-
+    join_obras_jurisdicionado %>% 
+    group_by(municipio) %>% 
+    summarize(total_obras = sum(valor_obra)) %>% 
+    top_n(20)
+
+obras_por_orgao_top20 <-
+    join_obras_jurisdicionado %>% 
+    group_by(nome) %>% 
+    summarize(total_obras = sum(valor_obra)) %>% 
+    top_n(20)
+
+obras_por_orgao_quantidade_top20 <-
+    plyr::count(join_obras_jurisdicionado, 'municipio') %>%
+    top_n(20)
+
+######################################PLOTANDO OS FRÁFICOS######################################
+
+UM_MILHAO = 1000000
+
+obras_por_mesoregiao %>%
+    filter(total_obras != 0) %>%
+    mutate(total_obras = total_obras/ UM_MILHAO) %>%
+    ggplot(aes(x = reorder(mesoregiao, -total_obras), y = total_obras)) + 
+    geom_col() + 
+    labs(title = "Gastos com obras por mesorregião", x="Mesorregião", y = "Valor gasto (milhões de R$)")
+
+
+obras_por_microregiao %>%
+    filter(total_obras != 0) %>%
+    mutate(total_obras = total_obras/ UM_MILHAO) %>%
+    ggplot(aes(x = reorder(microregiao, -total_obras), y = total_obras)) + 
+    geom_col() + 
+    labs(title = "Gastos com obras por microrregião", x="Microrregião", y = "Valor gasto (milhões de R$)") + 
+    coord_flip()
+
+
+obras_por_municipio_top20 %>%
+    filter(total_obras != 0) %>%
+    mutate(total_obras = total_obras/ UM_MILHAO) %>%
+    ggplot(aes(x = reorder(municipio, -total_obras), y = total_obras)) + 
+    geom_col() + 
+    labs(title = "Top 20 dos municípios que mais gastam", x="Município", y = "Valor gasto (milhões de R$)") + 
+    coord_flip()
+
+
+obras_por_orgao_top20 %>%
+    filter(total_obras != 0) %>%
+    mutate(total_obras = total_obras/ UM_MILHAO) %>%
+    ggplot(aes(x = reorder(nome, -total_obras), y = total_obras)) + 
+    geom_col() + 
+    labs(title = "Top 20 dos orgãos públicos que mais gastam", x="Orgão", y = "Valor gasto (milhões de R$)") + 
+    coord_flip()
+
+
+obras_por_orgao_quantidade_top20 %>%
+    ggplot(aes(x = reorder(municipio, -freq), y = freq)) + 
+    geom_col() + 
+    coord_flip() +
+    labs(title = "Top 20 dos orgãos públicos com maior quantidade de obras", x="Orgão", y = "Número de obras")
+
+
+
+plotly::plot_ly(
+    join_obras_jurisdicionado %>% filter(valor_obra > UM_MILHAO) %>% group_by(mesoregiao),
+    x = ~mesoregiao,
+    y = ~log(valor_obra),
+    color = ~mesoregiao,
+    type = "box",
+    boxpoints = "outliers",
+    text = ~paste("<b>Valor: </b>", valor_obra)
+) %>%
+    plotly::layout(title = "Obras com valores extremos")
+
+
+```
+
+
+
+
+
+
