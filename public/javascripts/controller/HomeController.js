@@ -39,12 +39,16 @@ function HomeController(ObrasService, $filter) {
         ).then(function (result) {
                 self.obras = result.data.lista;
                 self.numberOfBuildings = result.headers(COUNT_BUILDINGS_HEADER);
+            console.log(self.obras);
                 self.obras = self.obras.map(function(obra) {
                     obra.vl_Obra = $filter('currency')(obra.vl_Obra, "R$");
+                    obra.de_Localizacao = $filter('capitalize')(obra.de_Localizacao);
+                    obra.de_Sucinta = $filter('capitalize')(obra.de_Sucinta);
+
                     obra.fields = SHOWN_FIELDS;
                     return obra;
                 });
-                
+            console.log(self.obras);
             }).
             catch(function (err) {
                 console.log(err);
