@@ -391,7 +391,10 @@ anomalies.acompanhamento$problem_variables %>%
 
 Vemos que tanto o tipo do georeferenciamento, quanto o valor do mesmo em 98,9% das linhas tem valor igual a zero.
 
-```{r, warning=FALSE, message=FALSE, echo=FALSE}
+```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
 dbDisconnect(con1)
 dbDisconnect(con2)
 ```
+
+---
+
