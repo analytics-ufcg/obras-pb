@@ -9,6 +9,9 @@ GET     /                           controllers.HomeController.index
 # Example http://<application-ip>:<application-port>/buildings?limit=<limit-value>&page=<page-number>&metadata=<true/false>&orderingField=<ordering-field>&fields=<field1,field2,...>&filterBy=<Sua_Busca>
 GET     /buildings                  controllers.DBController.getBuildings(limit: Int ?= 5, page: Int ?= 1, metadata : Int ?= 1, orderingField: String ?= "cd_Ugestora", fields: String ?= "*", filterBy: String ?= "")
 
+#Get a Report of inconsistencies from the review of the GeoObras.
+
+
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

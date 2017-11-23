@@ -2,6 +2,7 @@ angular.module('obrasPb').config(['$stateProvider', '$urlRouterProvider', functi
 
     $urlRouterProvider.when("", "/home");
     $urlRouterProvider.when("/", "/home");
+    $urlRouterProvider.when("/report", "/report");
 
     $urlRouterProvider.otherwise("/home");
 
@@ -12,4 +13,10 @@ angular.module('obrasPb').config(['$stateProvider', '$urlRouterProvider', functi
             controller: 'HomeController as homeCtrl'
         });
 
+    $stateProvider
+        .state('report', {
+            url: '/report',
+            templateUrl: '/assets/views/relatorio-inconsistencias.html',
+            controller: 'HomeController as homeCtrl'
+        })
 }]);
