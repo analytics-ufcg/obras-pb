@@ -1,7 +1,10 @@
 ---
 title: "Inconsistência Geo-PB"
 date: "November 20, 2017"
-output: html_document
+output: 
+    html_document:
+        fig_height: 10
+        fig_width: 13
 ---
 
 ```{r, message=FALSE, warning=FALSE}
@@ -164,9 +167,11 @@ dbDisconnect(con2)
 
 
 
-```{r}
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 
 ######################################TRATANDO OS DADOS E JUNTANDO AS TABELAS######################################
+
+UM_MILHAO = 1000000
 
 jurisdicionado_db2_filtrado <- 
     jurisdicionado_db2 %>% 
@@ -221,9 +226,62 @@ obras_por_orgao_quantidade_top20 <-
     plyr::count(join_obras_jurisdicionado, 'municipio') %>%
     top_n(20)
 
-######################################PLOTANDO OS FRÁFICOS######################################
+outliers_borborema <-
+    join_obras_jurisdicionado %>%
+    filter(mesoregiao == "Borborema" & log(valor_obra) > 16)
 
-UM_MILHAO = 1000000
+outliers_sertao <-
+    join_obras_jurisdicionado %>%
+    filter(mesoregiao == "Sertão Paraibano" & log(valor_obra) > 16)
+
+outliers_mata <-
+    join_obras_jurisdicionado %>%
+    filter(mesoregiao == "Mata Paraibana" & log(valor_obra) > 17)
+
+outliers_agreste <-
+    join_obras_jurisdicionado %>%
+    filter(mesoregiao == "Agreste Paraibano" & log(valor_obra) > 16)
+
+outliers <- rbind(outliers_agreste, outliers_borborema, outliers_mata, outliers_sertao)
+
+mediana_mesoregiao <-
+    join_obras_jurisdicionado %>%
+    filter(valor_obra > UM_MILHAO) %>%
+    group_by(mesoregiao) %>%
+    summarise(mediana = median(valor_obra))
+
+mediana_microregiao <-
+    join_obras_jurisdicionado %>%
+    filter(valor_obra > UM_MILHAO) %>%
+    group_by(microregiao) %>%
+    summarise(mediana = median(valor_obra))
+
+
+getMedianaMicro <- function(microregiao) {
+    mediana <- mediana_microregiao$mediana[mediana_microregiao$microregiao == microregiao]
+    return(format(mediana/UM_MILHAO, digits = 2))
+}
+
+getMedianaMeso <- function(mesoregiao) {
+    mediana <- mediana_mesoregiao$mediana[mediana_mesoregiao$mesoregiao == mesoregiao]
+    return(format(mediana/UM_MILHAO, digits = 2))
+}
+
+breakString <- function(s) {
+    s <- trimws(s)
+    return(gsub('(.{1,45})(\\s|$)', '\\1\n', s))
+}
+
+```
+
+
+<h1>Obras com valores extremos</h1>
+
+Faremos agora uma análise sobre as obras que possuem valores distoantes das demais. Para isso vamos visualizar alguns gráficos para tentar entender melhor onde podem estar esses valores extremos.<br>
+
+
+```{r}
+######################################PLOTANDO OS FRÁFICOS######################################
 
 obras_por_mesoregiao %>%
     filter(total_obras != 0) %>%
@@ -231,8 +289,11 @@ obras_por_mesoregiao %>%
     ggplot(aes(x = reorder(mesoregiao, -total_obras), y = total_obras)) + 
     geom_col() + 
     labs(title = "Gastos com obras por mesorregião", x="Mesorregião", y = "Valor gasto (milhões de R$)")
+```
 
 
+
+```{r}
 obras_por_microregiao %>%
     filter(total_obras != 0) %>%
     mutate(total_obras = total_obras/ UM_MILHAO) %>%
@@ -240,8 +301,10 @@ obras_por_microregiao %>%
     geom_col() + 
     labs(title = "Gastos com obras por microrregião", x="Microrregião", y = "Valor gasto (milhões de R$)") + 
     coord_flip()
+```
 
 
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 obras_por_municipio_top20 %>%
     filter(total_obras != 0) %>%
     mutate(total_obras = total_obras/ UM_MILHAO) %>%
@@ -250,7 +313,10 @@ obras_por_municipio_top20 %>%
     labs(title = "Top 20 dos municípios que mais gastam", x="Município", y = "Valor gasto (milhões de R$)") + 
     coord_flip()
 
+```
 
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 obras_por_orgao_top20 %>%
     filter(total_obras != 0) %>%
     mutate(total_obras = total_obras/ UM_MILHAO) %>%
@@ -258,27 +324,51 @@ obras_por_orgao_top20 %>%
     geom_col() + 
     labs(title = "Top 20 dos orgãos públicos que mais gastam", x="Orgão", y = "Valor gasto (milhões de R$)") + 
     coord_flip()
+```
 
 
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 obras_por_orgao_quantidade_top20 %>%
     ggplot(aes(x = reorder(municipio, -freq), y = freq)) + 
     geom_col() + 
     coord_flip() +
     labs(title = "Top 20 dos orgãos públicos com maior quantidade de obras", x="Orgão", y = "Número de obras")
+```
 
 
-
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 plotly::plot_ly(
     join_obras_jurisdicionado %>% filter(valor_obra > UM_MILHAO) %>% group_by(mesoregiao),
     x = ~mesoregiao,
     y = ~log(valor_obra),
     color = ~mesoregiao,
     type = "box",
-    boxpoints = "outliers",
-    text = ~paste("<b>Valor: </b>", valor_obra)
+    boxpoints = "suspectedoutliers"
 ) %>%
-    plotly::layout(title = "Obras com valores extremos")
+    plotly::layout(title = "Obras com valores extremos (considerando apenas obras com valor maior que um milhão)", xaxis=list(title="Mesorregião"), yaxis=list(title="Valor da obra em escala logarítimica"))
+```
 
+
+Agora que temos noção de quais são as obras distoantes podemos separar estas e mostrá-las em um gráfico interativo. Veja o gráfico abaixo com mais informações sobre essas obras.
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+outliers_ggplot <- 
+    outliers %>% 
+    mutate(mediana_meso = lapply(mesoregiao, getMedianaMeso), mediana_micro = lapply(microregiao, getMedianaMicro)) %>%
+    ggplot(aes(y = valor_obra/UM_MILHAO, x = municipio, color = mesoregiao, 
+               text = paste0("<b>Orgão: </b>", nome,
+                             "<br><b>Valor:</b> R$", format(valor_obra/UM_MILHAO, digits = 2), " milhões", 
+                             "<br><b>Mediana da mesoregião: </b>R$", mediana_meso, " milhões",
+                             "<br><b>Mediana da microrregião: </b>R$", mediana_micro, " milhões",
+                             "<br><b>Local da obra: </b>", breakString(descricao_localidade), 
+                             "<b>Descrição: </b>", breakString(descricao_sucinta_obra)))) + 
+    geom_point(alpha = .7) + 
+    coord_flip() +
+    labs(title = "Obras com valores extremos", x="Município", y = "Valor da obra em milões de R$")
+    
+
+plotly::ggplotly(outliers_ggplot, tooltip=c("text"))
 
 ```
 
