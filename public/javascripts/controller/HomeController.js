@@ -1,8 +1,8 @@
 angular.module('obrasPb').controller('HomeController', HomeController);
 
-HomeController.$inject = ['ObrasService', "$filter"];
+HomeController.$inject = ['ObrasService', "$filter", "$state"];
 
-function HomeController(ObrasService, $filter) {
+function HomeController(ObrasService, $filter, $state) {
     var self = this;
 
     self.fields = [
@@ -66,5 +66,12 @@ function HomeController(ObrasService, $filter) {
 
 
     self.getObras();
+
+    self.showReport = function() {
+        $state.go("report");
+    }
+
+
+
 
 }
