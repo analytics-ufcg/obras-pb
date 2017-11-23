@@ -21,6 +21,8 @@ conf/application.conf
 # Data
 analysis/data/
 analysis/config.yml
+analysis/*.html
 # R
 *.Rhistory
 *.Rproj.user
+.Rproj.user
