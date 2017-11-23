@@ -6,6 +6,7 @@ output: html_document
 
 ```{r, message=FALSE, warning=FALSE}
 library(knitr)
+library(kableExtra)
 library(tidyverse)
 library(RPostgreSQL)
 library(config)
@@ -89,7 +90,7 @@ user_profile_db2 <- dbGetQuery(con2, "select * from t_user_profile")
 
 ```
 
-Destas tabelas, apenas a de acompanhamento tem dados geo-referenciados, mas a principal tabela é a de obras, visto que estamos no escopo do GeoPB.
+Destas tabelas, apenas a de acompanhamento tem dados geo-referenciados, mas a principal tabela é a de obras, visto que estamos no escopo do GeoObras.
 
 Vejamos a tabela de obras:
 
@@ -110,7 +111,7 @@ Com isso, ela provavelmente se refere à tabela do db2, visto que existem observ
 jurisdicionado_db2 %>% count()
 ```
 
-A chave estrangeira fk_tipo_obra não é encontrada em nenhuma outra tabela, assim como fk_tipo_execucao.
+A chave estrangeira fk_tipo_obra não é encontrada em nenhuma outra tabela, assim como fk_tipo_execucao. Apesar de existir uma coluna planilha_contratada na tabela obras, não foi encontrada outra tabela que seja referenciada por essa coluna.
 
 Vejamos a tabela de localidade, referente a chave estrangeira de obras:
 
@@ -137,7 +138,32 @@ complexo %>%
     str()
 ```
 
-Podemos ver que a tabela de complexo complementa a de obra, visto que tem o tipo da obra.
+Podemos ver que a tabela de complexo complementa a de obra, visto que tem o tipo da obra. Além disso, cada complexo é referenciado por mais de uma obra, como podemos ver a seguir:
+
+```{r}
+obra %>% 
+    filter(!is.na(fk_complexo_obras)) %>% 
+    nrow()
+
+complexo %>% 
+    nrow()
+```
+
+Vemos que existe um complexo que é referenciado por 27920 obras.
+
+```{r}
+obra %>% 
+    group_by(fk_complexo_obras) %>% 
+    summarise(quantidade = n()) %>% 
+    arrange(-quantidade) %>% 
+    head() %>% 
+    kable()
+
+complexo %>% 
+    filter(id == 298)
+```
+
+Vemos que o complexo é fictício, visto que a descrição é IMPORTAÇÃO GEOPB.
 
 Vejamos a tabela de acompanhamento, a que de fato contém os pontos georeferenciados.
 
@@ -147,15 +173,19 @@ acompanhamento %>%
 
 acompanhamento %>% 
     filter(tipo_georeferenciamento == 1) %>% 
-    head()
+    arrange(valor_georeferenciamento) %>% 
+    head() %>% 
+    kable()
 
 acompanhamento %>% 
     filter(tipo_georeferenciamento == 2) %>% 
-    head()
+    head() %>% 
+    kable()
 
 acompanhamento %>% 
     filter(tipo_georeferenciamento == 3) %>% 
-    head()
+    head() %>% 
+    kable()
 ```
 
 Vemos que a geolocalização pode ser de três tipos, onde o 1 é uma lista de pares latitude e longitude, o tipo 2 é uma referência para um arquivo KML e o tipo 3 é apenas um par de latitude e longitude.
@@ -163,7 +193,9 @@ Vemos que a geolocalização pode ser de três tipos, onde o 1 é uma lista de p
 Vejamos os dados faltantes na tabela de obras:
 
 ```{r}
-anomalies(obra)
+anomalies(obra) %>% 
+    kable() %>% 
+    scroll_box(width = "900px", height = "500px")
 ```
 
 Vemos que exceto o numero do protocolo tramita que 0.05% das observações são nulas, nenhuma outra coluna tem observações nulas, porém a porcentagem de zeros chega a 97,36% em dimensão e 79,06% no valor da obra. Apesar de acusar 99,1% de zeros na coluna de obras canceladas, é uma coluna com tipo lógico, faz sentido que a maioria das obras não sejam canceladas, o que também acontece na coluna de obras incorporáveis ao patrimônio, onde acusa que 91,29% das obras tem valor zero.
@@ -174,7 +206,9 @@ Apesar da maioria das colunas não apresentarem valores nulos ou zeros, muitas d
 obra %>% 
     group_by(numero_contrato) %>% 
     summarise(quantidade = n()) %>% 
-    arrange(-quantidade)
+    arrange(-quantidade) %>% 
+    head() %>% 
+    kable()
 ```
 
 Existem 18567 números de contrato 0000, assim como 30 com valor "-".
@@ -185,10 +219,14 @@ obras.sem.descricao <- obra %>%
     filter(str_count(descricao_sucinta_obra, "[:alpha:]|[:blank:]") / nchar(descricao_sucinta_obra) < 0.6)
 
 obras.sem.descricao %>% 
-    head()
+    head() %>% 
+    kable()
+```
 
+```{r}
 (obras.sem.descricao %>% count()) / (obra %>% count()) * 100
 ```
+
 
 Onde existem 1.5% de dados com mais de 40% da palavra composta por caracteres diferente do alfabeto.
 
@@ -199,7 +237,8 @@ obras.sem.localidade <- obra %>%
     filter(str_count(descricao_localidade, "[:alpha:]|[:blank:]") / nchar(descricao_localidade) < 0.6)
 
 obras.sem.localidade %>% 
-    head()
+    head() %>% 
+    kable()
 
 (obras.sem.localidade %>% count()) / (obra %>% count()) * 100
 ```
@@ -209,7 +248,9 @@ obras.sem.localidade %>%
 Vejamos os dados faltantes de jurisdicionados:
 
 ```{r}
-anomalies(jurisdicionado_db2)
+anomalies(jurisdicionado_db2) %>% 
+    kable() %>% 
+    scroll_box(width = "900px", height = "500px")
 ```
 
 Vemos que em 28,24% dos dados, o código do sagres é vazio e em 9,73% dos dados a esfera é nula.
@@ -217,7 +258,9 @@ Vemos que em 28,24% dos dados, o código do sagres é vazio e em 9,73% dos dados
 Vejamos agora os dados das localidades:
 
 ```{r}
-anomalies(localidade)
+anomalies(localidade) %>% 
+    kable() %>% 
+    scroll_box(width = "900px", height = "500px")
 ```
 
 Vemos que várias colunas da localidade tem 95,98% dos valores faltantes, como codigo_ibge, esfera, bandeira, brasao, link_ibge e link_wikipedia.
@@ -225,20 +268,25 @@ Vemos que várias colunas da localidade tem 95,98% dos valores faltantes, como c
 Agora pelo complexo:
 
 ```{r}
-anomalies(complexo)
+anomalies(complexo) %>% 
+    kable() %>% 
+    scroll_box(width = "900px", height = "500px")
 ```
 
 Vemos que os dados de complexo parecem ser bem completos, não tendo dados faltantes, visto que a coluna cancelled é um boolean, onde nenhum complexo foi cancelado. Apesar disso, duas descrições não fazem sentido: 
 
 ```{r}
 complexo %>% 
-    filter(str_count(descricao, "[:alpha:]|[:blank:]") / nchar(descricao) < 0.6)
+    filter(str_count(descricao, "[:alpha:]|[:blank:]") / nchar(descricao) < 0.6) %>% 
+    kable()
 ```
 
 Por último, vejamos os dados faltantes da tabela de acompanhamento:
 
 ```{r}
-anomalies(acompanhamento)
+anomalies(acompanhamento) %>% 
+    kable() %>% 
+    scroll_box(width = "900px", height = "500px")
 ```
 
 Vemos que tanto o tipo do georeferenciamento, quanto o valor do mesmo em 98,9% das linhas tem valor igual a zero.
