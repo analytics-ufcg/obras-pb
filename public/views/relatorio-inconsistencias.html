@@ -247,7 +247,6 @@ $(document).ready(function () {
 <li>cancelled : um boolean que indica que algo relativo ao jurisdicionado foi cancelado</li>
 <li>esfera : a esfera da localidade</li>
 </ul>
-<p>O nome do jurisdicionado parece coincidir com a unidade gestora do banco de dados do SAGRES.</p>
 <p>Vejamos a tabela de complexos, referente à chave estrangeira de obras:</p>
 <pre class="r"><code>complexo %&gt;% 
     str()</code></pre>
@@ -2239,6 +2238,19 @@ obras.sem.localidade %&gt;%
 </tbody>
 </table>
 <p>Vemos que tanto o tipo do georeferenciamento, quanto o valor do mesmo em 98,9% das linhas tem valor igual a zero.</p>
+</div>
+<div id="conclusao" class="section level4">
+<h4>Conclusão</h4>
+<p>Após uma análise sobre os dados relativos à obras, destacamos alguns pontos importantes:</p>
+<ul>
+<li>Existem duas tabelas de jurisdicionado, uma na base vigia e outra na base cabobranco, porém só a da base cabobranco que contém dados.</li>
+<li>Tabela obra: ** Esta tabela tem referência para outras tabelas, como as colunas fk_tipo_obra, fk_tipo_execucao e planilha_contratada, porém não encontramos as tabelas que são apontadas por essas referências. ** Esta tabela tem 0.05% das observações são nulas na coluna número do protocolo tramita, a porcentagem de zeros chega a 97,36% na dimensão e 79,06% no valor da obra. ** Esta tabela tem 18567 números de contrato 0000, assim como 30 com valor “-”. ** Esta tabela tem 1.5% das descrições com mais de 40% composta por caracteres diferente do alfabeto. ** Esta tabela tem 1,58% das localidades com mais de 40% composta por caracteres diferente do alfabeto.</li>
+<li>Tabela jurisdicionado: ** Esta tabela tem 28,24% do código do sagres com valor zero e em 9,73% dos dados da esfera, 0,76% da chave estrangeira da localidade e 0,38% do município de importação são nulos.</li>
+<li>Tabela localidade: ** Algumas colunas da localidade tem 95,98% dos valores faltantes, como codigo_ibge, esfera, bandeira, brasao, link_ibge e link_wikipedia.</li>
+<li>Tabela complexo: ** Dois complexos se destacaram das demais, por terem descrição “12412341234” e “21342134” ** 27920 complexos tem descrição “IMPORTAÇÃO GEOPB”.</li>
+<li>Tabela acompanhamento: ** O tipo do georeferenciamento e o valor do mesmo em 98,9% das linhas tem valor igual a zero.</li>
+</ul>
+<p>Algumas destas observações são características de dados legados, onde existem colunas cujos valores tem significados especiais, porém identificamos os mesmos para entender como lidar com estas características do banco de dados.</p>
 <hr />
 </div>
 
