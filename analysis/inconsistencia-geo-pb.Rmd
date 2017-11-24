@@ -27,16 +27,6 @@ con1 <- DBI::dbConnect(drv,
   dbname = config::get("dbname1")
 )
 
-con2 <- DBI::dbConnect(drv, 
-  host = config::get("host"),
-  port = config::get("port"),
-  user = config::get("user"),
-  password = config::get("password"),
-  dbname = config::get("dbname2")
-)
-```
-
-```{r, message=FALSE, warning=FALSE, echo=FALSE}
 # Importando dados:
 acompanhamento <- dbGetQuery(con1, "select * from t_acompanhamento")
 complexo <- dbGetQuery(con1, "select * from t_complexo")       
@@ -65,7 +55,19 @@ tipo_jurisdicionado_db1 <- dbGetQuery(con1, "select * from t_tipo_jurisdicionado
 user_db1 <- dbGetQuery(con1, "select * from t_user")
 user_api_db1 <- dbGetQuery(con1, "select * from t_user_api")
 user_profile_db1 <- dbGetQuery(con1, "select * from t_user_profile")
+```
 
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+# Criando conexão
+con2 <- DBI::dbConnect(drv, 
+  host = config::get("host"),
+  port = config::get("port"),
+  user = config::get("user"),
+  password = config::get("password"),
+  dbname = config::get("dbname2")
+)
+
+# Importando os dados
 play_evolutions <- dbGetQuery(con2, "select * from play_evolutions")
 contato <- dbGetQuery(con2, "select * from t_contato")
 endereco <- dbGetQuery(con2, "select * from t_endereco")
@@ -90,7 +92,9 @@ user_profile_db2 <- dbGetQuery(con2, "select * from t_user_profile")
 
 #### Descrição dos dados
 
-Das tabelas existentes no banco de dados do TCE, apenas a de acompanhamento tem dados geo-referenciados, mas a principal tabela é a de obras, visto que estamos no escopo do Geo Obras.
+Os dados utilizados nessa análise são provenientes do banco de dados do TCE/PB, mais específicamente as bases de dados cabobranco e vigia, as quais são utilizadas na aplicação GEO Obras.
+
+Como existem 46 tabelas nesse banco de dados, analisaremos apenas as que estão bastante atreladas as obras, visto que neste banco de dados existem também outros dados necessários para a aplicação rodar. Com isso, analisaremos a tabela obra, as que são referenciadas por esta, bem como a tabela de acompanhamento.
 
 Vejamos a tabela de obras:
 
