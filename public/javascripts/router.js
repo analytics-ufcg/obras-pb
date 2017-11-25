@@ -16,7 +16,6 @@ angular.module('obrasPb').config(['$stateProvider', '$urlRouterProvider', functi
     $stateProvider
         .state('report', {
             url: '/report',
-            templateUrl: '/assets/views/relatorio-inconsistencias.html',
-            controller: 'HomeController as homeCtrl'
+            templateUrl: '/assets/views/inconsistencia-geo-pb.html'
         })
 }]);

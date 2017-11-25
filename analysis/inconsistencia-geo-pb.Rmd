@@ -1,7 +1,10 @@
 ---
-title: "Inconsistência Geo-PB"
+title: "Análise investigativa Geo-PB"
 date: "November 20, 2017"
-output: html_document
+output: 
+    html_notebook:
+        toc: true
+        toc_float: true
 ---
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
@@ -11,6 +14,8 @@ library(kableExtra)
 library(tidyverse)
 library(RPostgreSQL)
 library(config)
+library(stringr)
+library(plotly)
 #devtools::install_github("sicarul/xray")
 library(xray)
 ```
@@ -90,12 +95,13 @@ user_profile_db2 <- dbGetQuery(con2, "select * from t_user_profile")
 
 ```
 
-#### Descrição dos dados
+##Introdução
 
 Os dados utilizados nessa análise são provenientes do banco de dados do TCE/PB, mais específicamente as bases de dados cabobranco e vigia, as quais são utilizadas na aplicação GEO Obras.
 
 Como existem 46 tabelas nesse banco de dados, analisaremos apenas as que estão bastante atreladas as obras, visto que neste banco de dados existem também outros dados necessários para a aplicação rodar. Com isso, analisaremos a tabela obra, as que são referenciadas por esta, bem como a tabela de acompanhamento.
 
+##Tabela obras
 Vejamos a tabela de obras:
 
 ```{r}
@@ -122,7 +128,9 @@ Na tabela de obras existem 16 colunas, onde temos:
 * fk_complexo_obras           : uma chave estrangeira para o complexo da obra
 * cancelled                   : um boolean que indica se a obra foi cancelada ou não
 
-Como falado acima, existe uma foreign key para o jurisdicionado, mas a tabela de jurisdicionado do db vigia é vazia.
+###Chave estrangeira jurisdicionado
+
+Como falado acima, existe uma chave estrangeira para o jurisdicionado, mas a tabela de jurisdicionado do db vigia é vazia.
 
 ```{r}
 jurisdicionado_db1 %>% count()
@@ -134,9 +142,12 @@ Com isso, ela provavelmente se refere à tabela do db cabobranco, visto que exis
 jurisdicionado_db2 %>% count()
 ```
 
+###Chaves estrangeiras desconhecidas
+
 A chave estrangeira fk_tipo_obra não é encontrada em nenhuma outra tabela, assim como fk_tipo_execucao. Apesar de existir uma coluna planilha_contratada na tabela obras, não foi encontrada outra tabela que contenha estas planilhas.
 
-Vejamos a tabela de localidade, referente a chave estrangeira de obras:
+###Chave estrangeira localidade
+Vejamos a tabela de localidade, referente a chave estrangeira fk_localidade da tabela obras:
 
 ```{r}
 localidade %>% 
@@ -162,7 +173,10 @@ Na tabela de localidades também existem 16 colunas, onde temos:
 * esfera            : a esfera da localidade
 * cancelled         : um boolean que provavelmente indica se algo da localidade foi cancelado
 
-Vejamos a tabela de jurisdicionados, referente à chave estrangeira de obras:
+
+
+##Tabela jurisdicionados
+Vejamos agora a tabela de jurisdicionados, referente à chave estrangeira de obras:
 
 ```{r}
 jurisdicionado_db2 %>% 
@@ -183,6 +197,10 @@ Na tabela de jurisdicionados existem 12 colunas, onde temos:
 * tramita_id           : o id do tramita
 * cancelled            : um boolean que indica que algo relativo ao jurisdicionado foi cancelado 
 * esfera               : a esfera da localidade
+
+O nome do jurisdicionado parece coincidir com a unidade gestora do banco de dados do SAGRES.
+
+##Tabela complexos
 
 Vejamos a tabela de complexos, referente à chave estrangeira de obras:
 
@@ -210,6 +228,8 @@ complexo %>%
     nrow()
 ```
 
+##Tabela acompanhamento
+
 Vejamos a tabela de acompanhamento, a que de fato contém os pontos georeferenciados.
 
 ```{r}
@@ -226,6 +246,8 @@ Na tabela de acompanhamentos existem 5 colunas, onde temos:
 * fk_obra                 : a chave estrangeira para a obra
 * cancelled               : um boolean que indica que algo relativo ao acompanhamento foi cancelado
 * data_cadastro           : a data de cadastro do acompanhamento
+
+###Tipos de acompanhamento
 
 Vejamos os tipos de acompanhamento
 
@@ -254,7 +276,9 @@ acompanhamento %>%
 
 Vemos que a geolocalização pode ser de quatro tipos, onde o 0 é quando não existe georeferenciamento, 1 é uma lista de pares latitude e longitude, o tipo 2 é uma referência para um arquivo KML, o qual não foi encontrado na base de dados, e o tipo 3 é apenas um par de latitude e longitude.
 
-#### Inconsistência dos dados
+##Dados faltantes
+
+###Tabela obras
 
 Vejamos os dados faltantes na tabela de obras:
 
@@ -301,7 +325,7 @@ obras.sem.descricao %>%
 
 Onde existem 1.5% de dados com mais de 40% da palavra composta por caracteres diferente do alfabeto.
 
-Da mesma forma, a descrição da localidade tem vários valores sem significados:
+Da mesma forma, a descrição da localidade tem vários valores sem significado:
 
 ```{r}
 obras.sem.localidade <- obra %>% 
@@ -317,6 +341,7 @@ obras.sem.localidade %>%
 
 É possível ver que 1,58% das obras tem localidade composta por mais de 40% de caracteres diferente do alfabeto.
 
+###Tabela jurisdicionados
 Vejamos os dados faltantes de jurisdicionados:
 
 ```{r}
@@ -331,6 +356,7 @@ anomalies.jurisdicionado$problem_variables %>%
 
 Vemos que em 28,24% dos dados, o código do sagres é vazio e em 9,73% dos dados da esfera, 0,76% da chave estrangeira da localidade e 0,38% do município de importação são nulos. Da mesma forma que o anterior, as colunas previdenciario e cancelled são do tipo boolean, logo, faz sentido a maior parte deles terem apenas um valor.
 
+###Tabela localidade
 Vejamos agora os dados das localidades:
 
 ```{r}
@@ -345,6 +371,7 @@ anomalies.localidade$problem_variables %>%
 
 Vemos que várias colunas da localidade tem 95,98% dos valores faltantes, como codigo_ibge, esfera, bandeira, brasao, link_ibge e link_wikipedia.
 
+###Tabela complexo
 Agora pelo complexo:
 
 ```{r}
@@ -365,7 +392,7 @@ complexo %>%
     kable()
 ```
 
-Além disso, é possível ver que existe que várias obras referenciam um mesmo complexo. Podemos ver a seguir os complexos com mais obras:
+Além disso, é possível ver que várias obras referenciam um mesmo complexo. Podemos ver a seguir os complexos com mais obras:
 
 ```{r}
 obra %>% 
@@ -379,6 +406,7 @@ obra %>%
 
 Vemos que o complexo com mais obras é fictício, visto que a descrição é IMPORTAÇÃO GEOPB.
 
+###Tabela acompanhamento
 Por último, vejamos os dados faltantes da tabela de acompanhamento:
 
 ```{r}
@@ -393,7 +421,231 @@ anomalies.acompanhamento$problem_variables %>%
 
 Vemos que tanto o tipo do georeferenciamento, quanto o valor do mesmo em 98,9% das linhas tem valor igual a zero.
 
-#### Conclusão
+##Obras com valores distoantes
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+
+######################################TRATANDO OS DADOS E JUNTANDO AS TABELAS######################################
+
+UM_MILHAO = 1000000
+
+jurisdicionado_db2_filtrado <- 
+    jurisdicionado_db2 %>% 
+    select(id, nome)
+
+
+localidade_filtrado <-
+    localidade %>% 
+    select(mesoregiao, microregiao, nome, id) %>%
+    mutate(municipio = nome) %>%
+    select(-nome)
+
+obra_filtrado <- 
+    obra %>%
+    select(fk_jurisdicionado, fk_localidade, descricao_localidade, descricao_sucinta_obra, valor_obra)
+
+
+join_obras_jurisdicionado <- 
+    base::merge(x = obra_filtrado, y = jurisdicionado_db2_filtrado, by.x = "fk_jurisdicionado", by.y = "id") %>%
+    select(-fk_jurisdicionado)
+
+join_obras_jurisdicionado <-
+    base::merge(join_obras_jurisdicionado, localidade_filtrado, by.x="fk_localidade", by.y="id") %>%
+    select(-fk_localidade)
+
+######################################CRIANDO OS DATASETS QUE SERÃO PLOTADOS######################################
+
+obras_por_mesoregiao <-
+    join_obras_jurisdicionado %>% 
+    group_by(mesoregiao) %>% 
+    summarize(total_obras = sum(valor_obra))
+
+
+obras_por_microregiao <-
+    join_obras_jurisdicionado %>% 
+    group_by(microregiao) %>% 
+    summarize(total_obras = sum(valor_obra))
+
+obras_por_municipio_top20 <-
+    join_obras_jurisdicionado %>% 
+    group_by(municipio) %>% 
+    summarize(total_obras = sum(valor_obra)) %>% 
+    top_n(20)
+
+obras_por_orgao_top20 <-
+    join_obras_jurisdicionado %>% 
+    group_by(nome) %>% 
+    summarize(total_obras = sum(valor_obra)) %>% 
+    top_n(20)
+
+obras_por_orgao_quantidade_top20 <-
+    plyr::count(join_obras_jurisdicionado, 'municipio') %>%
+    top_n(20)
+
+outliers_borborema <-
+    join_obras_jurisdicionado %>%
+    filter(mesoregiao == "Borborema" & log(valor_obra) > 16)
+
+outliers_sertao <-
+    join_obras_jurisdicionado %>%
+    filter(mesoregiao == "Sertão Paraibano" & log(valor_obra) > 16)
+
+outliers_mata <-
+    join_obras_jurisdicionado %>%
+    filter(mesoregiao == "Mata Paraibana" & log(valor_obra) > 17)
+
+outliers_agreste <-
+    join_obras_jurisdicionado %>%
+    filter(mesoregiao == "Agreste Paraibano" & log(valor_obra) > 16)
+
+outliers <- rbind(outliers_agreste, outliers_borborema, outliers_mata, outliers_sertao)
+
+mediana_mesoregiao <-
+    join_obras_jurisdicionado %>%
+    filter(valor_obra > UM_MILHAO) %>%
+    group_by(mesoregiao) %>%
+    summarise(mediana = median(valor_obra))
+
+mediana_microregiao <-
+    join_obras_jurisdicionado %>%
+    filter(valor_obra > UM_MILHAO) %>%
+    group_by(microregiao) %>%
+    summarise(mediana = median(valor_obra))
+
+
+getMedianaMicro <- function(microregiao) {
+    mediana <- mediana_microregiao$mediana[mediana_microregiao$microregiao == microregiao]
+    return(format(mediana/UM_MILHAO, digits = 2))
+}
+
+getMedianaMeso <- function(mesoregiao) {
+    mediana <- mediana_mesoregiao$mediana[mediana_mesoregiao$mesoregiao == mesoregiao]
+    return(format(mediana/UM_MILHAO, digits = 2))
+}
+
+breakString <- function(s) {
+    s <- trimws(s)
+    return(gsub('(.{1,45})(\\s|$)', '\\1\n', s))
+}
+
+```
+
+Faremos agora uma análise sobre as obras que possuem valores distoantes das demais. Para isso vamos visualizar alguns gráficos para tentar entender melhor onde podem estar esses valores extremos.
+
+
+###Valor total das obras por mesorregião
+
+Podemos ver que, de acordo com os dados, a mesorregião da Borborema é a que mais gasta com obras, com um gasto total de mais de 1 bilhão e 250 milhões de reais. Isso chama bastante a atenção pois era de se esperar que a mesorregião da Mata Paraibana concentrasse a maior parte dos gastos uma vez que esta contém a capital do estado e sua região metropolitana.
+
+```{r}
+######################################PLOTANDO OS FRÁFICOS######################################
+
+obras_por_mesoregiao %>%
+    filter(total_obras != 0) %>%
+    mutate(total_obras = total_obras/ UM_MILHAO) %>%
+    ggplot(aes(x = reorder(mesoregiao, -total_obras), y = total_obras)) + 
+    geom_col() + 
+    labs(title = "Gastos com obras por mesorregião", x="Mesorregião", y = "Valor gasto (milhões de R$)")
+```
+
+###Valor total das obras por microrregião
+
+Agora veremos os gastos por microrregião para granularizar melhor as informações. De acordo com os dados a microrregião do Seridó Oriental Paraibano realizou gastos de mais de um bilhão de reais em obras, o que é no minímo alarmante pois essa microrregião possui uma população pequena e ainda sim gastou mais em obras do que a microrregião de João Pessoa que compreende a capital do estado e cidades populosas como Santa Rita e Bayeux.
+
+```{r}
+obras_por_microregiao %>%
+    filter(total_obras != 0) %>%
+    mutate(total_obras = total_obras/ UM_MILHAO) %>%
+    ggplot(aes(x = reorder(microregiao, -total_obras), y = total_obras)) + 
+    geom_col() + 
+    labs(title = "Gastos com obras por microrregião", x="Microrregião", y = "Valor gasto (milhões de R$)") + 
+    coord_flip()
+```
+###Municípios que mais gastam
+
+Tendo em vista que a microrregião do Seridó Oriental é a que mais gasta, veremos agora os 20 municípios que mais gastam em obras para tentar identificar gastos que possam ter contribuido para o valor tão elevado visto anteriormente. O município de Cubati (que possui 8000 habitantes segundo o senso do IBGE de 2016) da mesorregião do Seridó Oriental realizou, segundo os dados, gastos superiores a 1 bilhão de reais, o que nos leva a entender que este município é responsável pelos valores extremos vistos anteriormente.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+obras_por_municipio_top20 %>%
+    filter(total_obras != 0) %>%
+    mutate(total_obras = total_obras/ UM_MILHAO) %>%
+    ggplot(aes(x = reorder(municipio, -total_obras), y = total_obras)) + 
+    geom_col() + 
+    labs(title = "Top 20 dos municípios que mais gastam", x="Município", y = "Valor gasto (milhões de R$)") + 
+    coord_flip()
+
+```
+
+###Orgãos públicos que mais gastam
+
+A prefeitura de Cubati e o orgão que mais gasta, como era de devido ao gráfico anterior. A prefeitura do Conde também parece gastar além da conta, tendo gastos superiores a orgãos "maiores" como a Prefeitura de João Pessoa e a Prefeitura de Campina Grande.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+obras_por_orgao_top20 %>%
+    filter(total_obras != 0) %>%
+    mutate(total_obras = total_obras/ UM_MILHAO) %>%
+    ggplot(aes(x = reorder(nome, -total_obras), y = total_obras)) + 
+    geom_col() + 
+    labs(title = "Top 20 dos orgãos públicos que mais gastam", x="Orgão", y = "Valor gasto (milhões de R$)") + 
+    coord_flip()
+```
+
+###Municípios com maior quantidade de obras
+
+Nesse gráfico temos os municípios que mais realizaram obras, se não levarmos em conta as obras que possuem o município "Não informado" (que podem ser obras de qualquer município) temos um resultado interessante, o município de Manaíra (com população de 11.000 habitantes segundo o censo do IBGE de 2016) tem uma quantidade de obras maior do que municípios como Cabedelo (67.000 habitantes segundo o censo do IBGE de 2016).
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+obras_por_orgao_quantidade_top20 %>%
+    ggplot(aes(x = reorder(municipio, -freq), y = freq)) + 
+    geom_col() + 
+    coord_flip() +
+    labs(title = "Top 20 dos municípios com maior quantidade de obras", x="Município", y = "Número de obras")
+```
+
+
+###Separando as obras com valor extremo
+
+Agora que já temos uma noção de onde podem estar as obras com valores muito altos vamos utilziar boxplotes para tentar separa-las para posteriormente visualiza-las separadamente.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8) 
+plotly::plot_ly(
+    join_obras_jurisdicionado %>% filter(valor_obra > UM_MILHAO) %>% group_by(mesoregiao),
+    x = ~mesoregiao,
+    y = ~log(valor_obra),
+    color = ~mesoregiao,
+    type = "box",
+    boxpoints = "suspectedoutliers"
+) %>%
+    plotly::layout(title = "Obras com valores extremos (considerando apenas obras com valor maior que um milhão)", xaxis=list(title="Mesorregião"), yaxis=list(title="Valor da obra em escala logarítimica"))
+```
+
+###Obras mais caras do estado
+
+Graças ao gráfico acima, sabemos quais obras distoam das outras feitas em sua mesorregião e podemos mostrá-las em um gráfico interativo. No gráfico abaixo podemos ver essas obras e informações sobre elas como descrição, valor, mediana das obras da região e etc. Vejamos:
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+outliers_ggplot <- 
+    outliers %>% 
+    mutate(mediana_meso = lapply(mesoregiao, getMedianaMeso), mediana_micro = lapply(microregiao, getMedianaMicro)) %>%
+    ggplot(aes(y = valor_obra/UM_MILHAO, x = municipio, color = mesoregiao, 
+               text = paste0("<b>Orgão: </b>", nome,
+                             "<br><b>Valor:</b> R$", format(valor_obra/UM_MILHAO, digits = 2), " milhões", 
+                             "<br><b>Mediana da mesoregião: </b>R$", mediana_meso, " milhões",
+                             "<br><b>Mediana da microrregião: </b>R$", mediana_micro, " milhões",
+                             "<br><b>Local da obra: </b>", breakString(descricao_localidade), 
+                             "<b>Descrição: </b>", breakString(descricao_sucinta_obra)))) + 
+    geom_point(alpha = .7) + 
+    coord_flip() +
+    labs(title = "Obras com valores extremos", x="Município", y = "Valor da obra em milhões de R$")
+    
+
+plotly::ggplotly(outliers_ggplot, tooltip=c("text"))
+
+```
+
+## Conclusão
 
 Após uma análise sobre os dados relativos à obras, destacamos alguns pontos importantes:
 
@@ -414,12 +666,17 @@ Após uma análise sobre os dados relativos à obras, destacamos alguns pontos i
 * Tabela acompanhamento:
 ** O tipo do georeferenciamento e o valor do mesmo em 98,9% das linhas tem valor igual a zero.
 
+* Valores extremos:
+** Nós acreditamos que a obra mais cara encontrada (da prefeitura de Cubati) pode ser fruto de algum erro de digitação na hora da entrada dos dados. É necessário verificar isso.
+** A segunda obra mais cara (da prefeitura do Conde) também parece ser fruto de erro.
+
 Algumas destas observações são características de dados legados, onde existem colunas cujos valores tem significados especiais, porém identificamos os mesmos para entender como lidar com estas características do banco de dados.
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
 dbDisconnect(con1)
 dbDisconnect(con2)
 ```
+
 
 ---
 
