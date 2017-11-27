@@ -43,6 +43,29 @@
         <script src='@routes.Assets.versioned("resources/js/angular-filters.js")' type="text/javascript"></script>
 
 
+        <!-- begin navbar -->
+        <md-toolbar layout="row" layout-align="space-between center" class="md-hue-2" style="position: fixed; top: 0px;">
+            <div layout="row">
+                <img src="assets/resources/images/tce_128.png" height="50px;" layout-margin>
+                <h3>Obras - PB</h3>
+            </div>
+            <md-button ng-href="assets/views/inconsistencia-geo-pb.html">Análise investigativa</md-button>
+        </md-toolbar>
+        <!-- end navbar -->
+
         <ui-view></ui-view>
+
+        <!-- begin footer -->
+        <footer style="bottom: 0px; position: fixed; width: 100%;">
+            <md-toolbar class="md-scroll-shrink">
+                <div layout="row" layout-align="center center" layout-fill>
+                    <p>
+                    Esta aplicação lista todas as obras informadas ao TCE-PB do período de 2010 até os dias atuais.
+                        As informações aqui listadas são provenientes da base de dados SAGRES que pertence ao TCE-PB.
+                    </p>
+                </div>
+            </md-toolbar>
+        </footer>
+        <!-- end footer -->
     </body>
 </html>
