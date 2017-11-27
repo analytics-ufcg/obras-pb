@@ -5,6 +5,8 @@ output:
     html_document:
         toc: true
         toc_float: true
+        fig_width: 10
+        fig_heigth: 8  
 ---
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
@@ -627,7 +629,6 @@ Graças ao gráfico acima, sabemos quais obras distoam das outras feitas em sua 
 
 
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
-knitr::opts_chunk$set(fig.width=12, fig.height=8) 
 outliers_ggplot <- 
     outliers %>% 
     mutate(mediana_meso = lapply(mesoregiao, getMedianaMeso), mediana_micro = lapply(microregiao, getMedianaMicro)) %>%
