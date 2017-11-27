@@ -1,7 +1,10 @@
 ---
 title: "Análise investigativa Geo-PB"
 date: "November 20, 2017"
-output: html_document
+output: 
+    html_document:
+        toc: true
+        toc_float: true
 ---
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
