@@ -1,0 +1,58 @@
+---
+title: "Dados disponíveis por época"
+output: 
+    html_document:
+        toc: true
+        toc_float: true
+        fig_width: 10
+        fig_heigth: 8 
+---
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+library(tidyverse)
+library(RPostgreSQL)
+library(knitr)
+```
+
+
+##Introdução
+
+Os dados utilizados nessa análise são provenientes do banco de dados do TCE/PB, mais específicamente as bases de dados cabobranco e vigia, as quais são utilizadas na aplicação GEO Obras.
+
+O intuito deste ralatório é verificar a disponibilidade dos dados temporalmente, visto que algumas colunas só se tornaram obrigatórias depois de algum tempo.
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+drv <- DBI::dbDriver("PostgreSQL")
+
+con1 <- DBI::dbConnect(drv, 
+  host = config::get("host"),
+  port = config::get("port"),
+  user = config::get("user"),
+  password = config::get("password"),
+  dbname = config::get("dbname1")
+)
+
+obra <- dbGetQuery(con1, "select * from t_obra")        
+acompanhamento <- dbGetQuery(con1, "select * from t_acompanhamento")
+complexo <- dbGetQuery(con1, "select * from t_complexo")
+evolucao <- dbGetQuery(con1, "select * from t_evolucao")
+
+con2 <- DBI::dbConnect(drv, 
+  host = config::get("host"),
+  port = config::get("port"),
+  user = config::get("user"),
+  password = config::get("password"),
+  dbname = config::get("dbname2")
+)
+
+jurisdicionado_db2 <- dbGetQuery(con2, "select * from t_jurisdicionado")
+```
+
+Utilizaremos a tabela de evolucao e utilizaremos a data de início da obra para fazera análise temporal.
+
+```{r}
+evolucao %>% 
+    head() %>% 
+    kable()
+```
+
