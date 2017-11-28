@@ -423,6 +423,128 @@ anomalies.acompanhamento$problem_variables %>%
 
 Vemos que tanto o tipo do georeferenciamento, quanto o valor do mesmo em 98,9% das linhas tem valor igual a zero.
 
+##Ranking de cidades com dados faltantes
+
+Vamos ver quais cidades que tem mais dados faltantes:
+
+###Dados faltantes de valor de obras
+
+Vamos analisar inicialmente quais cidades tem mais dados faltantes no valor da obra:
+
+```{r}
+obra.localidade <- left_join(obra, localidade, by = c("fk_localidade" = "id"))
+
+valor.obra.zero <- obra.localidade %>% 
+    group_by(nome) %>% 
+    summarise(
+        total.obras = n(),
+        porcentagem.zeros = (sum(valor_obra == 0) / total.obras) * 100
+        )
+
+valor.obra.zero %>% 
+    ggplot(aes(x = "cidades", y = porcentagem.zeros, label = nome)) +
+        geom_boxplot() +
+        geom_text(check_overlap = TRUE, size = 4)
+```
+
+Vemos que a maioria das cidades tem uma grande porcentagem de valores das obras iguais a zero, onde a mediana é cerca de 80% de dados faltantes.
+
+```{r}
+valor.obra.zero %>% 
+    filter(porcentagem.zeros > 90) %>% 
+    arrange(-porcentagem.zeros) %>% 
+    kable()
+```
+
+Vemos que 26 cidades tem mais de 90% dos valores da obra iguais a zero, onde Bananeiras, Malta e Santa Cruz tem 100% dos valores das obras zerados. Porém percebemos que a quantidades de obras nessas cidades é bem pequena, tendo menos de quatro obras cadastradas. 
+
+Vejamos como está o valor das obras ao longo do tempo, para verificar se esta grande quantidade de obras com valor zero permanece ainda hoje:
+
+```{r, warning=FALSE}
+obra.valor.localidade.data <- acompanhamento %>% 
+    mutate(ano = lubridate::year(data_cadastro)) %>% 
+    filter(!is.na(ano)) %>% 
+    group_by(fk_obra) %>% 
+    summarise(ano = min(ano)) %>% 
+    ungroup() %>% 
+    left_join(obra.localidade, by = c("fk_obra" = "id")) %>% 
+    group_by(nome, ano) %>% 
+    summarise(
+        total.obras = n(),
+        porcentagem.zeros = (sum(valor_obra == 0) / total.obras) * 100
+        )
+
+obra.valor.localidade.data %>% 
+    filter(ano >= 2000) %>% 
+    ggplot(aes(x = ano, y = porcentagem.zeros, group = ano, label = nome)) +
+        geom_boxplot()
+```
+
+Vemos que os dados anteriores à 2013 tem porcentagem mediana de valor da obra zerado igual a 100%, onde cair em 2013 e a partir de 2015 tem poucas cidades com obras cadastradas com valor zerado.
+
+Vejamos as cidades que mais tem valores de obras zerados a partir de 2014:
+
+```{r}
+obras.2014 <- obra.valor.localidade.data %>% 
+    filter(ano >= 2014) %>% 
+    mutate(ponderacao = total.obras * porcentagem.zeros) %>% 
+    group_by(nome) %>% 
+    summarise(
+        total.obras = sum(total.obras), 
+        porcentagem.zeros = sum(ponderacao) / total.obras) 
+
+obras.2014 %>% 
+    ggplot(aes(x = "cidades", y = porcentagem.zeros, label = nome)) +
+        geom_boxplot() +
+        geom_text(check_overlap = TRUE, size = 4, nudge_x = 0.1)
+```
+
+Vemos que a mediana dos valores zerados a partir de 2014 é 0%, mas existem alguns outliers, como Natuba, São José de Princesa e Araruna.
+
+```{r}
+obras.2014 %>% 
+    filter(porcentagem.zeros > 15) %>% 
+    arrange(-porcentagem.zeros) %>% 
+    kable()
+```
+
+###Dados faltantes de dimensão de obras
+
+Vejamos os dados faltantes para as dimensões das obras:
+
+```{r}
+obra.dimensao.localidade.data <- acompanhamento %>% 
+    mutate(ano = lubridate::year(data_cadastro)) %>% 
+    filter(!is.na(ano)) %>% 
+    group_by(fk_obra) %>% 
+    summarise(ano = min(ano)) %>% 
+    ungroup() %>% 
+    left_join(obra.localidade, by = c("fk_obra" = "id")) %>% 
+    group_by(nome, ano) %>% 
+    summarise(
+        total.obras = n(),
+        porcentagem.zeros = (sum(dimensao == 0) / total.obras) * 100
+        )
+
+obra.dimensao.localidade.data %>% 
+    filter(ano >= 2000) %>% 
+    ggplot(aes(x = ano, y = porcentagem.zeros, group = ano, label = nome)) +
+        geom_boxplot()
+```
+
+Vemos que diferentemente do valor das obras, a dimensão só está mais presente em 2017, onde teve mediada de valores zerados em dimensão de 50%, valor mais baixo que dos anos anteriores, onde a mediana era sempre de 100% de dimensões zeradas.
+
+Vejamos as cidades que menos colocam dimensão em suas obras no ano de 2017:
+
+```{r}
+obra.dimensao.localidade.data %>% 
+    filter(ano == 2017, porcentagem.zeros > 50) %>% 
+    arrange(-porcentagem.zeros) %>% 
+    kable()
+```
+
+Vemos que diversas cidades tem 100% de suas obras sem dimensão, mas a maioria delas tem poucas obras (quatro ou menos). A cidade que mais se destaca é Campina Grande, visto que tem 36 obras no ano de 2017 e 66,6% delas tem dimensão igual a zero.
+
 ##Obras com valores distoantes
 
 ```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
@@ -659,6 +781,12 @@ Após uma análise sobre os dados relativos à obras, destacamos alguns pontos i
     + Esta tabela tem 18567 números de contrato 0000, assim como 30 com valor “-”.
     + Esta tabela tem 1.5% das descrições com mais de 40% composta por caracteres diferente do alfabeto.
     + Esta tabela tem 1,58% das localidades com mais de 40% composta por caracteres diferente do alfabeto.
+    + As cidades que mais tem valor da obra zerado:
+        1. Natuba, tendo 10 obras, sendo 40% com valor zero.
+        2. São José de Princesa, tendo 3 obras, sendo 33.3% com valor zero.
+        3. Araruna, tendo 16 obras, sendo 31.25% com valor zero.
+        4. Mamanguape, tendo 16 obras, sendo 25% com valor zero.
+    + A cidade que mais se destaca em dimensões zeradas é Campina Grande, visto que tem 36 obras no ano de 2017 e 66,6% delas tem dimensão igual a zero.
 * Tabela jurisdicionado:
     + Esta tabela tem 28,24% do código do sagres com valor zero e em 9,73% dos dados da esfera, 0,76% da chave estrangeira da localidade e 0,38% do município de importação são nulos.
 * Tabela localidade:
