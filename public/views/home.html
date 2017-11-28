@@ -1,36 +1,31 @@
-<md-toolbar layout="row" layout-align="space-between center" class="md-hue-2">
-    <div layout="row">
-        <img src="assets/resources/images/tce_128.png" height="50px;" layout-margin>
-        <h3>Obras - PB</h3>
-    </div>
-    <md-button ng-href="assets/views/inconsistencia-geo-pb.html">Análise investigativa</md-button>
+<md-content layout="column" style="padding-top: 78px; padding-bottom: 60px;">
 
-</md-toolbar>
+    <!-- begin table -->
 
-<md-table-container md-whiteframe="3" style="margin: 10px 10px 0px 10px; max-height: 80%;">
+    <md-table-container md-whiteframe="3" style="margin: 10px 10px 0px 10px; max-height: 80%;">
 
-    <div class="md-toolbar-tools">
-        <form layout="row" layout-padding layout-margin layout-fill ng-submit="homeCtrl.getObras()">
-            <md-input-container md-no-float layout-fill>
-                <input type="text" ng-model="homeCtrl.tableQuery.filterBy" placeholder="Digite sua busca"></input>
-            </md-input-container>
-            <md-button type="submit">
-                <i class="material-icons text">search</i>
-            </md-button>
-        </form>
-    </div>
+        <div class="md-toolbar-tools">
+            <form layout="row" layout-padding layout-margin layout-fill ng-submit="homeCtrl.getObras()">
+                <md-input-container md-no-float layout-fill>
+                    <input type="text" ng-model="homeCtrl.tableQuery.filterBy" placeholder="Digite sua busca"></input>
+                </md-input-container>
+                <md-button type="submit">
+                    <i class="material-icons text">search</i>
+                </md-button>
+            </form>
+        </div>
 
-    <table md-table md-row-select multiple md-progress="homeCtrl.obrasPromise">
-        <thead md-head md-order="homeCtrl.tableQuery.orderMode" md-on-reorder="homeCtrl.getObras">
-        <tr md-row layout-align="space-around center">
+        <table md-table md-row-select multiple md-progress="homeCtrl.obrasPromise">
+            <thead md-head md-order="homeCtrl.tableQuery.orderMode" md-on-reorder="homeCtrl.getObras">
+            <tr md-row layout-align="space-around center">
 
-            <th ng-click="homeCtrl.setOrderingField(field.name)" ng-repeat="field in homeCtrl.fields" style="text-align: center; padding-left: 32px;"
-                md-column md-order-by="{{field.name}}">
-                <span> {{ field.description }} </span>
-            </th>
-        </tr>
-        </thead>
-        <tbody md-body>
+                <th ng-click="homeCtrl.setOrderingField(field.name)" ng-repeat="field in homeCtrl.fields" style="text-align: center; padding-left: 32px;"
+                    md-column md-order-by="{{field.name}}">
+                    <span> {{ field.description }} </span>
+                </th>
+            </tr>
+            </thead>
+            <tbody md-body>
             <tr md-row md-select-id="name" md-auto-select ng-repeat="obra in homeCtrl.obras">
                 <td md-cell style="text-align: center; width: 10%;" ng-repeat-start="field in obra.fields" ng-if="obra[field] != null">
                     {{obra[field]}}
@@ -40,8 +35,11 @@
                     Não há dados
                 </td>
             </tr>
-        </tbody>
-    </table>
-</md-table-container>
+            </tbody>
+        </table>
+    </md-table-container>
 
-<md-table-pagination md-limit="homeCtrl.tableQuery.limit" md-limit-options="[5, 10, 50, 100]" md-page="homeCtrl.tableQuery.page" md-total="{{homeCtrl.numberOfBuildings}}" md-on-paginate="homeCtrl.getObras" md-boundary-links="true" md-page-select></md-table-pagination>
+    <md-table-pagination md-limit="homeCtrl.tableQuery.limit" md-limit-options="[5, 10, 50, 100]" md-page="homeCtrl.tableQuery.page" md-total="{{homeCtrl.numberOfBuildings}}" md-on-paginate="homeCtrl.getObras" md-boundary-links="true" md-page-select></md-table-pagination>
+
+    <!-- end table -->
+</md-content>
