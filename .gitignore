@@ -25,4 +25,5 @@ analysis/*.html
 # R
 *.Rhistory
 *.Rproj.user
+analysis/.RData
 .Rproj.user

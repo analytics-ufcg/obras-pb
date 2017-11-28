@@ -461,8 +461,8 @@ Vemos que 26 cidades tem mais de 90% dos valores da obra iguais a zero, onde Ban
 Vejamos como está o valor das obras ao longo do tempo, para verificar se esta grande quantidade de obras com valor zero permanece ainda hoje:
 
 ```{r, warning=FALSE}
-obra.valor.localidade.data <- acompanhamento %>% 
-    mutate(ano = lubridate::year(data_cadastro)) %>% 
+obra.valor.localidade.data <- evolucao %>% 
+    mutate(ano = lubridate::year(data_inicio_obra)) %>% 
     filter(!is.na(ano)) %>% 
     group_by(fk_obra) %>% 
     summarise(ano = min(ano)) %>% 
@@ -499,7 +499,7 @@ obras.2014 %>%
         geom_text(check_overlap = TRUE, size = 4, nudge_x = 0.1)
 ```
 
-Vemos que a mediana dos valores zerados a partir de 2014 é 0%, mas existem alguns outliers, como Natuba, São José de Princesa e Araruna.
+Vemos que a mediana dos valores zerados a partir de 2014 é 0%, mas existem alguns outliers, como São Miguel de Taipu e Araruna.
 
 ```{r}
 obras.2014 %>% 
@@ -782,10 +782,8 @@ Após uma análise sobre os dados relativos à obras, destacamos alguns pontos i
     + Esta tabela tem 1.5% das descrições com mais de 40% composta por caracteres diferente do alfabeto.
     + Esta tabela tem 1,58% das localidades com mais de 40% composta por caracteres diferente do alfabeto.
     + As cidades que mais tem valor da obra zerado:
-        1. Natuba, tendo 10 obras, sendo 40% com valor zero.
-        2. São José de Princesa, tendo 3 obras, sendo 33.3% com valor zero.
-        3. Araruna, tendo 16 obras, sendo 31.25% com valor zero.
-        4. Mamanguape, tendo 16 obras, sendo 25% com valor zero.
+        1. São Miguel de Taipu, tendo 8 obras, sendo 62.5% com valor zero.
+        2. Araruna, tendo 17 obras, sendo 29.41% com valor zero.
     + A cidade que mais se destaca em dimensões zeradas é Campina Grande, visto que tem 36 obras no ano de 2017 e 66,6% delas tem dimensão igual a zero.
 * Tabela jurisdicionado:
     + Esta tabela tem 28,24% do código do sagres com valor zero e em 9,73% dos dados da esfera, 0,76% da chave estrangeira da localidade e 0,38% do município de importação são nulos.
