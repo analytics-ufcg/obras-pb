@@ -52,7 +52,59 @@ Utilizaremos a tabela de evolucao e utilizaremos a data de início da obra para 
 
 ```{r}
 evolucao %>% 
+    select(id, data_inicio_obra, data_prevista_conclusao, data_cadastro, fk_obra) %>% 
     head() %>% 
     kable()
 ```
 
+Vejamos a existência dos dados georeferenciados temporalmente, onde a existência dos mesmos será indicada caso a geolocalização for do tipo 1 ou 3, visto que são os tipos cujos valores de geolocalização estão presentes na própria tabela, sendo um par de latitude e longitude, ou uma lista de pares. Não consideraremos os do tipo 2, que é uma referência para um arquivo .kml nem o tipo 0 que de fato é o valor inexistente.
+
+```{r}
+geolocalizacao <- acompanhamento %>% 
+    group_by(fk_obra) %>% 
+    summarise(
+        tipo_georeferenciamento = ifelse(3 %in% tipo_georeferenciamento, 
+                                             3,
+                                             ifelse(1 %in% tipo_georeferenciamento, 
+                                                    1,
+                                                    ifelse(2 %in% tipo_georeferenciamento,
+                                                           2,
+                                                           0
+                                                           )
+                                                    )
+                                             )
+    ) %>% 
+    left_join(evolucao, by = "fk_obra") %>% 
+    select(fk_obra, tipo_georeferenciamento, data_inicio_obra) %>% 
+    mutate(ano = lubridate::year(data_inicio_obra))
+
+geolocalizacao.temporal <- geolocalizacao %>% 
+    group_by(ano) %>% 
+    summarise(
+        total = n(),
+        obras.geolocalizadas = sum(tipo_georeferenciamento == 1, tipo_georeferenciamento == 3),
+        porcentagem.localizacao.disponivel = obras.geolocalizadas / total
+        )
+
+geolocalizacao.temporal %>%     
+    filter(ano > 1900) %>% 
+    ggplot(aes(x = ano, y = porcentagem.localizacao.disponivel)) +
+    geom_line()
+```
+
+Analisando os dados de georeferenciamentos disponíveis, verificamos que existem alguns dados a partir de 2010, mas apenas no ano de 2017 existe um percentual razoável de dados geolocalizados, visto que chega a pouco mais de `r (geolocalizacao.temporal %>% select(porcentagem.localizacao.disponivel) %>% max() * 100) %>% format(digits=2, nsmall=2)`%.
+
+Vejamos em números absoutos:
+
+```{r}
+geolocalizacao.temporal %>%     
+    filter(ano > 1900) %>% 
+    ggplot(aes(x = ano, y = obras.geolocalizadas)) +
+    geom_line()
+```
+
+Podemos perceber que o número absoluto de obras geolocalizadas começa a crescer moderadamente a partir de 2010, mas tem uma ascensão mais forte a partir de 2015, chegando em `r geolocalizacao.temporal %>% select(obras.geolocalizadas) %>% max()` obras em 2017.
+
+No total, existem `r geolocalizacao.temporal %>% select(obras.geolocalizadas) %>% sum()` geolocalizadas.
+
+---
