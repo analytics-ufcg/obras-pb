@@ -278,4 +278,56 @@ obra.dimensao.data %>%
         scale_y_continuous(labels = scales::comma)
 ```
 
+
+##Nome do jurisdicionado temporalmente
+
+###Nome do jurisdicionado disponível
+
+Vemos pelo gráfico abaixo que 100% das obras possuem o nome do jurisdicionado responsável.
+
+```{r}
+
+
+obra.jurisdicionado <- obra %>% 
+    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+    select(id, data_inicio_obra, valor_obra, descricao_sucinta_obra, fk_jurisdicionado) %>% 
+    mutate(ano = lubridate::year(data_inicio_obra)) %>%
+    left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id"))
+
+
+
+obra.jurisdicionado %>%
+    filter(ano > 1998) %>%
+    group_by(ano) %>%
+    summarise(
+        total = n(),
+        total_nao_vazio = sum(!is.na(nome))
+      ) %>%
+    ggplot(aes(x = ano, y = total_nao_vazio/total * 100)) + 
+    geom_col() + 
+    labs(title = "Jurisdicionado temporalmente", subtitle="Considerando obras a partir de 1998", y = "Porcentagem de obras que possuem nome do jurisdicionado", x= "Ano da obra")
+
+
+```
+
+### Quantidade de obras por jurisdicionado
+
+No gráfico abaixo podemos ver quais jurisdicionados possuem a maior quantidade de obras (considerando obras de 1998 até os dias atuais). Algumas prefeituras de cidades tidas como pequenas aparecem no ranking enquanto orgãos de cidades maiores como Patos e Souza não aparecem.
+
+```{r}
+
+obra.jurisdicionado %>%
+    filter(ano > 1998) %>%
+    group_by(nome) %>%
+    summarise(
+        total = n()
+      ) %>%
+    top_n(10, total) %>%
+    ggplot(aes(x = reorder(nome, -total), y = total)) + 
+    geom_col() + 
+    coord_flip() + 
+    labs(x = "Jurisdicionado", y = "Quantidade de obras", title = "Top 10 jurisdicionados com maior quantidade de obras")
+
+```
+
 ---
