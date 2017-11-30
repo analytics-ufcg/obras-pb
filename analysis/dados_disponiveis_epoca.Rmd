@@ -330,4 +330,52 @@ obra.jurisdicionado %>%
 
 ```
 
+## Evolução das obras temporalmente
+
+Nesta seção iremos analisar as obras no que diz respeito a evolução das mesmas ao longo do tempo.
+
+### Andamento das obras temporalmente
+
+No gráfico abaixo podemos ver a quantidade de obras que se encontram em uma certa etapa de andamento ao longo do tempo. A esmagadora maioria das obras possuem status "Em andamento".
+
+Para facilitar a leitura do gráfico vejamos a que status de andamento corresponde cada código númerico
+
+```{r}
+
+mapeamento <- read_csv('mapeamento_andamento.csv')
+mapeamento
+```
+
+Vejamos agora o gráfico:
+
+```{r}
+
+obra.evolucao <- obra %>% 
+    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+    select(id, data_inicio_obra, valor_obra, descricao_sucinta_obra, fk_jurisdicionado, andamento) %>% 
+    mutate(ano = lubridate::year(data_inicio_obra))
+
+p <- obra.evolucao %>%
+    filter(ano > 1998) %>%
+    ggplot(aes(x = ano)) + 
+    geom_bar(aes(fill = andamento)) +
+    labs(title = "Evolução das obras temporalmente", x = "Ano", y = "Total de obras")
+
+plotly::ggplotly(p)
+```
+
+### Andamento de obras disponível
+
+Como já vimos anteriormente, a maioria das obras está em andamento mais especificamente 97.5% das obras cadastradas no sistema. 
+
+```{r}
+
+obra.evolucao %>%
+    filter(ano > 1998) %>%
+    group_by(andamento) %>%
+    summarise(total = n()) %>%
+    mutate(porcentagem = format(total/sum(total) * 100, digits = 2))
+```
+
+
 ---
