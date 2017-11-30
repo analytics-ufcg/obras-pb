@@ -204,4 +204,78 @@ obra.data.filtrado %>%
 
 Como comentado anteriormente, os valores das obras são bem concentrados, mas existem alguns outliers que elevam a média.
 
+## Dimensão das obras temporalmente
+
+### Dimensão da obra disponível
+
+Vejamos primeiramente qual a medida de dimensão utilizada.
+
+```{r}
+obra.dimensao.data <- obra %>% 
+    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+    select(id, data_inicio_obra, dimensao, descricao_sucinta_obra) %>% 
+    mutate(ano = lubridate::year(data_inicio_obra))
+
+obra.dimensao.data %>% 
+    filter(id %in% c(53, 28316, 28482)) %>% 
+    kable()
+```
+
+Podemos ver primeiramente que a dimensão de algumas obras estão representadas em medidas diferentes, onde umas representam a dimensão em metros, outras representam em quilômetros, enquando outras representam em metros quadrados, o que torna difícil indicar quais dimensões com valor maior que zero são inválidas. Com isso consideraremos dimensões disponívels apenas as que tiverem valor maior que zero.
+
+Vejamos a proporção de dados de dimensão disponíveis temporalmente:
+
+```{r}
+obra.dimensao.temporal <- obra.dimensao.data %>% 
+    filter(ano > 1900) %>% 
+    group_by(ano) %>% 
+    summarise(
+        total = n(),
+        dimensoes.validas = sum(dimensao > 0),
+        prop.dimensoes.validas = dimensoes.validas / total
+        )
+
+obra.dimensao.temporal %>% 
+    ggplot(aes(x = ano, y = prop.dimensoes.validas)) +
+        geom_line()
+```
+
+Vemos que os dados de dimensões começaram a ser implantados em 2015, mas só atingiram uma proporção considerável de dimensões válidas em 2017.
+
+Vejamos em valores absolutos:
+
+```{r}
+obra.dimensao.temporal %>% 
+    ggplot(aes(x = ano, y = dimensoes.validas)) +
+        geom_line()
+```
+
+Os valores absolutos seguem a mesma tendência dos proporcionais. No total temos `r obra.dimensao.temporal %>% select(dimensoes.validas) %>% sum()` obras com dimensões válidas.
+
+### Dimensão da obra temporalmente
+
+Vejamos quanto o valor das dimensões válidas variam no decorrer do tempo.
+
+```{r}
+obra.dimensao.data %>% 
+    filter(dimensao > 0) %>% 
+    group_by(ano) %>% 
+    summarise(
+        media.dimensao = mean(dimensao),
+        median.dimensao = median(dimensao)
+    ) %>% gather(medida, valor, -ano) %>% 
+    ggplot(aes(x = ano, y = valor, color = medida)) +
+        geom_line()
+```
+
+Vemos que a mediana se mantém quase constante ao longo do tempo, tendo valor perto dos 400, enquanto a média varia bastante, o que indica que existem outliers nas dimensões das obras, como podemos ver a seguir:
+
+```{r}
+obra.dimensao.data %>% 
+    filter(dimensao > 0) %>% 
+    ggplot(aes(x = ano, y = dimensao, group = ano)) +
+        geom_boxplot() +
+        scale_y_continuous(labels = scales::comma)
+```
+
 ---
