@@ -46,11 +46,13 @@ con2 <- DBI::dbConnect(drv,
 )
 
 jurisdicionado_db2 <- dbGetQuery(con2, "select * from t_jurisdicionado")
+
+tipos.das.obras <- read.csv("tipos_obra.csv")
 ```
 
 Utilizaremos a tabela de evolucao e utilizaremos a data de início da obra para fazera análise temporal.
 
-```{r}
+```{r, echo=FALSE}
 evolucao %>% 
     select(id, data_inicio_obra, data_prevista_conclusao, data_cadastro, fk_obra) %>% 
     head() %>% 
@@ -61,7 +63,7 @@ evolucao %>%
 
 Vejamos a existência dos dados georeferenciados temporalmente, onde a existência dos mesmos será indicada caso a geolocalização for do tipo 1 ou 3, visto que são os tipos cujos valores de geolocalização estão presentes na própria tabela, sendo um par de latitude e longitude, ou uma lista de pares. Não consideraremos os do tipo 2, que é uma referência para um arquivo .kml nem o tipo 0 que de fato é o valor inexistente.
 
-```{r}
+```{r, echo=FALSE}
 geolocalizacao <- acompanhamento %>% 
     group_by(fk_obra) %>% 
     summarise(
@@ -98,7 +100,7 @@ Analisando os dados de georeferenciamentos disponíveis, verificamos que existem
 
 Vejamos em números absoutos:
 
-```{r}
+```{r, echo=FALSE}
 geolocalizacao.temporal %>%     
     filter(ano > 1900) %>% 
     ggplot(aes(x = ano, y = obras.geolocalizadas)) +
@@ -115,7 +117,7 @@ No total, existem `r geolocalizacao.temporal %>% select(obras.geolocalizadas) %>
 
 Vejamos primeiramente os dados disponíveis por época:
 
-```{r}
+```{r, echo=FALSE}
 obra.data <- obra %>% 
     left_join(evolucao, by = c("id" = "fk_obra")) %>% 
     select(id, data_inicio_obra, valor_obra, descricao_sucinta_obra) %>% 
@@ -136,7 +138,7 @@ obra.data %>%
 
 É possível ver que existem várias obras com valores maior que zero, mas mesmo assim não condizem com o valor real de uma obra. Com isso, vamos considerar como valor válido obras com mais de 100 reais.
 
-```{r}
+```{r, echo=FALSE}
 obra.temporal <- obra.data %>% 
     group_by(ano) %>% 
     summarise(
@@ -148,7 +150,7 @@ obra.temporal <- obra.data %>%
 
 Vejamos a proporção de obras com valores válidos:
 
-```{r}
+```{r, echo=FALSE}
 obra.temporal %>% 
     filter(ano > 1900) %>% 
     ggplot(aes(x = ano, y = proporcao.valor.disponivel)) +
@@ -159,7 +161,7 @@ Vemos que os dados do valor da obra começaram a ser colocados apenas em 2013 e 
 
 Vejamos em números absolutos:
 
-```{r}
+```{r, echo=FALSE}
 obra.temporal %>% 
     filter(ano > 1900) %>% 
     mutate(quantidade.valor.indisponivel = total - quantidade.valor.disponivel) %>% 
@@ -175,7 +177,7 @@ Vemos que grande parte das obras que tem valor foram iniciadas entre 2013 e 2015
 
 Vejamos se os valores das obras vem aumentando desde 2013, ano que estas começaram a ser preenchidas com vigor:
 
-```{r}
+```{r, echo=FALSE}
 obra.data.filtrado <- obra.data %>% 
     filter(ano >= 2013, valor_obra > 100)
 
@@ -194,7 +196,7 @@ Vemos que a mediana dos valores fica um pouco acima dos 100 mil reais, mas exist
 
 Vejamos a dispersão do valor das obras ao longo do tempo:
 
-```{r}
+```{r, echo=FALSE}
 obra.data.filtrado %>% 
     filter(valor_obra < 1000000000) %>% 
     ggplot(aes(x = ano, y = valor_obra, group = ano)) +
@@ -210,7 +212,7 @@ Como comentado anteriormente, os valores das obras são bem concentrados, mas ex
 
 Vejamos primeiramente qual a medida de dimensão utilizada.
 
-```{r}
+```{r, echo=FALSE}
 obra.dimensao.data <- obra %>% 
     left_join(evolucao, by = c("id" = "fk_obra")) %>% 
     select(id, data_inicio_obra, dimensao, descricao_sucinta_obra) %>% 
@@ -225,7 +227,7 @@ Podemos ver primeiramente que a dimensão de algumas obras estão representadas 
 
 Vejamos a proporção de dados de dimensão disponíveis temporalmente:
 
-```{r}
+```{r, echo=FALSE}
 obra.dimensao.temporal <- obra.dimensao.data %>% 
     filter(ano > 1900) %>% 
     group_by(ano) %>% 
@@ -244,7 +246,7 @@ Vemos que os dados de dimensões começaram a ser implantados em 2015, mas só a
 
 Vejamos em valores absolutos:
 
-```{r}
+```{r, echo=FALSE}
 obra.dimensao.temporal %>% 
     ggplot(aes(x = ano, y = dimensoes.validas)) +
         geom_line()
@@ -256,7 +258,7 @@ Os valores absolutos seguem a mesma tendência dos proporcionais. No total temos
 
 Vejamos quanto o valor das dimensões válidas variam no decorrer do tempo.
 
-```{r}
+```{r, echo=FALSE}
 obra.dimensao.data %>% 
     filter(dimensao > 0) %>% 
     group_by(ano) %>% 
@@ -270,7 +272,7 @@ obra.dimensao.data %>%
 
 Vemos que a mediana se mantém quase constante ao longo do tempo, tendo valor perto dos 400, enquanto a média varia bastante, o que indica que existem outliers nas dimensões das obras, como podemos ver a seguir:
 
-```{r}
+```{r, echo=FALSE}
 obra.dimensao.data %>% 
     filter(dimensao > 0) %>% 
     ggplot(aes(x = ano, y = dimensao, group = ano)) +
@@ -278,6 +280,67 @@ obra.dimensao.data %>%
         scale_y_continuous(labels = scales::comma)
 ```
 
+## Tipo da obra temporalmente
+
+### Disponibilidade de dados
+
+Vejamos os tipos da obra disponíveis
+
+```{r, echo=FALSE, warning=FALSE}
+tipo.obra <- obra %>% 
+    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+    left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
+    select(id, data_inicio_obra, fk_tipo_obra, descricao_sucinta_obra, nome) %>% 
+    mutate(ano = lubridate::year(data_inicio_obra)) %>% 
+    rename(tipo_da_obra = nome)
+
+tipo.obra %>% 
+    group_by(tipo_da_obra) %>% 
+    summarise(quantidade = n()) %>% 
+    ggplot(aes(x = reorder(tipo_da_obra, quantidade), y = quantidade)) +
+        geom_bar(stat="identity") +
+        labs(x = "tipo da obra") +
+        coord_flip()
+```
+
+Vemos que o tipo de obra mais presente nos dados é o tipo "outras", seguido de "pavimentação paralelepípedo" e "escola". Vemos que existem uma pequena quantidade de dados faltantes.
+
+Vejamos se os dados disponíveis são mais recentes, ou o período é irrelevante:
+
+```{r, echo=FALSE, warning=FALSE}
+tipo.obra %>% 
+    group_by(ano) %>% 
+    summarise(
+        total = n(),
+        quantidade.dados.disponiveis = sum(!is.na(tipo_da_obra)),
+        prop.dados.disponiveis = quantidade.dados.disponiveis / total
+    ) %>% 
+    ggplot(aes(x = ano, y = prop.dados.disponiveis)) +
+        geom_line()
+```
+
+Vemos que a disponibilidade dos dados do tipo da obra cresceram ao longo do tempo, apesar de que, em todo período analisado, os tipos das obras tem uma boa disponibilidade de dados, se mantendo sempre acima de 98%.
+
+### Análise temporal
+
+Vejamos quais os tipos de obra que vem sendo mais construídos ao longo do tempo:
+
+```{r, warning=FALSE}
+obras.mais.construidas <- tipo.obra %>% 
+    group_by(tipo_da_obra) %>% 
+    summarise(quantidade = n()) %>% 
+    arrange(-quantidade) %>% 
+    head()
+
+tipo.obra %>% 
+    filter(ano > 1900, tipo_da_obra %in% obras.mais.construidas$tipo_da_obra) %>% 
+    group_by(ano, tipo_da_obra) %>% 
+    summarise(quantidade = n()) %>% 
+    ggplot(aes(x = ano, y = quantidade, color = tipo_da_obra)) +
+    geom_line()
+```
+
+Podemos ver que de 2002 à 2005 todas os tipos de obras tem uma tendência ascendente, além disso, dos seis tipos de construção mais construídos, a escolas e postos de saúdes são os únicos que tem uma tendência crescente até 2014, após isso todos tipos de obras tendem a cair. 
 
 ##Nome do jurisdicionado temporalmente
 
@@ -329,5 +392,4 @@ obra.jurisdicionado %>%
     labs(x = "Jurisdicionado", y = "Quantidade de obras", title = "Top 10 jurisdicionados com maior quantidade de obras")
 
 ```
-
 ---
