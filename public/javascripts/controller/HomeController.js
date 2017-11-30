@@ -1,8 +1,8 @@
 angular.module('obrasPb').controller('HomeController', HomeController);
 
-HomeController.$inject = ['ObrasService', "$filter", "$state"];
+HomeController.$inject = ['ObrasService', "$filter", "$state", "$window"];
 
-function HomeController(ObrasService, $filter, $state) {
+function HomeController(ObrasService, $filter, $state, $window) {
     var self = this;
 
     self.fields = [
@@ -69,6 +69,13 @@ function HomeController(ObrasService, $filter, $state) {
 
     self.showReport = function() {
         $state.go("report");
+    };
+
+    self.relatorios = [{nome: "Relatório 1", referencia: "assets/views/inconsistencia-geo-pb.html"}];
+
+    self.redireciona = function(url) {
+        $window.location.href = url;
+        console.log("err");
     }
 
 

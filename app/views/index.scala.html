@@ -37,6 +37,7 @@
         <!-- Services -->
         <script src='@routes.Assets.versioned("javascripts/service/ObrasService.js")' type="text/javascript"></script>
 
+        s
 
         <!-- Angular formatação pt-br -->
         <script src='@routes.Assets.versioned("resources/js/angular-locale_pt-br.js")' type="text/javascript"></script>
@@ -44,12 +45,20 @@
 
 
         <!-- begin navbar -->
-        <md-toolbar layout="row" layout-align="space-between center" class="md-hue-2" style="position: fixed; top: 0px;">
+        <md-toolbar layout="row" ng-controller="HomeController as homeCtrl" layout-align="space-between center" class="md-hue-2" style="position: fixed; top: 0px;">
             <div layout="row">
                 <img src="assets/resources/images/tce_128.png" height="50px;" layout-margin>
                 <h3>Obras - PB</h3>
             </div>
-            <md-button ng-href="assets/views/inconsistencia-geo-pb.html">Análise investigativa</md-button>
+            <md-input-container >
+                <label md-colors="{background:'white'}">Relatórios</label>
+                <md-select ng-model="homeCtrl.relatorios">
+                    <md-option  ng-repeat="relatorio in homeCtrl.relatorios" ng-value="relatorio.nome" ng-click="homeCtrl.redireciona(relatorio.referencia)">
+              {{relatorio.nome}}
+
+                    </md-option>
+                </md-select>
+            </md-input-container>
         </md-toolbar>
         <!-- end navbar -->
 
