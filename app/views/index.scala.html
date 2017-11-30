@@ -11,6 +11,8 @@
 
         <!-- Angular material table CSS -->
         <link rel="stylesheet" href='@routes.Assets.versioned("resources/css/md-data-table.css")'>
+        <!-- Own CSS style GeoObras -->
+        <link rel="stylesheet" href='@routes.Assets.versioned("resources/css/geoobrasstyle.css")'>
     </head>
 
     <body ng-app="obrasPb">
@@ -50,9 +52,9 @@
                 <img src="assets/resources/images/tce_128.png" height="50px;" layout-margin>
                 <h3>Obras - PB</h3>
             </div>
-            <md-input-container >
-                <label md-colors="{background:'white'}">Relatórios</label>
-                <md-select ng-model="homeCtrl.relatorios">
+            <md-input-container>
+
+                  <md-select ng-model="homeCtrl.relatorios" placeholder="Selecione um relatório">
                     <md-option  ng-repeat="relatorio in homeCtrl.relatorios" ng-value="relatorio.nome" ng-click="homeCtrl.redireciona(relatorio.referencia)">
               {{relatorio.nome}}
 
