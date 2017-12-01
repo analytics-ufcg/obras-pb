@@ -46,6 +46,7 @@ con2 <- DBI::dbConnect(drv,
 )
 
 jurisdicionado_db2 <- dbGetQuery(con2, "select * from t_jurisdicionado")
+localidade <- dbGetQuery(con2, "select * from t_localidade")
 
 tipos.das.obras <- read.csv("tipos_obra.csv")
 ```
@@ -59,6 +60,46 @@ evolucao %>%
     kable()
 ```
 
+Vejamos primeiramente quantas obras existem ao longo dos anos:
+
+```{r, echo=FALSE, warning=FALSE}
+obras.data <- obra %>% 
+    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+    mutate(ano = lubridate::year(data_inicio_obra)) 
+
+obras.data %>% 
+    filter(ano > 1900) %>% 
+    group_by(ano) %>% 
+    summarise(quantidade = n()) %>% 
+    ggplot(aes(x = ano, y = quantidade)) +
+        geom_line() +
+        labs(y = "quantidade de obras",
+             title = "Quantidade de obras por ano",
+             subtitle = "Considerando obras depois de 1900")
+```
+
+Existem 163 obras cadastradas em 01/01/1900, o que consideramos como dados de data de inicio da obra faltante, além de 2016 obras com a data de início da obra nula. Podemos perceber no gráfico que a as obras começaram a ser cadastradas a partir de 2003 e a quantidade de obras fica entre 1500 e 2500, com exceção das obras posteriores à 2015, onde é perceptível uma grande queda na quantidade de obras.
+
+No total temos `r obra %>% count()` obras cadastradas, sendo `r obras.data %>% filter(ano >= 2003) %>% count()` delas a partir de 2003.
+
+```{r, echo=FALSE}
+obras.filtradas <- obras.data %>% 
+    filter(ano >= 2003)
+```
+
+```{r}
+obras.filtradas %>% 
+    ggplot(aes(x = "ano", y = ano)) +
+        geom_boxplot() +
+        coord_flip() +
+        labs(x = "ano",
+             title = "Dispersão das obras ao longo dos anos",
+             subtitle = "Considerando as obras a partir de 2003")
+```
+
+Vemos também que metade das obras foram construídas antes de 2008 e 25% das obras são datadas a partir de 2012. 
+Das obras que iniciaram a partir de 2003 todas possuem o município em que foram construída, além de possuir também a microregião e mesoregião que pertencem.
+    
 ## Análise da geolocalização temporalmente
 
 ### Disponibilidade das geolocalizações temporalmente
