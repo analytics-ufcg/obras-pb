@@ -1,0 +1,151 @@
+---
+title: "Análise do status das obras de Nova Palmeira"
+author: "Lucas Diniz"
+date: "November 27, 2017"
+output:
+    html_document:
+        toc: true
+        toc_float: true
+        fig_heigth: 8
+        fig_width: 10
+---
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+# Imports
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(RPostgreSQL)
+library(config)
+library(ggplot2)
+library(stringr)
+library(plotly)
+#devtools::install_github("sicarul/xray")
+library(xray)
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+# Criando conexão:
+drv <- DBI::dbDriver("PostgreSQL")
+
+con1 <- DBI::dbConnect(drv, 
+  host = config::get("host"),
+  port = config::get("port"),
+  user = config::get("user"),
+  password = config::get("password"),
+  dbname = config::get("dbname1")
+)
+
+# Importando dados:
+acompanhamento <- dbGetQuery(con1, "select * from t_acompanhamento")
+complexo <- dbGetQuery(con1, "select * from t_complexo")       
+convenio <- dbGetQuery(con1, "select * from t_convenio")         
+empenhos_medicao <- dbGetQuery(con1, "select * from t_empenhos_medicao")
+endereco <- dbGetQuery(con1, "select * from t_endereco")    
+ente <- dbGetQuery(con1, "select * from t_ente")         
+evolucao <- dbGetQuery(con1, "select * from t_evolucao")
+foto_acompanhamento <- dbGetQuery(con1, "select * from t_foto_acompanhamento")
+foto_medicao <- dbGetQuery(con1, "select * from t_foto_medicao")
+jurisdicionado_db1 <- dbGetQuery(con1, "select * from t_jurisdicionado")     
+medicao <- dbGetQuery(con1, "select * from t_medicao")   
+municipio <- dbGetQuery(con1, "select * from t_municipio")          
+obra <- dbGetQuery(con1, "select * from t_obra")        
+origem <- dbGetQuery(con1, "select * from t_origem")             
+parameter_db1 <- dbGetQuery(con1, "select * from t_parameter")
+permission_db1 <- dbGetQuery(con1, "select * from t_permission")        
+pessoa_db1 <- dbGetQuery(con1, "select * from t_pessoa")      
+pessoafisica_db1 <- dbGetQuery(con1, "select * from t_pessoafisica")     
+pessoajuridica_db1 <- dbGetQuery(con1, "select * from t_pessoajuridica")     
+profile_db1 <- dbGetQuery(con1, "select * from t_profile")   
+profile_permission_db1 <- dbGetQuery(con1, "select * from t_profile_permission")
+recurso_proprio <- dbGetQuery(con1, "select * from t_recurso_proprio")
+regularidade <- dbGetQuery(con1, "select * from t_regularidade")  
+tipo_jurisdicionado_db1 <- dbGetQuery(con1, "select * from t_tipo_jurisdicionado")
+user_db1 <- dbGetQuery(con1, "select * from t_user")
+user_api_db1 <- dbGetQuery(con1, "select * from t_user_api")
+user_profile_db1 <- dbGetQuery(con1, "select * from t_user_profile")
+```
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+# Criando conexão
+con2 <- DBI::dbConnect(drv, 
+  host = config::get("host"),
+  port = config::get("port"),
+  user = config::get("user"),
+  password = config::get("password"),
+  dbname = config::get("dbname2")
+)
+
+# Importando os dados
+play_evolutions <- dbGetQuery(con2, "select * from play_evolutions")
+contato <- dbGetQuery(con2, "select * from t_contato")
+endereco <- dbGetQuery(con2, "select * from t_endereco")
+gestao <- dbGetQuery(con2, "select * from t_gestao")
+jurisdicionado_db2 <- dbGetQuery(con2, "select * from t_jurisdicionado")
+localidade <- dbGetQuery(con2, "select * from t_localidade")
+parameter_db2 <- dbGetQuery(con2, "select * from t_parameter")
+periodoresponsabilidade <- dbGetQuery(con2, "select * from t_periodoresponsabilidade")
+permission_db2 <- dbGetQuery(con2, "select * from t_permission")
+pessoa_db2 <- dbGetQuery(con2, "select * from t_pessoa")
+pessoafisica_db2 <- dbGetQuery(con2, "select * from t_pessoafisica")
+pessoajuridica_db2 <- dbGetQuery(con2, "select * from t_pessoajuridica")
+profile_db2 <- dbGetQuery(con2, "select * from t_profile")
+profile_permission_db2 <- dbGetQuery(con2, "select * from t_profile_permission")
+resto_a_pagar_temp <- dbGetQuery(con2, "select * from t_resto_a_pagar_temp")
+tipo_jurisdicionado_db2 <- dbGetQuery(con2, "select * from t_tipo_jurisdicionado")
+user_db2 <- dbGetQuery(con2, "select * from t_user")
+user_api_db2 <- dbGetQuery(con2, "select * from t_user_api")
+user_profile_db2 <- dbGetQuery(con2, "select * from t_user_profile")
+
+```
+
+##Nova Palmeira
+
+Nesta análise será investigado o andamento das obras do município de Nova Palmeira
+
+###Andamento das obras
+
+Após tratar os dados constatou-se que todas as obras deste município se encontram com status "1" que significa "Em execução". Contudo é visível que muitas das obras não mais se encontram em andamento pois várias delas datam de anos tão distantes quanto 2002.
+
+```{r}
+UM_MILHAO = 1000000
+
+jurisdicionado_db2_filtrado <- 
+    jurisdicionado_db2 %>% 
+    select(id, nome)
+
+
+localidade_filtrado <-
+    localidade %>% 
+    select(mesoregiao, microregiao, nome, id) %>%
+    mutate(municipio = nome) %>%
+    select(-nome)
+
+evolucao_filtrado <-
+    evolucao %>%
+    select(fk_obra, data_prevista_conclusao, data_inicio_obra, andamento)
+
+obra_filtrado <- 
+    obra %>%
+    select(fk_jurisdicionado, fk_localidade, descricao_localidade, descricao_sucinta_obra, valor_obra, id)
+
+
+join_obras_jurisdicionado <- 
+    base::merge(x = obra_filtrado, y = jurisdicionado_db2_filtrado, by.x = "fk_jurisdicionado", by.y = "id") %>%
+    select(-fk_jurisdicionado)
+
+join_obras_jurisdicionado <-
+    base::merge(join_obras_jurisdicionado, localidade_filtrado, by.x="fk_localidade", by.y="id") %>%
+    select(-fk_localidade)
+
+nova_palmeira <-
+    base::merge(evolucao_filtrado,join_obras_jurisdicionado,  by.x="fk_obra", by.y="id") %>%
+    filter(municipio == "Nova Palmeira")
+
+
+glimpse(nova_palmeira)
+
+plyr::count(nova_palmeira, 'andamento')
+```
+
+
