@@ -134,13 +134,13 @@ geolocalizacao.temporal <- geolocalizacao %>%
         )
 
 geolocalizacao.temporal %>%     
-    filter(ano > 1900) %>% 
+    filter(ano >= 2003) %>% 
     ggplot(aes(x = ano, y = porcentagem.localizacao.disponivel)) +
         geom_line() +
         scale_y_continuous(labels=scales::percent) +
         labs(y = "porcentagem das obras georeferenciadas disponíveis", 
              title = "Porcentagem das obras georeferenciadas disponíveis ao longo do tempo",
-             subtitle = "Considerando obras depois de 1900")
+             subtitle = "Considerando obras a partir de 2003")
 ```
 
 Analisando os dados de georeferenciamentos disponíveis, verificamos que existem alguns dados a partir de 2010, mas apenas no ano de 2017 existe um percentual razoável de dados geolocalizados, visto que chega a pouco mais de `r (geolocalizacao.temporal %>% select(porcentagem.localizacao.disponivel) %>% max() * 100) %>% format(digits=2, nsmall=2)`%.
@@ -149,12 +149,12 @@ Vejamos em números absoutos:
 
 ```{r, echo=FALSE}
 geolocalizacao.temporal %>%     
-    filter(ano > 1900) %>% 
+    filter(ano >= 2003) %>% 
     ggplot(aes(x = ano, y = obras.geolocalizadas)) +
         geom_line() +
         labs(y = "quantidade de obras georeferenciadas", 
              title = "Quantidade de obras georeferenciadas ao longo do tempo",
-             subtitle = "Considerando obras depois de 1900")
+             subtitle = "Considerando obras depois de 2003")
 ```
 
 Podemos perceber que o número absoluto de obras geolocalizadas começa a crescer moderadamente a partir de 2010, mas tem uma ascensão mais forte a partir de 2015, chegando em `r geolocalizacao.temporal %>% select(obras.geolocalizadas) %>% max()` obras em 2017.
@@ -167,7 +167,7 @@ Vejamos se os tipos de geolocalização variaram ao longo do tempo:
 
 ```{r, echo=FALSE, warning=FALSE}
 geolocalizacao %>% 
-    filter(tipo_georeferenciamento > 0) %>% 
+    filter(tipo_georeferenciamento > 0, ano >= 2003) %>% 
     group_by(ano) %>% 
     summarise(
         total = n(),
@@ -181,7 +181,8 @@ geolocalizacao %>%
         geom_line() +
         scale_y_continuous(label = scales::percent) +
         labs(y = "proporção de georeferenciamento",
-             title = "Proporção de obras georeferenciadas por tipo ao longo do tempo")
+             title = "Proporção de obras georeferenciadas por tipo ao longo do tempo",
+             subtitle = "Considerando obras a partir de 2003")
 ```
 
 Vemos que antes de 2011, com exceção de 2003, todos os tipos de georeferenciamentos eram do tipo 1, mas a partir de 2011, começaram a crescer o tipo 2 e 3 e em 2015 o tipo 3 já era maioria.
@@ -208,8 +209,6 @@ Vemos que pouco mais de 50% dos dados utilizam no georeferenciamento o tipo 1, p
 
 __NOTA__: O tipo 1 é uma lista de pares latitude e longitude, o tipo 2 é uma referência para um arquivo KML e o tipo 3 é apenas um par de latitude e longitude.
 
-
-
 ## Análise do valor das obras temporalmente
 
 ### Valor da obra disponível
@@ -217,32 +216,30 @@ __NOTA__: O tipo 1 é uma lista de pares latitude e longitude, o tipo 2 é uma r
 Vejamos primeiramente os dados disponíveis por época:
 
 ```{r, echo=FALSE}
-obra.data <- obra %>% 
-    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
-    select(id, data_inicio_obra, valor_obra, descricao_sucinta_obra) %>% 
-    mutate(ano = lubridate::year(data_inicio_obra))
+obra.data <- obras.filtradas %>% 
+    select(id, data_inicio_obra, valor_obra, descricao_sucinta_obra, ano)
 
 obra.data %>% 
-    filter(valor_obra > 0, valor_obra <= 100) %>% 
+    filter(valor_obra > 0, valor_obra <= 1000) %>% 
     arrange(valor_obra) %>% 
     head() %>% 
     kable()
 
 obra.data %>% 
-    filter(valor_obra > 0, valor_obra <= 100) %>% 
+    filter(valor_obra > 0, valor_obra <= 1000) %>% 
     arrange(valor_obra) %>% 
     tail() %>% 
     kable()
 ```
 
-É possível ver que existem várias obras com valores maior que zero, mas mesmo assim não condizem com o valor real de uma obra. Com isso, vamos considerar como valor válido obras com mais de 100 reais.
+É possível ver que existem várias obras com valores maior que zero, mas mesmo assim não condizem com o valor real de uma obra. Com isso, vamos considerar como valor válido obras com mais de 1000 reais.
 
 ```{r, echo=FALSE}
 obra.temporal <- obra.data %>% 
     group_by(ano) %>% 
     summarise(
         total = n(),
-        quantidade.valor.disponivel = sum(valor_obra > 100),
+        quantidade.valor.disponivel = sum(valor_obra > 1000),
         proporcao.valor.disponivel = quantidade.valor.disponivel / total
         )
 ```
@@ -251,13 +248,12 @@ Vejamos a proporção de obras com valores válidos:
 
 ```{r, echo=FALSE}
 obra.temporal %>% 
-    filter(ano > 1900) %>% 
     ggplot(aes(x = ano, y = proporcao.valor.disponivel)) +
         geom_line() +
         scale_y_continuous(labels = scales::percent) +
         labs(y = "proporção de obras com valor disponível", 
              title = "Proporção de obras com valor disponível ao longo do tempo",
-             subtitle = "Considerando obras depois de 1900")
+             subtitle = "Considerando obras a partir de 2003")
 ```
 
 Vemos que os dados do valor da obra começaram a ser colocados apenas em 2013 e quase todas obras tem valor a partir de 2015.
@@ -266,7 +262,6 @@ Vejamos em números absolutos:
 
 ```{r, echo=FALSE}
 obra.temporal %>% 
-    filter(ano > 1900) %>% 
     mutate(quantidade.valor.indisponivel = total - quantidade.valor.disponivel) %>% 
     select(-proporcao.valor.disponivel, -total) %>% 
     rename(
@@ -278,7 +273,7 @@ obra.temporal %>%
         geom_line() +
         labs(y = "quantidade por disponibilidade", 
              title = "Quantidade de obras com valor disponível ou indisponível ao longo do tempo",
-             subtitle = "Considerando obras depois de 1900")
+             subtitle = "Considerando obras a partir de 2003")
 ```
 
 Vemos que grande parte das obras que tem valor foram iniciadas entre 2013 e 2015, enquanto as obras sem valor disponível foran iniciadas antes de 2013, ou seja, o campo valor da obra começou a ser preenchido a partir de 2013.
@@ -289,7 +284,7 @@ Vejamos se os valores das obras vem aumentando desde 2013, ano que estas começa
 
 ```{r, echo=FALSE}
 obra.data.filtrado <- obra.data %>% 
-    filter(ano >= 2013, valor_obra > 100)
+    filter(ano >= 2013, valor_obra > 1000)
 
 obra.data.filtrado %>% 
     group_by(ano) %>% 
@@ -328,8 +323,7 @@ Como comentado anteriormente, os valores das obras são bem concentrados, mas ex
 Vejamos primeiramente qual a medida de dimensão utilizada.
 
 ```{r, echo=FALSE}
-obra.dimensao.data <- obra %>% 
-    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+obra.dimensao.data <- obras.filtradas %>% 
     select(id, data_inicio_obra, dimensao, descricao_sucinta_obra) %>% 
     mutate(ano = lubridate::year(data_inicio_obra))
 
@@ -344,7 +338,6 @@ Vejamos a proporção de dados de dimensão disponíveis temporalmente:
 
 ```{r, echo=FALSE}
 obra.dimensao.temporal <- obra.dimensao.data %>% 
-    filter(ano > 1900) %>% 
     group_by(ano) %>% 
     summarise(
         total = n(),
@@ -358,7 +351,7 @@ obra.dimensao.temporal %>%
         scale_y_continuous(labels = scales::percent) +
         labs(y = "proporção das dimensões disponíveis",
              title = "Proporção de dimensões das obras disponíveis ao longo do tempo",
-             subtitle = "Considerando obras depois de 1900")
+             subtitle = "Considerando obras a partir de 2003")
 ```
 
 Vemos que os dados de dimensões começaram a ser implantados em 2015, mas só atingiram uma proporção considerável de dimensões válidas em 2017.
@@ -371,7 +364,7 @@ obra.dimensao.temporal %>%
         geom_line() +
         labs(y = "quantidade de dimensões válidas",
              title = "Quantidade de dimensões das obras válidas ao longo do tempo",
-             subtitle = "Considerando obras depois de 1900")
+             subtitle = "Considerando obras a partir de 2003")
 ```
 
 Os valores absolutos seguem a mesma tendência dos proporcionais. No total temos `r obra.dimensao.temporal %>% select(dimensoes.validas) %>% sum()` obras com dimensões válidas.
@@ -413,8 +406,7 @@ obra.dimensao.data %>%
 Vejamos os tipos da obra disponíveis
 
 ```{r, echo=FALSE, warning=FALSE}
-tipo.obra <- obra %>% 
-    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+tipo.obra <- obras.filtradas %>% 
     left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
     select(id, data_inicio_obra, fk_tipo_obra, descricao_sucinta_obra, nome) %>% 
     mutate(ano = lubridate::year(data_inicio_obra)) %>% 
@@ -449,13 +441,13 @@ tipo.obra %>%
              title = "Proporção dos tipos das obras disponíveis ao longo do tempo")
 ```
 
-Vemos que a disponibilidade dos dados do tipo da obra cresceram ao longo do tempo, apesar de que, em todo período analisado, os tipos das obras tem uma boa disponibilidade de dados, se mantendo sempre acima de 98%.
+Vemos que a disponibilidade dos dados do tipo da obra cresceram ao longo do tempo, apesar de que, em todo período analisado, os tipos das obras tem uma boa disponibilidade de dados, se mantendo sempre acima de 98,5%.
 
 ### Análise temporal
 
 Vejamos quais os tipos de obra que vem sendo mais construídos ao longo do tempo:
 
-```{r, warning=FALSE}
+```{r, echo=FALSE, warning=FALSE}
 obras.mais.construidas <- tipo.obra %>% 
     group_by(tipo_da_obra) %>% 
     summarise(quantidade = n()) %>% 
@@ -463,16 +455,16 @@ obras.mais.construidas <- tipo.obra %>%
     head()
 
 tipo.obra %>% 
-    filter(ano > 1900, tipo_da_obra %in% obras.mais.construidas$tipo_da_obra) %>% 
+    filter(tipo_da_obra %in% obras.mais.construidas$tipo_da_obra) %>% 
     group_by(ano, tipo_da_obra) %>% 
     summarise(quantidade = n()) %>% 
     ggplot(aes(x = ano, y = quantidade, color = tipo_da_obra)) +
         geom_line() +
         labs(title = "Quantidades de obras agrupadas por tipo ao longo do tempo",
-             subtitle = "Considerando obras depois de 1900")
+             subtitle = "Considerando obras dos tipos mais construídos a partir de 2003")
 ```
 
-Podemos ver que de 2002 à 2005 todas os tipos de obras tem uma tendência ascendente, além disso, dos seis tipos de construção mais construídos, a escolas e postos de saúdes são os únicos que tem uma tendência crescente até 2014, após isso todos tipos de obras tendem a cair. 
+Podemos ver que dos seis tipos de obras mais construídas, a escolas e postos de saúdes são as únicos que tem uma tendência crescente até 2014, após isso todos tipos de obras tendem a cair. 
 
 ##Nome do jurisdicionado temporalmente
 
@@ -480,11 +472,10 @@ Podemos ver que de 2002 à 2005 todas os tipos de obras tem uma tendência ascen
 
 Vemos pelo gráfico abaixo que 100% das obras possuem o nome do jurisdicionado responsável.
 
-```{r}
+```{r, echo = FALSE}
 
 
-obra.jurisdicionado <- obra %>% 
-    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+obra.jurisdicionado <- obras.filtradas %>% 
     select(id, data_inicio_obra, valor_obra, descricao_sucinta_obra, fk_jurisdicionado) %>% 
     mutate(ano = lubridate::year(data_inicio_obra)) %>%
     left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id"))
@@ -492,7 +483,6 @@ obra.jurisdicionado <- obra %>%
 
 
 obra.jurisdicionado %>%
-    filter(ano > 1998) %>%
     group_by(ano) %>%
     summarise(
         total = n(),
@@ -500,19 +490,18 @@ obra.jurisdicionado %>%
       ) %>%
     ggplot(aes(x = ano, y = total_nao_vazio/total * 100)) + 
     geom_col() + 
-    labs(title = "Jurisdicionado temporalmente", subtitle="Considerando obras a partir de 1998", y = "Porcentagem de obras que possuem nome do jurisdicionado", x= "Ano da obra")
+    labs(title = "Jurisdicionado temporalmente", subtitle="Considerando obras a partir de 2003", y = "Porcentagem de obras que possuem nome do jurisdicionado", x= "Ano da obra")
 
 
 ```
 
 ### Quantidade de obras por jurisdicionado
 
-No gráfico abaixo podemos ver quais jurisdicionados possuem a maior quantidade de obras (considerando obras de 1998 até os dias atuais). Algumas prefeituras de cidades tidas como pequenas aparecem no ranking enquanto orgãos de cidades maiores como Patos e Souza não aparecem.
+No gráfico abaixo podemos ver quais jurisdicionados possuem a maior quantidade de obras (considerando obras de 2003 até os dias atuais). Algumas prefeituras de cidades tidas como pequenas aparecem no ranking enquanto orgãos de cidades maiores como Patos e Souza não aparecem.
 
-```{r}
+```{r, echo=FALSE}
 
 obra.jurisdicionado %>%
-    filter(ano > 1998) %>%
     group_by(nome) %>%
     summarise(
         total = n()
