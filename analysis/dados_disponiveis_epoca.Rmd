@@ -61,6 +61,8 @@ evolucao %>%
 
 ## Análise da geolocalização temporalmente
 
+### Disponibilidade das geolocalizações temporalmente
+
 Vejamos a existência dos dados georeferenciados temporalmente, onde a existência dos mesmos será indicada caso a geolocalização for do tipo 1 ou 3, visto que são os tipos cujos valores de geolocalização estão presentes na própria tabela, sendo um par de latitude e longitude, ou uma lista de pares. Não consideraremos os do tipo 2, que é uma referência para um arquivo .kml nem o tipo 0 que de fato é o valor inexistente.
 
 ```{r, echo=FALSE}
@@ -117,6 +119,55 @@ geolocalizacao.temporal %>%
 Podemos perceber que o número absoluto de obras geolocalizadas começa a crescer moderadamente a partir de 2010, mas tem uma ascensão mais forte a partir de 2015, chegando em `r geolocalizacao.temporal %>% select(obras.geolocalizadas) %>% max()` obras em 2017.
 
 No total, existem `r geolocalizacao.temporal %>% select(obras.geolocalizadas) %>% sum()` geolocalizadas.
+
+### Análise dos tipos de geolocalização temporalmente
+
+Vejamos se os tipos de geolocalização variaram ao longo do tempo:
+
+```{r, echo=FALSE, warning=FALSE}
+geolocalizacao %>% 
+    filter(tipo_georeferenciamento > 0) %>% 
+    group_by(ano) %>% 
+    summarise(
+        total = n(),
+        prop.tipo.1 = sum(tipo_georeferenciamento == 1) / total,
+        prop.tipo.2 = sum(tipo_georeferenciamento == 2) / total,
+        prop.tipo.3 = sum(tipo_georeferenciamento == 3) / total
+    ) %>% 
+    select(-total) %>% 
+    gather(prop.georeferenciamento, valor, -ano, na.rm = TRUE) %>% 
+    ggplot(aes(x = ano, y = valor, color = prop.georeferenciamento)) +
+        geom_line() +
+        scale_y_continuous(label = scales::percent) +
+        labs(y = "proporção de georeferenciamento",
+             title = "Proporção de obras georeferenciadas por tipo ao longo do tempo")
+```
+
+Vemos que antes de 2011, com exceção de 2003, todos os tipos de georeferenciamentos eram do tipo 1, mas a partir de 2011, começaram a crescer o tipo 2 e 3 e em 2015 o tipo 3 já era maioria.
+
+```{r}
+obras.agrup.tipo.geo <- geolocalizacao %>% 
+    filter(tipo_georeferenciamento > 0) %>% 
+    mutate(total = n()) %>% 
+    group_by(tipo_georeferenciamento) %>% 
+    summarise(
+        quantidade = n(),
+        proporcao = quantidade / min(total)
+    )
+
+obras.agrup.tipo.geo %>% 
+    ggplot(aes(x = reorder(tipo_georeferenciamento, -proporcao), y = proporcao)) +
+        geom_bar(stat = "identity") +
+        scale_y_continuous(label = scales::percent) +
+        labs(x = "tipo georeferenciamento",
+             title = "Proporção dos tipos de georeferenciamento")
+```
+
+Vemos que pouco mais de 50% dos dados utilizam no georeferenciamento o tipo 1, pouco mais de 30% utilizam o tipo 3 e cerca de 15% utiliza o tipo 2.
+
+__NOTA__: O tipo 1 é uma lista de pares latitude e longitude, o tipo 2 é uma referência para um arquivo KML e o tipo 3 é apenas um par de latitude e longitude.
+
+
 
 ## Análise do valor das obras temporalmente
 
