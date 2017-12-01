@@ -54,7 +54,7 @@
             </div>
             <md-input-container>
 
-                  <md-select ng-model="homeCtrl.relatorios" placeholder="Selecione um relatório">
+                  <md-select layout-align="space-between center" class="mySelect" ng-model="homeCtrl.relatorios" placeholder="Selecione um relatório" >
                     <md-option  ng-repeat="relatorio in homeCtrl.relatorios" ng-value="relatorio.nome" ng-click="homeCtrl.redireciona(relatorio.referencia)">
               {{relatorio.nome}}
 
