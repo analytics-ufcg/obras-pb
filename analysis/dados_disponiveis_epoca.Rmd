@@ -444,23 +444,23 @@ No gráfico abaixo podemos ver a quantidade de obras que se encontram em uma cer
 
 Para facilitar a leitura do gráfico vejamos a que status de andamento corresponde cada código númerico
 
-```{r}
-
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 mapeamento <- read_csv('mapeamento_andamento.csv')
-mapeamento
+
+mapeamento %>% 
+    kable()
 ```
 
 Vejamos agora o gráfico:
 
-```{r}
-
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 obra.evolucao <- obra %>% 
     left_join(evolucao, by = c("id" = "fk_obra")) %>% 
     select(id, data_inicio_obra, valor_obra, descricao_sucinta_obra, fk_jurisdicionado, andamento) %>% 
-    mutate(ano = lubridate::year(data_inicio_obra))
+    mutate(ano = lubridate::year(data_inicio_obra)) %>% 
+    filter(ano >= 2003)
 
 p <- obra.evolucao %>%
-    filter(ano > 1998) %>%
     mutate(andamento = factor(andamento)) %>%
     ggplot(aes(x = ano)) + 
     geom_bar(aes(fill = andamento)) +
@@ -471,35 +471,31 @@ plotly::ggplotly(p)
 
 ### Andamento de obras disponível
 
-Como já vimos anteriormente, a maioria das obras está em andamento, mais especificamente 97.5% das obras cadastradas no sistema. 
+Como já vimos anteriormente, a maioria das obras está em andamento, mais especificamente 97.4% das obras cadastradas no sistema. 
 
-```{r}
-
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 obra.evolucao %>%
-    filter(ano > 1998) %>%
     group_by(andamento) %>%
     summarise(total = n()) %>%
-    mutate(porcentagem = format(total/sum(total) * 100, digits = 2))
+    mutate(porcentagem = format(total/sum(total) * 100, digits = 2)) %>% 
+    arrange(desc(porcentagem)) %>% 
+    kable()
 ```
 
 ### Total de obras em execução temporalmente
 
 O ano que possui mais obras com status diferente de "em execução" é 2015 com algo em torno de 91% de obras em exeução. Nos anos de 2016/2017 temos um pouco mais de 95% das obras em execução.
 
-```{r}
-
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 obra.evolucao %>%
-    filter(ano > 1998) %>%
     group_by(ano, andamento) %>%
     summarise(total = n()) %>%
     mutate(porcentagem = total/sum(total) * 100) %>%
     filter(andamento == 1) %>%
     ggplot(aes(x = ano, y = porcentagem)) + 
-    scale_x_continuous(breaks = seq(2000, 2017, by = 1)) +
+    scale_x_continuous(breaks = seq(2003, 2017, by = 1)) +
     geom_line() + 
     labs(title = "Total de obras em execução temporalmente")
-
-
 ```
 
 
@@ -507,16 +503,13 @@ obra.evolucao %>%
 
 Nesta seçao iremos analisar os orgãos públicos que possuem menor proporção de obras com status em andamento.
 
-#### De 2000 até os dias atuais
+#### De 2003 até os dias atuais
 
-No gráfico abaixo veremos quais orgãos públicos possuem menos obras em andamento, talvez fosse desejável ver quais orgãos possuem MAIS obras em andamento para verificar aqueles que não se preocupam em mudar o status das obras, contudo, estes seriam a esmagadora maioria uma vez que temos algo em torno de 90% dos orgãos com 100% de obras em execução. Vejamos o gráfico:
+No gráfico abaixo veremos quais orgãos públicos possuem menos obras em andamento, mas talvez fosse desejável ver quais orgãos possuem mais obras em andamento para verificar aqueles que não se preocupam em mudar o status das obras, contudo, estes seriam a esmagadora maioria uma vez que temos algo em torno de 90% dos orgãos com 100% de obras em execução. Vejamos o gráfico:
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 
-obra.evolucao.jurisdicionado <- obra %>% 
-    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
-    select(id, data_inicio_obra, valor_obra, descricao_sucinta_obra, fk_jurisdicionado, andamento) %>% 
-    mutate(ano = lubridate::year(data_inicio_obra)) %>%
+obra.evolucao.jurisdicionado <- obra.evolucao %>% 
     left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id"))
 
 
@@ -542,7 +535,7 @@ orgaos_menos_obras_em_andamento %>%
 
 Quando fazemos a mesma verificação anterior considerando apenas obras de 2015 pra cá a situação melhora um pouco, porém, ainda temos algo em torno de 80% dos orgãos com 100% das obras em andamento. Vejamos os orgãos que tem menos obras em andamento:
 
-```{r}
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 
 orgaos_menos_obras_em_andamento <-
     obra.evolucao.jurisdicionado %>%
