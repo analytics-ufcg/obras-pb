@@ -4,6 +4,7 @@ output:
     html_document:
         toc: true
         toc_float: true
+        toc_depth: 4
         fig_width: 10
         fig_heigth: 8 
 ---
@@ -506,4 +507,128 @@ obra.jurisdicionado %>%
     labs(x = "Jurisdicionado", y = "Quantidade de obras", title = "Top 10 jurisdicionados com maior quantidade de obras")
 
 ```
+
+## Evolução das obras temporalmente
+
+Nesta seção iremos analisar as obras no que diz respeito a evolução das mesmas ao longo do tempo.
+
+### Andamento das obras temporalmente
+
+No gráfico abaixo podemos ver a quantidade de obras que se encontram em uma certa etapa de andamento ao longo do tempo. A esmagadora maioria das obras possuem status "Em andamento".
+
+Para facilitar a leitura do gráfico vejamos a que status de andamento corresponde cada código númerico
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+mapeamento <- read_csv('mapeamento_andamento.csv')
+
+mapeamento %>% 
+    kable()
+```
+
+Vejamos agora o gráfico:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+obra.evolucao <- obra %>% 
+    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+    select(id, data_inicio_obra, valor_obra, descricao_sucinta_obra, fk_jurisdicionado, andamento) %>% 
+    mutate(ano = lubridate::year(data_inicio_obra)) %>% 
+    filter(ano >= 2003)
+
+p <- obra.evolucao %>%
+    mutate(andamento = factor(andamento)) %>%
+    ggplot(aes(x = ano)) + 
+    geom_bar(aes(fill = andamento)) +
+    labs(title = "Evolução das obras temporalmente", x = "Ano", y = "Total de obras")
+
+plotly::ggplotly(p)
+```
+
+### Andamento de obras disponível
+
+Como já vimos anteriormente, a maioria das obras está em andamento, mais especificamente 97.4% das obras cadastradas no sistema. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+obra.evolucao %>%
+    group_by(andamento) %>%
+    summarise(total = n()) %>%
+    mutate(porcentagem = format(total/sum(total) * 100, digits = 2)) %>% 
+    arrange(desc(porcentagem)) %>% 
+    kable()
+```
+
+### Total de obras em execução temporalmente
+
+O ano que possui mais obras com status diferente de "em execução" é 2015 com algo em torno de 91% de obras em exeução. Nos anos de 2016/2017 temos um pouco mais de 95% das obras em execução.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+obra.evolucao %>%
+    group_by(ano, andamento) %>%
+    summarise(total = n()) %>%
+    mutate(porcentagem = total/sum(total) * 100) %>%
+    filter(andamento == 1) %>%
+    ggplot(aes(x = ano, y = porcentagem)) + 
+    scale_x_continuous(breaks = seq(2003, 2017, by = 1)) +
+    geom_line() + 
+    labs(title = "Total de obras em execução temporalmente")
+```
+
+
+### Orgãos com menos obras em andamento
+
+Nesta seçao iremos analisar os orgãos públicos que possuem menor proporção de obras com status em andamento.
+
+#### De 2003 até os dias atuais
+
+No gráfico abaixo veremos quais orgãos públicos possuem menos obras em andamento, mas talvez fosse desejável ver quais orgãos possuem mais obras em andamento para verificar aqueles que não se preocupam em mudar o status das obras, contudo, estes seriam a esmagadora maioria uma vez que temos algo em torno de 90% dos orgãos com 100% de obras em execução. Vejamos o gráfico:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+obra.evolucao.jurisdicionado <- obra.evolucao %>% 
+    left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id"))
+
+
+orgaos_menos_obras_em_andamento <-
+    obra.evolucao.jurisdicionado %>%
+    group_by(nome, andamento) %>%
+    summarise(total = n()) %>%
+    mutate(porcentagem = total/sum(total) * 100) %>%
+    filter(andamento == 1) %>%
+    ungroup(nome) %>% 
+    top_n(15, -porcentagem)
+
+orgaos_menos_obras_em_andamento %>%
+    ggplot(aes(x = reorder(nome, -porcentagem), y = porcentagem)) +
+    geom_col() + 
+    coord_flip() +
+    labs(title = "Top 15 orgãos com menos obras com status em execução", x = "Orgão Público")
+
+```
+
+
+#### De 2015 até os dias atuais
+
+Quando fazemos a mesma verificação anterior considerando apenas obras de 2015 pra cá a situação melhora um pouco, porém, ainda temos algo em torno de 80% dos orgãos com 100% das obras em andamento. Vejamos os orgãos que tem menos obras em andamento:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+orgaos_menos_obras_em_andamento <-
+    obra.evolucao.jurisdicionado %>%
+    filter(ano >= 2015) %>%
+    group_by(nome, andamento) %>%
+    summarise(total = n()) %>%
+    mutate(porcentagem = total/sum(total) * 100) %>%
+    filter(andamento == 1) %>%
+    ungroup(nome) %>%
+    top_n(15, -porcentagem)
+
+orgaos_menos_obras_em_andamento %>%
+    ggplot(aes(x = reorder(nome, -porcentagem), y = porcentagem)) +
+    geom_col() + 
+    coord_flip() +
+    labs(title = "Top 15 orgãos com menos obras com status em execução (2015-atualmente)", x = "Orgão Público")
+
+
+
+```
+
 ---
