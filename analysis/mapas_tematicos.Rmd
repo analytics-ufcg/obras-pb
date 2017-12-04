@@ -62,11 +62,28 @@ obra.filtrada <- obra.georef %>%
     filter(tipo_georeferenciamento != 0)
 
 format.geo <- function(mat) {
-    lat <- mean(mat[,1])
-    lon <- mean(mat[,2])
-    paste("[",
-            paste(lat,lon, sep = ","),
-            "]")
+    coord1 <- mean(mat[,1])
+    coord2 <- mean(mat[,2])
+    
+    if (coord1 > 0) {
+        coord1 <- coord1 * -1
+    }
+    
+    if (coord2 > 0) {
+        coord2 <- coord2 * -1
+    }
+    
+    lat <- max(coord1, coord2)
+    lon <- min(coord1, coord2)
+    
+    while( lat < -10 ) {
+        lat <- lat/10
+    }
+    
+    while( lon < -100) {
+        lon <- lon/10
+    }
+    paste("[", paste(lat,lon, sep = ","), "]")
 }
 
 centroide <- function(localizacao) {
@@ -80,14 +97,14 @@ centroide <- function(localizacao) {
         error=function(cond) {
             tryCatch(
                 {
-                    s <- strsplit(localizacao, "\\],")[[1]]
-                    s1 <- str_replace_all(s, "\\[|\\]", "")
-                    s2 <- unlist(strsplit(s1, ","))
-                    coords <- trimws(s2, which = "both")
-                    s4 <- lapply(coords, function(d){
+                    lista.loc.format <- strsplit(localizacao, "\\],")[[1]]
+                    lista.loc.format <- str_replace_all(lista.loc.format, "\\[|\\]", "")
+                    lista.coord <- unlist(strsplit(lista.loc.format, ","))
+                    lista.coord <- trimws(lista.coord, which = "both")
+                    lista.coord.format <- lapply(lista.coord, function(d){
                         as.numeric(unlist(strsplit(d, " "))[1])
                         })
-                    parsed.matrix <- matrix(unlist(s4), ncol = 2, byrow = TRUE)
+                    parsed.matrix <- matrix(unlist(lista.coord.format), ncol = 2, byrow = TRUE)
                     
                     return(format.geo(parsed.matrix))
                 },
