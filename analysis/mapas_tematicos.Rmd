@@ -163,6 +163,18 @@ obra.georef.corrigido <- obra.filtrada %>%
     filter(
         is.dentro.pb(lat,lon)
     )
+
+
+obra.georef.centroide.sumarizado <- 
+    obra.georef.corrigido %>%
+    group_by(fk_obra) %>%
+    mutate(lat = mean(lat), lon = mean(lon)) %>%
+    select(-valor_georeferenciamento)
+
+obra.georef.centroide.sumarizado <- obra.georef.centroide.sumarizado[!duplicated(obra.georef.centroide.sumarizado$fk_obra),]
+#write_csv(obra.georef.centroide.sumarizado, "obras_georef_centroide_sumarizadas.csv")
+    
+
 ```
 
 
