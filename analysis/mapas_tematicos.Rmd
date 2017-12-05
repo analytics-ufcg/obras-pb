@@ -1,0 +1,156 @@
+---
+title: "Mapas Temáticos"
+output: 
+    html_document:
+        toc: true
+        toc_float: true
+        fig_width: 10
+        fig_heigth: 8 
+---
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+library(tidyverse)
+library(RPostgreSQL)
+library(knitr)
+library(jsonlite)
+```
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+drv <- DBI::dbDriver("PostgreSQL")
+
+con1 <- DBI::dbConnect(drv, 
+  host = config::get("host"),
+  port = config::get("port"),
+  user = config::get("user"),
+  password = config::get("password"),
+  dbname = config::get("dbname1")
+)
+
+obra <- dbGetQuery(con1, "select * from t_obra")        
+acompanhamento <- dbGetQuery(con1, "select * from t_acompanhamento")
+complexo <- dbGetQuery(con1, "select * from t_complexo")
+evolucao <- dbGetQuery(con1, "select * from t_evolucao")
+
+con2 <- DBI::dbConnect(drv, 
+  host = config::get("host"),
+  port = config::get("port"),
+  user = config::get("user"),
+  password = config::get("password"),
+  dbname = config::get("dbname2")
+)
+
+jurisdicionado_db2 <- dbGetQuery(con2, "select * from t_jurisdicionado")
+localidade <- dbGetQuery(con2, "select * from t_localidade")
+
+tipos.das.obras <- read.csv("tipos_obra.csv")
+```
+
+Nesta análise vamos identificar possíveis mapas temáticos para incorporar futuramente ao GeoPB, utilizando dados georeferenciados de obras da Paraíba.
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obra.georef <- acompanhamento %>% 
+    left_join(obra, by = c("fk_obra" = "id")) %>% 
+    left_join(localidade, by = c("fk_localidade" = "id"))
+```
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+# Associa para cada obra uma localização georeferenciada
+
+## Coloca o centróide no lugar de uma dista de localizações 
+
+obra.filtrada <- obra.georef %>% 
+    filter(tipo_georeferenciamento != 0)
+
+format.geo <- function(mat) {
+    coord1 <- mean(mat[,1])
+    coord2 <- mean(mat[,2])
+    
+    if (coord1 > 0) {
+        coord1 <- coord1 * -1
+    }
+    
+    if (coord2 > 0) {
+        coord2 <- coord2 * -1
+    }
+    
+    lat <- max(coord1, coord2)
+    lon <- min(coord1, coord2)
+    
+    while( lat < -10 ) {
+        lat <- lat/10
+    }
+    
+    while( lon < -100) {
+        lon <- lon/10
+    }
+    paste(lat,lon, sep = ",")
+}
+
+
+is.dentro.pb <- function(lat,lon) {
+    lon.min <- -38.770132
+    lat.min <- -8.316999
+    lon.max <- -34.786624
+    lat.max <- -5.995412
+    return(lon.min < lon && lon < lon.max && lat.min < lat && lat < lat.max)
+}
+
+centroide <- function(localizacao) {
+    
+    coords <- tryCatch( 
+        {
+            parsed.mat <- matrix(jsonlite::fromJSON(localizacao), ncol = 2)
+            
+            return(format.geo(parsed.mat))
+        },
+        error=function(cond) {
+            tryCatch(
+                {
+                    lista.loc.format <- strsplit(localizacao, "\\],")[[1]]
+                    lista.loc.format <- str_replace_all(lista.loc.format, "\\[|\\]", "")
+                    lista.coord <- unlist(strsplit(lista.loc.format, ","))
+                    lista.coord <- trimws(lista.coord, which = "both")
+                    lista.coord.format <- lapply(lista.coord, function(d){
+                        as.numeric(unlist(strsplit(d, " "))[1])
+                        })
+                    parsed.matrix <- matrix(unlist(lista.coord.format), ncol = 2, byrow = TRUE)
+                    
+                    return(format.geo(parsed.matrix))
+                },
+                error = function(cond) {
+                    return(localizacao)
+                }
+            )
+            return(localizacao)
+        }
+    )
+    coords
+}
+
+obra.georef.corrigido <- obra.filtrada %>% 
+    rowwise() %>% 
+    mutate(
+        valor_georeferenciamento = ifelse(tipo_georeferenciamento != 1 & tipo_georeferenciamento != 3, 
+                                          valor_georeferenciamento, 
+                                          centroide(valor_georeferenciamento))
+    ) %>%
+    filter(
+        tipo_georeferenciamento != 2
+    ) %>% 
+    separate(
+        
+        valor_georeferenciamento, 
+        c("lat", "lon"),
+        sep = ",",
+        remove = FALSE,
+        convert = TRUE
+    ) %>% 
+    filter(
+        is.dentro.pb(lat,lon)
+    )
+```
+
+
+
+
+---
