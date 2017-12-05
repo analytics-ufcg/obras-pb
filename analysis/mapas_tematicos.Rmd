@@ -83,7 +83,16 @@ format.geo <- function(mat) {
     while( lon < -100) {
         lon <- lon/10
     }
-    paste("[", paste(lat,lon, sep = ","), "]")
+    paste(lat,lon, sep = ",")
+}
+
+
+is.dentro.pb <- function(lat,lon) {
+    lon.min <- -38.770132
+    lat.min <- -8.316999
+    lon.max <- -34.786624
+    lat.max <- -5.995412
+    return(lon.min < lon && lon < lon.max && lat.min < lat && lat < lat.max)
 }
 
 centroide <- function(localizacao) {
@@ -121,7 +130,23 @@ centroide <- function(localizacao) {
 obra.georef.corrigido <- obra.filtrada %>% 
     rowwise() %>% 
     mutate(
-        valor_georeferenciamento = ifelse(tipo_georeferenciamento != 1, valor_georeferenciamento, centroide(valor_georeferenciamento))
+        valor_georeferenciamento = ifelse(tipo_georeferenciamento != 1 & tipo_georeferenciamento != 3, 
+                                          valor_georeferenciamento, 
+                                          centroide(valor_georeferenciamento))
+    ) %>%
+    filter(
+        tipo_georeferenciamento != 2
+    ) %>% 
+    separate(
+        
+        valor_georeferenciamento, 
+        c("lat", "lon"),
+        sep = ",",
+        remove = FALSE,
+        convert = TRUE
+    ) %>% 
+    filter(
+        is.dentro.pb(lat,lon)
     )
 ```
 
