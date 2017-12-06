@@ -292,5 +292,97 @@ obras.2003 %>%
 ```
 
 
+Selecionando apenas obras a partir de 2013 e com valor maior que 1000 reais.
+
+
+```{r}
+
+obras.2013 <- obra %>% 
+    left_join(localidade, by = c("fk_localidade" = "id")) %>% 
+    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+    mutate(ano = lubridate::year(data_inicio_obra)) %>% 
+    filter(
+        ano >= 2013 &
+        valor_obra > 1000
+    ) %>% 
+    left_join(tipos.das.obras %>% mutate(tipo_obra = nome) %>% select(-nome), by = c("fk_tipo_obra" = "id"))
+```
+
+
+Vamos ver agora qual o tipo de obra mais executada, considerando apenas observações com dimensão maior que zero.
+
+```{r}
+
+obras.2013 %>%
+    group_by(tipo_obra) %>%
+    filter(dimensao > 0) %>%
+    count() %>%
+    arrange(-n)
+    
+```
+
+Selecionando apenas o tipo mais frequente (PAVIMENTAÇÃO PARALEPÍPEDO) e com dimensão maior do que 50m2.
+
+```{r}
+
+obras.2013.pavimentacao <-
+    obras.2013 %>%
+    filter(tipo_obra == 'PAVIMENTAÇÃO PARALEPÍPEDO' & dimensao > 50) %>%
+    select(valor_obra, dimensao, nome, descricao_sucinta_obra) %>%
+    mutate(custo_efetivo = valor_obra/dimensao) %>% 
+    group_by(nome) %>%
+    summarise(custo_efetivo = median(custo_efetivo))
+
+
+obras.2013.escola <-
+    obras.2013 %>%
+    filter(tipo_obra == 'ESCOLA' & dimensao > 50) %>%
+    select(valor_obra, dimensao, nome, descricao_sucinta_obra) %>%
+    mutate(custo_efetivo = valor_obra/dimensao)
+
+
+
+mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
+
+levels_mapa = levels(mapa_paraiba@data$Nome_Munic)
+levels_mapa[51] = "Tacima"
+levels_mapa[156] = "Quixaba"
+levels_mapa[173] = "Joca Claudino"
+levels_mapa[179] = "São Domingos de Pombal"
+levels_mapa[200] = "São Vicente do Seridó"
+
+levels(mapa_paraiba@data$Nome_Munic) = levels_mapa
+
+mapa_paraiba@data <- 
+    mapa_paraiba@data %>%
+    left_join(obras.2013.pavimentacao,by = c("Nome_Munic" = "nome"))
+
+colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba@data$custo_efetivo, na.rm = T), max(mapa_paraiba@data$custo_efetivo, na.rm = T)))
+
+mapa_paraiba %>% 
+    leaflet() %>% 
+    addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+    addPolygons(opacity = 0.5, 
+              weight = 1, 
+              fillColor = colors(mapa_paraiba@data$custo_efetivo),
+              color = 'black', 
+              label = mapa_paraiba@data$Nome_Munic,
+              popup = paste('Município: ', mapa_paraiba@data$Nome_Munic, '</br>Custo efetivo: R$', mapa_paraiba@data$custo_efetivo),
+              fillOpacity = 1) %>%
+    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba@data$custo_efetivo,
+            title = "Custo efetivo mediano das obras",
+            opacity = 1)
+
+
+
+```
+
+
+
+
+
+
+
+
 
 ---
