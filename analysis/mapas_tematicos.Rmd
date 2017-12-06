@@ -180,23 +180,40 @@ obra.georef.centroide.sumarizado <- obra.georef.centroide.sumarizado[!duplicated
 ```
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-obras.filtradas <- obra %>% 
+obras.2003 <- obra %>% 
+    left_join(localidade, by = c("fk_localidade" = "id")) %>% 
     left_join(evolucao, by = c("id" = "fk_obra")) %>% 
     mutate(ano = lubridate::year(data_inicio_obra)) %>% 
     filter(
         ano >= 2003
     ) %>% 
-    left_join(localidade, by = c("fk_localidade" = "id")) %>% 
     left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id"))
 
-obras.filtradas.valor <- obra.filtrada %>% 
+mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
+
+municipios <- data.frame(nome = mapa_paraiba$Nome_Munic, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
+obras.2003 <- obras.2003 %>% 
+    left_join(
+        municipios, by = c("nome.x" = "nome")
+    ) %>% 
+    left_join(obra.georef.centroide.sumarizado %>% select(id,lat,lon), by = "id") %>% 
+    mutate(
+        lat = ifelse(is.na(lat.y), lat.x, lat.y), 
+        lon = ifelse(is.na(lon.y), lon.x, lon.y) 
+    ) %>% select(
+        -lat.x, -lat.y, -lon.x, -lon.y
+    )
+    
+
+
+obras.filtradas.valor <- obras.2003 %>% 
     filter(valor_obra > 1000)
 
-obras.filtradas.dimensao <- obra.filtrada %>% 
+obras.filtradas.dimensao <- obras.2003 %>% 
     filter(dimensao > 0)
 
 valor.obras.municipio <- obras.filtradas.valor %>% 
-    group_by(nome) %>% 
+    group_by(nome.x) %>% 
     summarise(
         valor.mediano = median(valor_obra),
         qtde.obras = n()
@@ -206,8 +223,6 @@ valor.obras.municipio <- obras.filtradas.valor %>%
 Vamos ver o mapa da Paraíba:
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
-
 # Municípios que mudaram de nome ou que estão com o nome errado
 levels_mapa = levels(mapa_paraiba@data$Nome_Munic)
 levels_mapa[51] = "Tacima"
@@ -220,8 +235,10 @@ levels(mapa_paraiba@data$Nome_Munic) = levels_mapa
 
 mapa_paraiba@data <- mapa_paraiba@data %>%
   left_join(valor.obras.municipio,
-            by = c("Nome_Munic" = "nome"))
+            by = c("Nome_Munic" = "nome.x"))
 ```
+
+
 
 Vamos elencar as variáveis disponíveis para mostrar nos mapas:
 
@@ -263,6 +280,16 @@ mapa_paraiba %>%
             opacity = 1)
 ```
 
+Vejamos as obras de João Pessoa, Santa Rita e Pocinhos:
+
+```{r}
+obras.2003 %>% 
+    filter(nome.x %in% c("João Pessoa", "Santa Rita", "Pocinhos")) %>% 
+    arrange(-valor_obra) %>% 
+    select(descricao_sucinta_obra, nome.x, valor_obra) %>% 
+    top_n(10) %>% 
+    kable()
+```
 
 
 
