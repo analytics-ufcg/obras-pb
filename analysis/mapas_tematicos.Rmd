@@ -13,6 +13,8 @@ library(tidyverse)
 library(RPostgreSQL)
 library(knitr)
 library(jsonlite)
+library(leaflet)
+library(rgdal)
 ```
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
@@ -177,6 +179,117 @@ obra.georef.centroide.sumarizado <- obra.georef.centroide.sumarizado[!duplicated
 
 ```
 
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+obras.2003 <- obra %>% 
+    left_join(localidade, by = c("fk_localidade" = "id")) %>% 
+    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+    mutate(ano = lubridate::year(data_inicio_obra)) %>% 
+    filter(
+        ano >= 2003
+    ) %>% 
+    left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id"))
+
+mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
+
+municipios <- data.frame(nome = mapa_paraiba$Nome_Munic, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
+obras.2003 <- obras.2003 %>% 
+    left_join(
+        municipios, by = c("nome.x" = "nome")
+    ) %>% 
+    left_join(obra.georef.centroide.sumarizado %>% select(id,lat,lon), by = "id") %>% 
+    mutate(
+        lat = ifelse(is.na(lat.y), lat.x, lat.y), 
+        lon = ifelse(is.na(lon.y), lon.x, lon.y) 
+    ) %>% select(
+        -lat.x, -lat.y, -lon.x, -lon.y
+    )
+    
+
+
+obras.filtradas.valor <- obras.2003 %>% 
+    filter(valor_obra > 1000)
+
+obras.filtradas.dimensao <- obras.2003 %>% 
+    filter(dimensao > 0)
+
+valor.obras.municipio <- obras.filtradas.valor %>% 
+    group_by(nome.x) %>% 
+    summarise(
+        valor.mediano = median(valor_obra),
+        qtde.obras = n()
+    )
+```
+
+Vamos ver o mapa da Paraíba:
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Municípios que mudaram de nome ou que estão com o nome errado
+levels_mapa = levels(mapa_paraiba@data$Nome_Munic)
+levels_mapa[51] = "Tacima"
+levels_mapa[156] = "Quixaba"
+levels_mapa[173] = "Joca Claudino"
+levels_mapa[179] = "São Domingos de Pombal"
+levels_mapa[200] = "São Vicente do Seridó"
+
+levels(mapa_paraiba@data$Nome_Munic) = levels_mapa
+
+mapa_paraiba@data <- mapa_paraiba@data %>%
+  left_join(valor.obras.municipio,
+            by = c("Nome_Munic" = "nome.x"))
+```
+
+
+
+Vamos elencar as variáveis disponíveis para mostrar nos mapas:
+
+* Localidade
+    + Mesoregião
+    + Microregião
+    + Nome
+    + Georeferencia
+* Valor
+* Dimensão
+* Tipo da obra
+    + Nome
+    + Unidade de medida
+* Obra incorporável ao patrimônio
+* Cancelada
+* Data:
+    + Ano
+    + Início da obra
+    + Previsão de conclusão
+* Andamento
+
+Vejamos o valor mediano das obras nos municípios paraibanos:
+
+```{r}
+colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba@data$valor.mediano, na.rm = T), max(mapa_paraiba@data$valor.mediano, na.rm = T)))
+
+mapa_paraiba %>% 
+    leaflet() %>% 
+    addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+    addPolygons(opacity = 0.5, 
+              weight = 1, 
+              fillColor = colors(mapa_paraiba@data$valor.mediano),
+              color = 'black', 
+              label = mapa_paraiba@data$Nome_Munic,
+              popup = paste('Município: ', mapa_paraiba@data$Nome_Munic, '</br>Custo mediano das obras: R$ ', mapa_paraiba@data$valor.mediano, '</br>Número de obras: ', mapa_paraiba@data$qtde.obras),
+              fillOpacity = 1) %>%
+    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba@data$valor.mediano,
+            title = "Valor mediano das obras",
+            opacity = 1)
+```
+
+Vejamos as obras de João Pessoa, Santa Rita e Pocinhos:
+
+```{r}
+obras.2003 %>% 
+    filter(nome.x %in% c("João Pessoa", "Santa Rita", "Pocinhos")) %>% 
+    arrange(-valor_obra) %>% 
+    select(descricao_sucinta_obra, nome.x, valor_obra) %>% 
+    top_n(10) %>% 
+    kable()
+```
 
 
 
