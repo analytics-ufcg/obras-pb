@@ -1,0 +1,11 @@
+md-select-value.md-select-placeholder {
+    color: white!important;
+    font-size: 80%;
+
+}
+
+.mySelect {
+    height: 10px;
+    min-height: 10px;
+    width: 100%;
+}
