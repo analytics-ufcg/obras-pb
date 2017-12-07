@@ -45,6 +45,7 @@ jurisdicionado_db2 <- dbGetQuery(con2, "select * from t_jurisdicionado")
 localidade <- dbGetQuery(con2, "select * from t_localidade")
 
 tipos.das.obras <- read.csv("tipos_obra.csv")
+municipios.pb <- read.csv("municipios_pb.csv")
 ```
 
 ## Introdução
@@ -195,21 +196,15 @@ mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
 
 municipios <- data.frame(nome = mapa_paraiba$Nome_Munic, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
 obras.2013 <- obras.2013 %>% 
-    left_join(
-        municipios, by = c("nome.x" = "nome")
-    ) %>% 
+    left_join(municipios, by = c("nome.x" = "nome")) %>% 
     left_join(obra.georef.centroide.sumarizado %>% select(id,lat,lon), by = "id") %>% 
     mutate(
         lat = ifelse(is.na(lat.y), lat.x, lat.y), 
         lon = ifelse(is.na(lon.y), lon.x, lon.y) 
-    ) %>% select(
-        -lat.x, -lat.y, -lon.x, -lon.y
-    )
+    ) %>% select(-lat.x, -lat.y, -lon.x, -lon.y)
     
-
-
 obras.filtradas.valor <- obras.2013 %>% 
-    filter(valor_obra > 1000)
+    filter(valor_obra > 1000, valor_obra < 1000000000)
 
 obras.filtradas.dimensao <- obras.2013 %>% 
     filter(dimensao > 0)
@@ -283,5 +278,48 @@ mapa_paraiba %>%
 ```
 
 É possível ver que o município de Manaíra se destaca dos demais, por ser uma cidade pequena e ter uma grande quantidade de obras. O motivo de acontecer isso é porque nesta cidade existem várias observações para um mesmo contrato, ou seja, existem vários casos de ter um mesmo contrato, mas a obra ocorre em várias ruas, seja para calçamento, rede de esgotamento, entre outros tipos de obra.
+
+Vejamos agora um o valor gasto em obras por habitante em cada município:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+gastos.por.habitante.por.municipio <- obras.filtradas.valor %>% 
+    group_by(codigo_ibge) %>% 
+    summarise(valor.total.obras = sum(valor_obra)) %>% 
+    left_join(municipios.pb %>% rename("codigo_ibge" = "Código", "populacao" = "População.estimada...pessoas") %>% select(codigo_ibge, populacao),
+              by = "codigo_ibge") %>% 
+    mutate(gastos.por.habitante = valor.total.obras / populacao)
+
+mapa_paraiba@data <- mapa_paraiba@data %>%
+  left_join(gastos.por.habitante.por.municipio,
+            by = c("GEOCODIG_M" = "codigo_ibge"))
+
+colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba@data$gastos.por.habitante, na.rm = T), max(mapa_paraiba@data$gastos.por.habitante, na.rm = T)))
+
+mapa_paraiba %>% 
+    leaflet() %>% 
+    addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+    addPolygons(opacity = 0.5, 
+              weight = 1, 
+              fillColor = colors(mapa_paraiba@data$gastos.por.habitante),
+              color = "black", 
+              label = mapa_paraiba@data$Nome_Munic,
+              popup = paste("Município: ", mapa_paraiba@data$Nome_Munic, "</br>Valor em obras por habitante: R$", mapa_paraiba@data$gastos.por.habitante, "</br>Valor total das obras: R$", mapa_paraiba@data$valor.total.obras, "</br>Quantidade de habitante: ", mapa_paraiba@data$populacao),
+              fillOpacity = 1) %>%
+    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba@data$gastos.por.habitante,
+            title = "Valor gasto em obras por habitante",
+            opacity = 1)
+```
+
+Vejamos as obras de São Francisco mais caras:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obras.filtradas.valor %>% 
+    filter(nome.x == "São Francisco") %>% 
+    arrange(-valor_obra) %>% select(nome.x, valor_obra, descricao_sucinta_obra, descricao_localidade) %>%
+    top_n(5) %>% 
+    kable()
+```
+
+Provavelmente o gasto por habitante com obras foi elevado devido à primeira obra, a qual custou 28 mi de reais.
 
 ---
