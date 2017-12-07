@@ -631,4 +631,23 @@ orgaos_menos_obras_em_andamento %>%
 
 ```
 
+## Conclusão
+
+Visto as observações anteriores aponteremos os pontos mais importantes encontrados:
+
+* Existem dados de obras iniciadas desde 1900, os quais consideramos como dados faltantes, mas apenas em 2003 passa a ter uma quantidade considerável de obras iniciadas, com isso, consideramos nas demais análises dados a partir de 2003.
+    + Existem uma tendência decrescente de obras iniciadas a partir de 2014.
+* Analisando os dados de georeferenciamentos disponíveis, verificamos que existem alguns dados a partir de 2010, mas apenas no ano de 2017 existe um percentual razoável de dados geolocalizados, visto que chega a cerca de 62.70%.
+* Os dados do valor da obra começaram a ser colocados no sistema apenas em 2013 e quase todas obras tem valor a partir de 2015.
+* Os dados de dimensões começaram a ser implantados em 2015, mas só atingiram uma proporção considerável de dimensões válidas em 2017, onde tem cerca de 80% das obras com dimensão.
+* Os tipo das obras tem uma boa disponibilidade de dados, se mantendo sempre acima de 98,5% em todo período analisado.
+    + Dos seis tipos de obras mais construídas, a escolas e postos de saúdes são as únicos que tem uma tendência crescente até 2014, após isso todos tipos de obras tendem a cair.
+* Os dados de juirisdicionados são sempre disponíveis, no período analisado.
+    + Alguns jurisdicionados de cidades pequenas aparecem no ranking de jurisdicionados com maior quantidade de obras, como Picuí (4º), Manaíra (7º) e Boa Vista (8º).
+* A maior parte das obras está em execução, independente de ano, onde no geral 97,4% delas se encontram nesta situação. 
+    + O ano que possui mais obras com status diferente de “em execução” é 2015 com algo em torno de 91% de obras em exeução. Nos anos de 2016/2017 temos um pouco mais de 95% das obras em execução.
+    + Cerca de 90% dos jurisdicionados tem 100% das obras em execução, analisando dados desde 2003.
+    + Considerando dados a partir de 2015, a situação melhora um pouco, porém, ainda temos algo em torno de 80% dos jurisdicionados com 100% das obras em andamento.
+
+
 ---
