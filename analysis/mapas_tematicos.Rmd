@@ -388,4 +388,82 @@ leaflet() %>%
 ```
 
 
+Agora vamos dar uma olhada no custo efetivo das obras.
+
+Selecionando apenas as obras a partir de 2013 e com valor maior que 1000 reais.
+
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obras.2013 <- obra %>% 
+    left_join(localidade, by = c("fk_localidade" = "id")) %>% 
+    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+    mutate(ano = lubridate::year(data_inicio_obra)) %>% 
+    filter(
+        ano >= 2013 &
+        valor_obra > 1000
+    ) %>% 
+    left_join(tipos.das.obras %>% mutate(tipo_obra = nome) %>% select(-nome), by = c("fk_tipo_obra" = "id"))
+```
+
+
+Vamos ver agora os cinco tipos de obra mais executadas, considerando apenas obras com dimensão maior que zero.
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obras.2013 %>%
+    group_by(tipo_obra) %>%
+    filter(dimensao > 0) %>%
+    count() %>%
+    arrange(-n) %>% 
+    head(5) %>% 
+    kable()
+```
+
+Agora vamos selecionar apenas o tipo mais frequente (PAVIMENTAÇÃO PARALEPÍPEDO) e com dimensão maior do que 50m2.
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obras.2013.pavimentacao <-
+    obras.2013 %>%
+    filter(tipo_obra == 'PAVIMENTAÇÃO PARALEPÍPEDO' & dimensao > 50) %>%
+    select(valor_obra, dimensao, nome, descricao_sucinta_obra) %>%
+    mutate(custo_efetivo = valor_obra/dimensao) %>% 
+    group_by(nome) %>%
+    summarise(custo_efetivo = median(custo_efetivo))
+```
+
+Vejamos agora o mapa do custo efetivo por metro quadrado das obras de pavimentação em todo o estado.
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+mapa_paraiba@data <- 
+    mapa_paraiba@data %>%
+    left_join(obras.2013.pavimentacao,by = c("Nome_Munic" = "nome"))
+
+colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba@data$custo_efetivo, na.rm = T), max(mapa_paraiba@data$custo_efetivo, na.rm = T)))
+
+mapa_paraiba %>% 
+    leaflet() %>% 
+    addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+    addPolygons(opacity = 0.5, 
+              weight = 1, 
+              fillColor = colors(mapa_paraiba@data$custo_efetivo),
+              color = 'black', 
+              label = mapa_paraiba@data$Nome_Munic,
+              popup = paste('Município: ', mapa_paraiba@data$Nome_Munic, '</br>Custo efetivo: R$', format(mapa_paraiba@data$custo_efetivo, digits = 2, big.mark=".", decimal.mark = ",", scientific = FALSE)),
+              fillOpacity = 1) %>%
+    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba@data$custo_efetivo,
+            title = "Custo efetivo mediano das obras",
+            opacity = 1)
+
+```
+
+Obs: A cidade que possui o maior custo efetivo do estado (São José de Princesa) parece ser fruto de dados errôneos, uma vez que este município efetuou apenas uma obra de pavimentação desde 2013 e esta obra foi orçada no valor R$368.346,40 e a dimensão da mesma consta como apenas 100 metros quadrados.
+
+
+
+
+
+
+
+
+
+
 ---
