@@ -194,9 +194,9 @@ obras.2013 <- obra %>%
 
 mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
 
-municipios <- data.frame(nome = mapa_paraiba$Nome_Munic, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
+municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
 obras.2013 <- obras.2013 %>% 
-    left_join(municipios, by = c("nome.x" = "nome")) %>% 
+    left_join(municipios, by = "codigo_ibge") %>% 
     left_join(obra.georef.centroide.sumarizado %>% select(id,lat,lon), by = "id") %>% 
     mutate(
         lat = ifelse(is.na(lat.y), lat.x, lat.y), 
@@ -270,7 +270,7 @@ mapa_paraiba %>%
               fillColor = colors(mapa_paraiba@data$qtde.obras),
               color = 'black', 
               label = mapa_paraiba@data$Nome_Munic,
-              popup = paste('Município: ', mapa_paraiba@data$Nome_Munic, '</br>Custo mediano das obras: R$ ', mapa_paraiba@data$valor.mediano, '</br>Número de obras: ', mapa_paraiba@data$qtde.obras),
+              popup = paste('Município: ', mapa_paraiba@data$Nome_Munic, '</br>Custo mediano das obras: R$ ', format(mapa_paraiba@data$valor.mediano, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), '</br>Número de obras: ', mapa_paraiba@data$qtde.obras),
               fillOpacity = 1) %>%
     addLegend(position = "bottomright", pal = colors, values = mapa_paraiba@data$qtde.obras,
             title = "Quantidade de obras por município",
@@ -305,7 +305,7 @@ mapa_paraiba %>%
               fillColor = colors(mapa_paraiba@data$gastos.por.habitante),
               color = "black", 
               label = mapa_paraiba@data$Nome_Munic,
-              popup = paste("Município: ", mapa_paraiba@data$Nome_Munic, "</br>Valor em obras por habitante: R$", mapa_paraiba@data$gastos.por.habitante, "</br>Valor total das obras: R$", mapa_paraiba@data$valor.total.obras, "</br>Quantidade de habitante: ", mapa_paraiba@data$populacao),
+              popup = paste("Município: ", mapa_paraiba@data$Nome_Munic, "</br>Valor em obras por habitante: R$", format(mapa_paraiba@data$gastos.por.habitante, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Valor total das obras: R$", format(mapa_paraiba@data$valor.total.obras, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Quantidade de habitante: ", mapa_paraiba@data$populacao),
               fillOpacity = 1) %>%
     addLegend(position = "bottomright", pal = colors, values = mapa_paraiba@data$gastos.por.habitante,
             title = "Valor gasto em obras por habitante",
@@ -330,6 +330,13 @@ Vejamos agora o mapa de pontos das obras georeferenciadas, onde os detalhes pode
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 obra.georef.centroide.sumarizado %>% 
+    left_join(
+        evolucao %>% 
+            mutate(ano = lubridate::year(data_inicio_obra)) %>% 
+            select(fk_obra, ano),
+        by = c("id" = "fk_obra")
+    ) %>% 
+    filter(ano >= 2013) %>% 
     mutate(
         label = str_to_upper(
             ifelse(nchar(descricao_sucinta_obra) <= 30,
