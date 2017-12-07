@@ -279,6 +279,33 @@ mapa_paraiba %>%
 
 É possível ver que o município de Manaíra se destaca dos demais, por ser uma cidade pequena e ter uma grande quantidade de obras. O motivo de acontecer isso é porque nesta cidade existem várias observações para um mesmo contrato, ou seja, existem vários casos de ter um mesmo contrato, mas a obra ocorre em várias ruas, seja para calçamento, rede de esgotamento, entre outros tipos de obra.
 
+## Cidades que mais gastam 2013-2017
+
+Vejamos as cidades que mais gastam com obras na Paraíba:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obras.filtradas.valor %>% 
+    group_by(nome.x) %>%
+    summarise(
+        valor.total = sum(valor_obra),
+        lat = mean(lat),
+        lon = mean(lon)
+    ) %>% 
+    mutate(
+        popup = paste(
+            "Município:", nome.x,
+            "</br>Valor total em obras: R$", format(valor.total, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE)
+        )
+    ) %>% 
+    leaflet() %>% 
+    addProviderTiles(providers$OpenStreetMap.Mapnik) %>%
+    addCircles(
+        weight = 1, 
+        radius = ~sqrt(valor.total), 
+        popup = ~popup
+    )
+```
+
 ## Gasto por habitante 2013-2017
 
 Vejamos agora um o valor gasto em obras por habitante em cada município, onde os detalhes podem ser vistos clicando no município:
