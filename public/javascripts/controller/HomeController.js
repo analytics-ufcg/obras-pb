@@ -71,7 +71,11 @@ function HomeController(ObrasService, $filter, $state, $window) {
         $state.go("report");
     };
 
-    self.relatorios = [{nome: "Relatório 1", referencia: "assets/views/inconsistencia-geo-pb.html"}, {nome: "Relatório 2", referencia: "assets/views/dados_disponiveis_epoca.html"}];
+    self.relatorios = [
+        {nome: "Análise investigativa Geo-PB", referencia: "assets/views/inconsistencia-geo-pb.html"},
+        {nome: "Dados disponíveis por época", referencia: "assets/views/dados_disponiveis_epoca.html"},
+        {nome: "Mapas temáticos", referencia: "assets/views/mapas_tematicos.html"},
+    ];
 
     self.redireciona = function(url) {
         $window.location.href = url;
