@@ -69,7 +69,7 @@ obra.filtrada <- obra.georef %>%
 is.dentro.pb <- function(lat,lon) {
     lon.min <- -38.770132
     lat.min <- -8.316999
-    lon.max <- -34.5
+    lon.max <- -34.786624
     lat.max <- -5.995412
     return(lon.min < lon && lon < lon.max && lat.min < lat && lat < lat.max)
 }
@@ -255,9 +255,9 @@ mapa_paraiba@data <- mapa_paraiba@data %>%
 # * Andamento
 ```
 
-## Quantidade de obras
+## Quantidade de obras 2013-2017
 
-Vejamos primeiramente a quantidade de obras por município:
+Vejamos primeiramente a quantidade de obras por município, onde os detalhes podem ser vistos clicando no município:
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba@data$qtde.obras, na.rm = T), max(mapa_paraiba@data$qtde.obras, na.rm = T)))
@@ -279,7 +279,9 @@ mapa_paraiba %>%
 
 É possível ver que o município de Manaíra se destaca dos demais, por ser uma cidade pequena e ter uma grande quantidade de obras. O motivo de acontecer isso é porque nesta cidade existem várias observações para um mesmo contrato, ou seja, existem vários casos de ter um mesmo contrato, mas a obra ocorre em várias ruas, seja para calçamento, rede de esgotamento, entre outros tipos de obra.
 
-Vejamos agora um o valor gasto em obras por habitante em cada município:
+## Gasto por habitante 2013-2017
+
+Vejamos agora um o valor gasto em obras por habitante em cada município, onde os detalhes podem ser vistos clicando no município:
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 gastos.por.habitante.por.municipio <- obras.filtradas.valor %>% 
@@ -315,11 +317,68 @@ Vejamos as obras de São Francisco mais caras:
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 obras.filtradas.valor %>% 
     filter(nome.x == "São Francisco") %>% 
-    arrange(-valor_obra) %>% select(nome.x, valor_obra, descricao_sucinta_obra, descricao_localidade) %>%
+    arrange(-valor_obra) %>% select(nome.x, ano, valor_obra, descricao_sucinta_obra, descricao_localidade) %>%
     top_n(5) %>% 
     kable()
 ```
 
 Provavelmente o gasto por habitante com obras foi elevado devido à primeira obra, a qual custou 28 mi de reais.
+
+## Obras georeferenciadas 2013-2017
+
+Vejamos agora o mapa de pontos das obras georeferenciadas, onde os detalhes podem ser vistos clicando na obra:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obra.georef.centroide.sumarizado %>% 
+    mutate(
+        label = str_to_upper(
+            ifelse(nchar(descricao_sucinta_obra) <= 30,
+                   descricao_sucinta_obra,
+                   paste0(substr(descricao_sucinta_obra, 1, 30), "...")
+                   )
+        ),
+        popup = paste(
+               "Descrição:", str_to_upper(descricao_sucinta_obra), "</br>",
+               "Cidade:", nome, "</br>",
+               "Valor pago: R$", format(valor_obra, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE)
+             )
+        ) %>% 
+leaflet() %>% 
+    addProviderTiles(providers$OpenStreetMap.Mapnik) %>%
+    setView(lng = -36.623, lat = -7.548, zoom = 7)  %>% 
+  addTiles() %>%
+  addMarkers(~lon, ~lat, label = ~label, 
+             popup = ~popup,
+             clusterOptions = markerClusterOptions())
+```
+
+### Dados inválidos inputados
+
+E agora os pontos georeferenciados, substituindo a localização pelo centro da cidade quando o dado é inexistente, onde os detalhes podem ser vistos clicando na obra:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obras.2013 %>% 
+    mutate(
+        label = str_to_upper(
+            ifelse(nchar(descricao_sucinta_obra) <= 30,
+                   descricao_sucinta_obra,
+                   paste0(substr(descricao_sucinta_obra, 1, 30), "...")
+                   )
+        ),
+        popup = paste(
+               "Descrição:", str_to_upper(descricao_sucinta_obra), "</br>",
+               "Cidade:", nome.x, "</br>",
+               "Valor pago: R$", format(valor_obra, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE)
+             )
+        ) %>% 
+leaflet() %>% 
+    addProviderTiles(providers$OpenStreetMap.Mapnik) %>%
+    setView(lng = -36.623, lat = -7.548, zoom = 7)  %>% 
+  addTiles() %>%
+  addMarkers(~lon, ~lat, label = ~label, 
+             popup = ~popup,
+             clusterOptions = markerClusterOptions())
+```
+
 
 ---
