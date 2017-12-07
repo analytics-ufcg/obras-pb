@@ -388,13 +388,12 @@ leaflet() %>%
 ```
 
 
-Agora vamos dar uma olhada no custo efetivo das obras.
+## Custo efetivo 2013-2017
 
-Selecionando apenas as obras a partir de 2013 e com valor maior que 1000 reais.
-
+Agora vamos verificar o custo efetivo das obras, selecionando apenas as obras com valor maior que 1000 reais e dimensão maior que zero.
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
-obras.2013 <- obra %>% 
+obras.2013.custo.efetivo <- obra %>% 
     left_join(localidade, by = c("fk_localidade" = "id")) %>% 
     left_join(evolucao, by = c("id" = "fk_obra")) %>% 
     mutate(ano = lubridate::year(data_inicio_obra)) %>% 
@@ -403,13 +402,13 @@ obras.2013 <- obra %>%
         valor_obra > 1000
     ) %>% 
     left_join(tipos.das.obras %>% mutate(tipo_obra = nome) %>% select(-nome), by = c("fk_tipo_obra" = "id"))
+
 ```
 
-
-Vamos ver agora os cinco tipos de obra mais executadas, considerando apenas obras com dimensão maior que zero.
+Para isso, vamos ver os cinco tipos de obra mais executados, visto que faz mais sentido comparar o custo efetivo de obras do mesmo tipo.
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
-obras.2013 %>%
+obras.2013.custo.efetivo %>%
     group_by(tipo_obra) %>%
     filter(dimensao > 0) %>%
     count() %>%
@@ -418,11 +417,13 @@ obras.2013 %>%
     kable()
 ```
 
-Agora vamos selecionar apenas o tipo mais frequente (PAVIMENTAÇÃO PARALEPÍPEDO) e com dimensão maior do que 50m2.
+### Pavimentação de paralelepípedo
+
+Como o tipo mais frequente é PAVIMENTAÇÃO PARALEPÍPEDO, vamos selecionar apenas este tipo e obras com dimensão maior do que 50m2.
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 obras.2013.pavimentacao <-
-    obras.2013 %>%
+    obras.2013.custo.efetivo %>%
     filter(tipo_obra == 'PAVIMENTAÇÃO PARALEPÍPEDO' & dimensao > 50) %>%
     select(valor_obra, dimensao, nome, descricao_sucinta_obra) %>%
     mutate(custo_efetivo = valor_obra/dimensao) %>% 
@@ -456,14 +457,5 @@ mapa_paraiba %>%
 ```
 
 Obs: A cidade que possui o maior custo efetivo do estado (São José de Princesa) parece ser fruto de dados errôneos, uma vez que este município efetuou apenas uma obra de pavimentação desde 2013 e esta obra foi orçada no valor R$368.346,40 e a dimensão da mesma consta como apenas 100 metros quadrados.
-
-
-
-
-
-
-
-
-
 
 ---
