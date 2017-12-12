@@ -195,12 +195,14 @@ obras.2013 <- obra %>%
 mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
 
 municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
+
 obras.2013 <- obras.2013 %>% 
     left_join(municipios, by = "codigo_ibge") %>% 
     left_join(obra.georref.centroide.sumarizado %>% select(id,lat,lon), by = "id") %>% 
     mutate(
         lat = ifelse(is.na(lat.y), lat.x, lat.y), 
-        lon = ifelse(is.na(lon.y), lon.x, lon.y) 
+        lon = ifelse(is.na(lon.y), lon.x, lon.y),
+        is.inputado = (is.na(lat.y) & is.na(lon.y))
     ) %>% select(-lat.x, -lat.y, -lon.x, -lon.y)
     
 obras.filtradas.valor <- obras.2013 %>% 
@@ -417,6 +419,49 @@ leaflet() %>%
              popup = ~popup,
              clusterOptions = markerClusterOptions())
 ```
+
+### Obras não georreferenciadas
+
+Vejamos os municípios que não georreferenciam suas obras, onde os detalhes podem ser vistos clicando na obra:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+municipior.nao.georref.prop <- obras.2013 %>% 
+    group_by(codigo_ibge, nome.x) %>% 
+    summarise(
+        total.nao.georref = n(),
+        qtde.nao.georref = sum(is.inputado),
+        prop.nao.georref = (qtde.nao.georref / total.nao.georref) * 100
+    )
+    
+mapa_paraiba_nao_georreferenciada <- mapa_paraiba
+
+mapa_paraiba_nao_georreferenciada@data <- mapa_paraiba_nao_georreferenciada@data %>%
+  left_join(municipior.nao.georref.prop,
+            by = c("GEOCODIG_M" = "codigo_ibge"))
+
+colors <- colorNumeric("viridis", 
+                       domain = c(
+                           min(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, na.rm = T),
+                           max(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, na.rm = T)
+                           )
+                       )
+
+mapa_paraiba_nao_georreferenciada %>% 
+    leaflet() %>% 
+    addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+    addPolygons(opacity = 0.5, 
+              weight = 1, 
+              fillColor = colors(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref),
+              color = "black", 
+              label = mapa_paraiba_nao_georreferenciada@data$Nome_Munic,
+              popup = paste0("Município: ", mapa_paraiba_nao_georreferenciada@data$Nome_Munic, "</br>Total de obras: ", mapa_paraiba_nao_georreferenciada@data$total.nao.georref, "</br>Quantidade de obras não georreferenciadas: ", mapa_paraiba_nao_georreferenciada@data$qtde.nao.georref, "</br>Proporção de obras não georreferenciadas em %: ", round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"),
+              fillOpacity = 1) %>%
+    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba_nao_georreferenciada@data$prop.nao.georref,
+            title = "Proporção de obras não</br> georreferenciadas em %",
+            opacity = 1)
+```
+
+Vemos que a maior parte das obras não são georreferenciadas nos municípios paraibanos entre 2013 e 2017, onde apenas 5 municípios tem mais de 10% das obras georreferenciadas.
 
 ## Custo efetivo 2013-2017
 
