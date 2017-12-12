@@ -255,27 +255,28 @@ quantidade.obras.municipio <- obras.2013 %>%
     group_by(nome.x, codigo_ibge) %>% 
     summarise(
         valor.mediano = median(valor_obra),
-        qtde.obras = n()
+        qtde.obras = n(),
+        qtde.obras.log = log(qtde.obras)
     )
 
 mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
   left_join(quantidade.obras.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba_quantidade_obras@data$qtde.obras, na.rm = T), max(mapa_paraiba_quantidade_obras@data$qtde.obras, na.rm = T)))
+colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba_quantidade_obras@data$qtde.obras.log, na.rm = T), max(mapa_paraiba_quantidade_obras@data$qtde.obras.log, na.rm = T)))
 
 mapa_paraiba_quantidade_obras %>% 
     leaflet() %>% 
     addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
     addPolygons(opacity = 0.5, 
               weight = 1, 
-              fillColor = colors(mapa_paraiba_quantidade_obras@data$qtde.obras),
+              fillColor = colors(mapa_paraiba_quantidade_obras@data$qtde.obras.log),
               color = 'black', 
               label = mapa_paraiba_quantidade_obras@data$Nome_Munic,
               popup = paste('Município: ', mapa_paraiba_quantidade_obras@data$Nome_Munic, '</br>Custo mediano das obras: R$ ', format(mapa_paraiba_quantidade_obras@data$valor.mediano, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), '</br>Número de obras: ', mapa_paraiba_quantidade_obras@data$qtde.obras),
               fillOpacity = 1) %>%
-    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba_quantidade_obras@data$qtde.obras,
-            title = "Quantidade de obras por município",
+    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba_quantidade_obras@data$qtde.obras.log,
+            title = "Log da quantidade de </br> obras por município",
             opacity = 1)
 ```
 
@@ -313,33 +314,36 @@ obras.filtradas.valor %>%
 Vejamos agora um o valor gasto em obras por habitante em cada município, onde os detalhes podem ser vistos clicando no município:
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
-gastos.por.habitante.por.municipio <- obras.filtradas.valor %>% 
+gasto.por.habitante.por.municipio <- obras.filtradas.valor %>% 
     group_by(codigo_ibge) %>% 
     summarise(valor.total.obras = sum(valor_obra)) %>% 
     left_join(municipios.pb %>% rename("codigo_ibge" = "Código", "populacao" = "População.estimada...pessoas") %>% select(codigo_ibge, populacao),
               by = "codigo_ibge") %>% 
-    mutate(gastos.por.habitante = valor.total.obras / populacao)
+    mutate(
+        gasto.por.habitante = valor.total.obras / populacao,
+        gasto.por.habitante.log = log(gasto.por.habitante)
+    )
 
 mapa_paraiba_gasto_habitante <- mapa_paraiba
 
 mapa_paraiba_gasto_habitante@data <- mapa_paraiba_gasto_habitante@data %>%
-  left_join(gastos.por.habitante.por.municipio,
+  left_join(gasto.por.habitante.por.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba_gasto_habitante@data$gastos.por.habitante, na.rm = T), max(mapa_paraiba_gasto_habitante@data$gastos.por.habitante, na.rm = T)))
+colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log, na.rm = T), max(mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log, na.rm = T)))
 
 mapa_paraiba_gasto_habitante %>% 
     leaflet() %>% 
     addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
     addPolygons(opacity = 0.5, 
               weight = 1, 
-              fillColor = colors(mapa_paraiba_gasto_habitante@data$gastos.por.habitante),
+              fillColor = colors(mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log),
               color = "black", 
               label = mapa_paraiba_gasto_habitante@data$Nome_Munic,
-              popup = paste("Município: ", mapa_paraiba_gasto_habitante@data$Nome_Munic, "</br>Valor em obras por habitante: R$", format(mapa_paraiba_gasto_habitante@data$gastos.por.habitante, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Valor total das obras: R$", format(mapa_paraiba_gasto_habitante@data$valor.total.obras, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Quantidade de habitante: ", mapa_paraiba_gasto_habitante@data$populacao),
+              popup = paste("Município: ", mapa_paraiba_gasto_habitante@data$Nome_Munic, "</br>Valor em obras por habitante: R$", format(mapa_paraiba_gasto_habitante@data$gasto.por.habitante, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Valor total das obras: R$", format(mapa_paraiba_gasto_habitante@data$valor.total.obras, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Quantidade de habitante: ", mapa_paraiba_gasto_habitante@data$populacao),
               fillOpacity = 1) %>%
-    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba_gasto_habitante@data$gastos.por.habitante,
-            title = "Valor gasto em obras por habitante",
+    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log,
+            title = "Log de valor gasto em </br> obras por habitante",
             opacity = 1)
 ```
 
@@ -456,9 +460,12 @@ obras.2013.pavimentacao <-
     obras.2013.custo.efetivo %>%
     filter(tipo_obra == 'PAVIMENTAÇÃO PARALEPÍPEDO' & dimensao > 50) %>%
     select(valor_obra, dimensao, nome, descricao_sucinta_obra) %>%
-    mutate(custo_efetivo = valor_obra/dimensao) %>% 
+    mutate(custo.efetivo = valor_obra/dimensao) %>% 
     group_by(nome) %>%
-    summarise(custo_efetivo = median(custo_efetivo))
+    summarise(
+        custo.efetivo = median(custo.efetivo),
+        custo.efetivo.log = log(custo.efetivo)
+    )
 ```
 
 Vejamos agora o mapa do custo efetivo por metro quadrado das obras de pavimentação em todo o estado.
@@ -469,20 +476,20 @@ mapa_paraiba_custo_efetivo <- mapa_paraiba
 mapa_paraiba_custo_efetivo@data <- mapa_paraiba_custo_efetivo@data %>%
     left_join(obras.2013.pavimentacao,by = c("Nome_Munic" = "nome"))
 
-colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba_custo_efetivo@data$custo_efetivo, na.rm = T), max(mapa_paraiba_custo_efetivo@data$custo_efetivo, na.rm = T)))
+colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba_custo_efetivo@data$custo.efetivo.log, na.rm = T), max(mapa_paraiba_custo_efetivo@data$custo.efetivo.log, na.rm = T)))
 
 mapa_paraiba_custo_efetivo %>% 
     leaflet() %>% 
     addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
     addPolygons(opacity = 0.5, 
               weight = 1, 
-              fillColor = colors(mapa_paraiba_custo_efetivo@data$custo_efetivo),
+              fillColor = colors(mapa_paraiba_custo_efetivo@data$custo.efetivo.log),
               color = 'black', 
               label = mapa_paraiba_custo_efetivo@data$Nome_Munic,
-              popup = paste('Município: ', mapa_paraiba_custo_efetivo@data$Nome_Munic, '</br>Custo efetivo: R$', format(mapa_paraiba_custo_efetivo@data$custo_efetivo, digits = 2, big.mark=".", decimal.mark = ",", scientific = FALSE)),
+              popup = paste('Município: ', mapa_paraiba_custo_efetivo@data$Nome_Munic, '</br>Custo efetivo: R$', format(mapa_paraiba_custo_efetivo@data$custo.efetivo, digits = 2, big.mark=".", decimal.mark = ",", scientific = FALSE)),
               fillOpacity = 1) %>%
-    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba_custo_efetivo@data$custo_efetivo,
-            title = "Custo efetivo mediano das obras",
+    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba_custo_efetivo@data$custo.efetivo.log,
+            title = "Log de custo efetivo </br> mediano das obras",
             opacity = 1)
 ```
 
