@@ -197,7 +197,7 @@ mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
 municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
 obras.2013 <- obras.2013 %>% 
     left_join(municipios, by = "codigo_ibge") %>% 
-    left_join(obra.georref.centroide.sumarizado %>% select(id,lat,lon), by = "id") %>% 
+    left_join(obra.georref.centroide.sumarizado %>% select(id,lat,lon), by = c("id" = "fk_obra")) %>% 
     mutate(
         lat = ifelse(is.na(lat.y), lat.x, lat.y), 
         lon = ifelse(is.na(lon.y), lon.x, lon.y) 
