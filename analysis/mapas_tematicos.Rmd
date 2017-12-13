@@ -13,7 +13,6 @@ library(tidyverse)
 library(RColorBrewer)
 library(RPostgreSQL)
 library(knitr)
-library(jsonlite)
 library(leaflet)
 library(rgdal)
 ```
@@ -47,6 +46,8 @@ localidade <- dbGetQuery(con2, "select * from t_localidade")
 
 tipos.das.obras <- read.csv("tipos_obra.csv")
 municipios.pb <- read.csv("municipios_pb.csv")
+
+mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
 ```
 
 ## Introdução
@@ -190,20 +191,18 @@ obra.georref.corrigido <- obra.filtrada %>%
         is.dentro.pb(lat,lon)
     )
 
-
-obra.georref.centroide.sumarizado <- 
-    obra.georref.corrigido %>%
+obra.georref.centroide.sumarizado <- obra.georref.corrigido %>%
     group_by(fk_obra) %>%
     mutate(lat = mean(lat), lon = mean(lon)) %>%
-    select(-valor_georeferenciamento)
+    select(-valor_georeferenciamento) %>% 
+    filter(!duplicated(fk_obra))
 
-obra.georref.centroide.sumarizado <- obra.georref.centroide.sumarizado[!duplicated(obra.georref.centroide.sumarizado$fk_obra),]
 #write_csv(obra.georref.centroide.sumarizado, "obras_georref_centroide_sumarizadas.csv")
-    
-
 ```
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
+
 obras.2013 <- obra %>% 
     left_join(localidade, by = c("fk_localidade" = "id")) %>% 
     left_join(evolucao, by = c("id" = "fk_obra")) %>% 
@@ -211,13 +210,7 @@ obras.2013 <- obra %>%
     filter(
         ano >= 2013
     ) %>% 
-    left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id"))
-
-mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
-
-municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
-
-obras.2013 <- obras.2013 %>% 
+    left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
     left_join(municipios, by = "codigo_ibge") %>% 
     left_join(obra.georref.centroide.sumarizado %>% select(id,lat,lon), by = c("id" = "fk_obra")) %>% 
     mutate(
@@ -228,9 +221,6 @@ obras.2013 <- obras.2013 %>%
     
 obras.filtradas.valor <- obras.2013 %>% 
     filter(valor_obra > 1000, valor_obra < 1000000000)
-
-obras.filtradas.dimensao <- obras.2013 %>% 
-    filter(dimensao > 0)
 ```
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
@@ -282,7 +272,7 @@ quantidade.obras.municipio <- obras.2013 %>%
         qtde.obras.log = log(qtde.obras)
     )
 
-mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
+mapa_paraiba_quantidade_obras@data <- mapa_paraiba@data %>%
   left_join(quantidade.obras.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
@@ -344,7 +334,7 @@ gasto.por.habitante.por.municipio <- obras.filtradas.valor %>%
 
 mapa_paraiba_gasto_habitante <- mapa_paraiba
 
-mapa_paraiba_gasto_habitante@data <- mapa_paraiba_gasto_habitante@data %>%
+mapa_paraiba_gasto_habitante@data <- mapa_paraiba@data %>%
   left_join(gasto.por.habitante.por.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
@@ -387,24 +377,25 @@ obra.georref.centroide.sumarizado %>%
     filter(ano >= 2013) %>% 
     mutate(
         label = str_to_upper(
-            ifelse(nchar(descricao_sucinta_obra) <= 30,
-                   descricao_sucinta_obra,
-                   paste0(substr(descricao_sucinta_obra, 1, 30), "...")
-                   )
+            ifelse(
+                nchar(descricao_sucinta_obra) <= 30,
+                descricao_sucinta_obra,
+                paste0(substr(descricao_sucinta_obra, 1, 30), "...")
+            )
         ),
         popup = paste(
-               "Descrição:", str_to_upper(descricao_sucinta_obra), "</br>",
-               "Cidade:", nome, "</br>",
-               "Valor pago: R$", format(valor_obra, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE)
-             )
-        ) %>% 
-leaflet() %>% 
-    addProviderTiles(providers$OpenStreetMap.Mapnik) %>%
-    setView(lng = -36.623, lat = -7.548, zoom = 7)  %>% 
-  addTiles() %>%
-  addMarkers(~lon, ~lat, label = ~label, 
-             popup = ~popup,
-             clusterOptions = markerClusterOptions())
+            "Descrição:", str_to_upper(descricao_sucinta_obra), "</br>",
+            "Cidade:", nome, "</br>",
+            "Valor pago: R$", format(valor_obra, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE)
+        )
+    ) %>% 
+    leaflet() %>% 
+        addProviderTiles(providers$OpenStreetMap.Mapnik) %>%
+        setView(lng = -36.623, lat = -7.548, zoom = 7)  %>% 
+        addTiles() %>%
+        addMarkers(~lon, ~lat, label = ~label, 
+                 popup = ~popup,
+                 clusterOptions = markerClusterOptions())
 ```
 
 ### Dados inválidos inputados
@@ -415,22 +406,23 @@ E agora os pontos georreferenciados, substituindo a localização pelo centro da
 obras.2013 %>% 
     mutate(
         label = str_to_upper(
-            ifelse(nchar(descricao_sucinta_obra) <= 30,
-                   descricao_sucinta_obra,
-                   paste0(substr(descricao_sucinta_obra, 1, 30), "...")
-                   )
+            ifelse(
+                nchar(descricao_sucinta_obra) <= 30,
+                descricao_sucinta_obra,
+                paste0(substr(descricao_sucinta_obra, 1, 30), "...")
+           )
         ),
         popup = paste(
-               "Descrição:", str_to_upper(descricao_sucinta_obra), "</br>",
-               "Cidade:", nome.x, "</br>",
-               "Valor pago: R$", format(valor_obra, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE)
-             )
-        ) %>% 
-leaflet() %>% 
-    addProviderTiles(providers$OpenStreetMap.Mapnik) %>%
-    setView(lng = -36.623, lat = -7.548, zoom = 7)  %>% 
-  addTiles() %>%
-  addMarkers(~lon, ~lat, label = ~label, 
+            "Descrição:", str_to_upper(descricao_sucinta_obra), "</br>",
+            "Cidade:", nome.x, "</br>",
+            "Valor pago: R$", format(valor_obra, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE)
+        )
+    ) %>% 
+    leaflet() %>% 
+        addProviderTiles(providers$OpenStreetMap.Mapnik) %>%
+        setView(lng = -36.623, lat = -7.548, zoom = 7)  %>% 
+        addTiles() %>%
+        addMarkers(~lon, ~lat, label = ~label, 
              popup = ~popup,
              clusterOptions = markerClusterOptions())
 ```
@@ -482,7 +474,6 @@ obras.2013.custo.efetivo <- obra %>%
         valor_obra > 1000
     ) %>% 
     left_join(tipos.das.obras %>% mutate(tipo_obra = nome) %>% select(-nome), by = c("fk_tipo_obra" = "id"))
-
 ```
 
 Para isso, vamos ver os cinco tipos de obra mais executados, visto que faz mais sentido comparar o custo efetivo de obras do mesmo tipo.
@@ -502,8 +493,7 @@ obras.2013.custo.efetivo %>%
 Como o tipo mais frequente é PAVIMENTAÇÃO PARALEPÍPEDO, vamos selecionar apenas este tipo e obras com dimensão maior do que 50m2.
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
-obras.2013.pavimentacao <-
-    obras.2013.custo.efetivo %>%
+obras.2013.pavimentacao <- obras.2013.custo.efetivo %>%
     filter(tipo_obra == 'PAVIMENTAÇÃO PARALEPÍPEDO' & dimensao > 50) %>%
     select(valor_obra, dimensao, nome, descricao_sucinta_obra) %>%
     mutate(custo.efetivo = valor_obra/dimensao) %>% 
@@ -519,7 +509,7 @@ Vejamos agora o mapa do custo efetivo por metro quadrado das obras de pavimenta�
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 mapa_paraiba_custo_efetivo <- mapa_paraiba
 
-mapa_paraiba_custo_efetivo@data <- mapa_paraiba_custo_efetivo@data %>%
+mapa_paraiba_custo_efetivo@data <- mapa_paraiba@data %>%
     left_join(obras.2013.pavimentacao,by = c("Nome_Munic" = "nome"))
 
 colors <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
