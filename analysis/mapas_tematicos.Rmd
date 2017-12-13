@@ -149,6 +149,26 @@ centroide <- function(localizacao) {
     coords
 }
 
+paleta.de.cores <- function(paleta = "YlOrRd", dado) {
+    colors <- colorNumeric(paleta, domain = c(min(dado, na.rm = T), max(dado, na.rm = T)))
+}
+
+cria.mapa <- function(dado, valor.municipio, tooltip, janela, cores, titulo) {
+    dado %>% 
+        leaflet() %>% 
+        addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+        addPolygons(opacity = 0.5, 
+                  weight = 1, 
+                  fillColor = colors(valor.municipio),
+                  color = "black", 
+                  label = tooltip,
+                  popup = janela,
+                  fillOpacity = 1) %>%
+        addLegend(position = "bottomright", pal = cores, values = valor.municipio,
+                title = titulo,
+                opacity = 1)
+}
+
 obra.georref.corrigido <- obra.filtrada %>% 
     rowwise() %>% 
     mutate(
@@ -265,21 +285,16 @@ mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
   left_join(quantidade.obras.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- colorNumeric("YlOrRd", domain = c(min(mapa_paraiba_quantidade_obras@data$qtde.obras, na.rm = T), max(mapa_paraiba_quantidade_obras@data$qtde.obras, na.rm = T)))
+colors <- paleta.de.cores(dado = mapa_paraiba_quantidade_obras@data$qtde.obras)
 
-mapa_paraiba_quantidade_obras %>% 
-    leaflet() %>% 
-    addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
-    addPolygons(opacity = 0.5, 
-              weight = 1, 
-              fillColor = colors(mapa_paraiba_quantidade_obras@data$qtde.obras),
-              color = 'black', 
-              label = mapa_paraiba_quantidade_obras@data$Nome_Munic,
-              popup = paste('Município: ', mapa_paraiba_quantidade_obras@data$Nome_Munic, '</br>Custo mediano das obras: R$ ', format(mapa_paraiba_quantidade_obras@data$valor.mediano, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), '</br>Número de obras: ', mapa_paraiba_quantidade_obras@data$qtde.obras),
-              fillOpacity = 1) %>%
-    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba_quantidade_obras@data$qtde.obras,
-            title = "Quantidade de obras por município",
-            opacity = 1)
+cria.mapa(
+    mapa_paraiba_quantidade_obras, 
+    mapa_paraiba_quantidade_obras@data$qtde.obras, 
+    mapa_paraiba_quantidade_obras@data$Nome_Munic, 
+    paste('Município: ', mapa_paraiba_quantidade_obras@data$Nome_Munic, '</br>Custo mediano das obras: R$ ', format(mapa_paraiba_quantidade_obras@data$valor.mediano, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), '</br>Número de obras: ', mapa_paraiba_quantidade_obras@data$qtde.obras), 
+    colors, 
+    "Quantidade de obras por município"
+    )
 ```
 
 É possível ver que o município de Manaíra se destaca dos demais, por ser uma cidade pequena e ter uma grande quantidade de obras. O motivo de acontecer isso é porque nesta cidade existem várias observações para um mesmo contrato, ou seja, existem vários casos de ter um mesmo contrato, mas a obra ocorre em várias ruas, seja para calçamento, rede de esgotamento, entre outros tipos de obra.
@@ -329,21 +344,16 @@ mapa_paraiba_gasto_habitante@data <- mapa_paraiba_gasto_habitante@data %>%
   left_join(gastos.por.habitante.por.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- colorNumeric("YlOrRd", domain = c(min(mapa_paraiba_gasto_habitante@data$gastos.por.habitante, na.rm = T), max(mapa_paraiba_gasto_habitante@data$gastos.por.habitante, na.rm = T)))
+colors <- paleta.de.cores(dado = mapa_paraiba_gasto_habitante@data$gastos.por.habitante)
 
-mapa_paraiba_gasto_habitante %>% 
-    leaflet() %>% 
-    addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
-    addPolygons(opacity = 0.5, 
-              weight = 1, 
-              fillColor = colors(mapa_paraiba_gasto_habitante@data$gastos.por.habitante),
-              color = "black", 
-              label = mapa_paraiba_gasto_habitante@data$Nome_Munic,
-              popup = paste("Município: ", mapa_paraiba_gasto_habitante@data$Nome_Munic, "</br>Valor em obras por habitante: R$", format(mapa_paraiba_gasto_habitante@data$gastos.por.habitante, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Valor total das obras: R$", format(mapa_paraiba_gasto_habitante@data$valor.total.obras, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Quantidade de habitante: ", mapa_paraiba_gasto_habitante@data$populacao),
-              fillOpacity = 1) %>%
-    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba_gasto_habitante@data$gastos.por.habitante,
-            title = "Valor gasto em obras por habitante",
-            opacity = 1)
+cria.mapa(
+    mapa_paraiba_gasto_habitante, 
+    mapa_paraiba_gasto_habitante@data$gastos.por.habitante, 
+    mapa_paraiba_gasto_habitante@data$Nome_Munic, 
+    paste("Município: ", mapa_paraiba_gasto_habitante@data$Nome_Munic, "</br>Valor em obras por habitante: R$", format(mapa_paraiba_gasto_habitante@data$gastos.por.habitante, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Valor total das obras: R$", format(mapa_paraiba_gasto_habitante@data$valor.total.obras, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Quantidade de habitante: ", mapa_paraiba_gasto_habitante@data$populacao), 
+    colors, 
+    "Valor gasto em obras por habitante"
+    )
 ```
 
 Vejamos as obras de São Francisco mais caras:
@@ -440,26 +450,16 @@ mapa_paraiba_nao_georreferenciada@data <- mapa_paraiba_nao_georreferenciada@data
   left_join(municipior.nao.georref.prop,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- colorNumeric("YlOrRd", 
-                       domain = c(
-                           min(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, na.rm = T),
-                           max(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, na.rm = T)
-                           )
-                       )
+colors <- paleta.de.cores(dado = mapa_paraiba_nao_georreferenciada@data$prop.nao.georref)
 
-mapa_paraiba_nao_georreferenciada %>% 
-    leaflet() %>% 
-    addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
-    addPolygons(opacity = 0.5, 
-              weight = 1, 
-              fillColor = colors(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref),
-              color = "black", 
-              label = mapa_paraiba_nao_georreferenciada@data$Nome_Munic,
-              popup = paste0("Município: ", mapa_paraiba_nao_georreferenciada@data$Nome_Munic, "</br>Total de obras: ", mapa_paraiba_nao_georreferenciada@data$total.nao.georref, "</br>Quantidade de obras não georreferenciadas: ", mapa_paraiba_nao_georreferenciada@data$qtde.nao.georref, "</br>Proporção de obras não georreferenciadas em %: ", round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"),
-              fillOpacity = 1) %>%
-    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba_nao_georreferenciada@data$prop.nao.georref,
-            title = "Proporção de obras não</br> georreferenciadas em %",
-            opacity = 1)
+cria.mapa(
+    mapa_paraiba_nao_georreferenciada, 
+    mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 
+    mapa_paraiba_nao_georreferenciada@data$Nome_Munic, 
+    paste0("Município: ", mapa_paraiba_nao_georreferenciada@data$Nome_Munic, "</br>Total de obras: ", mapa_paraiba_nao_georreferenciada@data$total.nao.georref, "</br>Quantidade de obras não georreferenciadas: ", mapa_paraiba_nao_georreferenciada@data$qtde.nao.georref, "</br>Proporção de obras não georreferenciadas em %: ", round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"), 
+    colors, 
+    "Proporção de obras não</br> georreferenciadas em %"
+    )
 ```
 
 Vemos que a maior parte das obras não são georreferenciadas nos municípios paraibanos entre 2013 e 2017, onde apenas 5 municípios tem mais de 10% das obras georreferenciadas.
@@ -515,21 +515,16 @@ mapa_paraiba_custo_efetivo <- mapa_paraiba
 mapa_paraiba_custo_efetivo@data <- mapa_paraiba_custo_efetivo@data %>%
     left_join(obras.2013.pavimentacao,by = c("Nome_Munic" = "nome"))
 
-colors <- colorNumeric("YlOrRd", domain = c(min(mapa_paraiba_custo_efetivo@data$custo_efetivo, na.rm = T), max(mapa_paraiba_custo_efetivo@data$custo_efetivo, na.rm = T)))
+colors <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo_efetivo)
 
-mapa_paraiba_custo_efetivo %>% 
-    leaflet() %>% 
-    addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
-    addPolygons(opacity = 0.5, 
-              weight = 1, 
-              fillColor = colors(mapa_paraiba_custo_efetivo@data$custo_efetivo),
-              color = 'black', 
-              label = mapa_paraiba_custo_efetivo@data$Nome_Munic,
-              popup = paste('Município: ', mapa_paraiba_custo_efetivo@data$Nome_Munic, '</br>Custo efetivo: R$', format(mapa_paraiba_custo_efetivo@data$custo_efetivo, digits = 2, big.mark=".", decimal.mark = ",", scientific = FALSE)),
-              fillOpacity = 1) %>%
-    addLegend(position = "bottomright", pal = colors, values = mapa_paraiba_custo_efetivo@data$custo_efetivo,
-            title = "Custo efetivo mediano das obras",
-            opacity = 1)
+cria.mapa(
+    mapa_paraiba_custo_efetivo,
+    mapa_paraiba_custo_efetivo@data$custo_efetivo, 
+    mapa_paraiba_custo_efetivo@data$Nome_Munic, 
+    paste('Município: ', mapa_paraiba_custo_efetivo@data$Nome_Munic, '</br>Custo efetivo: R$', format(mapa_paraiba_custo_efetivo@data$custo_efetivo, digits = 2, big.mark=".", decimal.mark = ",", scientific = FALSE)), 
+    colors, 
+    "Custo efetivo mediano das obras"
+    )
 ```
 
 Obs: A cidade que possui o maior custo efetivo do estado (São José de Princesa) parece ser fruto de dados errôneos, uma vez que este município efetuou apenas uma obra de pavimentação desde 2013 e esta obra foi orçada no valor R$368.346,40 e a dimensão da mesma consta como apenas 100 metros quadrados.
