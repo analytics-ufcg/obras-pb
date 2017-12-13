@@ -219,7 +219,7 @@ municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinate
 
 obras.2013 <- obras.2013 %>% 
     left_join(municipios, by = "codigo_ibge") %>% 
-    left_join(obra.georref.centroide.sumarizado %>% select(id,lat,lon), by = "id") %>% 
+    left_join(obra.georref.centroide.sumarizado %>% select(id,lat,lon), by = c("id" = "fk_obra")) %>% 
     mutate(
         lat = ifelse(is.na(lat.y), lat.x, lat.y), 
         lon = ifelse(is.na(lon.y), lon.x, lon.y),
@@ -278,7 +278,8 @@ quantidade.obras.municipio <- obras.2013 %>%
     group_by(nome.x, codigo_ibge) %>% 
     summarise(
         valor.mediano = median(valor_obra),
-        qtde.obras = n()
+        qtde.obras = n(),
+        qtde.obras.log = log(qtde.obras)
     )
 
 mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
@@ -331,17 +332,20 @@ obras.filtradas.valor %>%
 Vejamos agora um o valor gasto em obras por habitante em cada município, onde os detalhes podem ser vistos clicando no município:
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
-gastos.por.habitante.por.municipio <- obras.filtradas.valor %>% 
+gasto.por.habitante.por.municipio <- obras.filtradas.valor %>% 
     group_by(codigo_ibge) %>% 
     summarise(valor.total.obras = sum(valor_obra)) %>% 
     left_join(municipios.pb %>% rename("codigo_ibge" = "Código", "populacao" = "População.estimada...pessoas") %>% select(codigo_ibge, populacao),
               by = "codigo_ibge") %>% 
-    mutate(gastos.por.habitante = valor.total.obras / populacao)
+    mutate(
+        gasto.por.habitante = valor.total.obras / populacao,
+        gasto.por.habitante.log = log(gasto.por.habitante)
+    )
 
 mapa_paraiba_gasto_habitante <- mapa_paraiba
 
 mapa_paraiba_gasto_habitante@data <- mapa_paraiba_gasto_habitante@data %>%
-  left_join(gastos.por.habitante.por.municipio,
+  left_join(gasto.por.habitante.por.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
 colors <- paleta.de.cores(dado = mapa_paraiba_gasto_habitante@data$gastos.por.habitante)
@@ -502,9 +506,12 @@ obras.2013.pavimentacao <-
     obras.2013.custo.efetivo %>%
     filter(tipo_obra == 'PAVIMENTAÇÃO PARALEPÍPEDO' & dimensao > 50) %>%
     select(valor_obra, dimensao, nome, descricao_sucinta_obra) %>%
-    mutate(custo_efetivo = valor_obra/dimensao) %>% 
+    mutate(custo.efetivo = valor_obra/dimensao) %>% 
     group_by(nome) %>%
-    summarise(custo_efetivo = median(custo_efetivo))
+    summarise(
+        custo.efetivo = median(custo.efetivo),
+        custo.efetivo.log = log(custo.efetivo)
+    )
 ```
 
 Vejamos agora o mapa do custo efetivo por metro quadrado das obras de pavimentação em todo o estado.
