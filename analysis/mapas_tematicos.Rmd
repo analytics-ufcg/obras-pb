@@ -10,6 +10,7 @@ output:
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 library(tidyverse)
+library(RColorBrewer)
 library(RPostgreSQL)
 library(knitr)
 library(jsonlite)
@@ -264,7 +265,7 @@ mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
   left_join(quantidade.obras.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba_quantidade_obras@data$qtde.obras, na.rm = T), max(mapa_paraiba_quantidade_obras@data$qtde.obras, na.rm = T)))
+colors <- colorNumeric("YlOrRd", domain = c(min(mapa_paraiba_quantidade_obras@data$qtde.obras, na.rm = T), max(mapa_paraiba_quantidade_obras@data$qtde.obras, na.rm = T)))
 
 mapa_paraiba_quantidade_obras %>% 
     leaflet() %>% 
@@ -328,7 +329,7 @@ mapa_paraiba_gasto_habitante@data <- mapa_paraiba_gasto_habitante@data %>%
   left_join(gastos.por.habitante.por.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba_gasto_habitante@data$gastos.por.habitante, na.rm = T), max(mapa_paraiba_gasto_habitante@data$gastos.por.habitante, na.rm = T)))
+colors <- colorNumeric("YlOrRd", domain = c(min(mapa_paraiba_gasto_habitante@data$gastos.por.habitante, na.rm = T), max(mapa_paraiba_gasto_habitante@data$gastos.por.habitante, na.rm = T)))
 
 mapa_paraiba_gasto_habitante %>% 
     leaflet() %>% 
@@ -439,7 +440,7 @@ mapa_paraiba_nao_georreferenciada@data <- mapa_paraiba_nao_georreferenciada@data
   left_join(municipior.nao.georref.prop,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- colorNumeric("viridis", 
+colors <- colorNumeric("YlOrRd", 
                        domain = c(
                            min(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, na.rm = T),
                            max(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, na.rm = T)
@@ -514,7 +515,7 @@ mapa_paraiba_custo_efetivo <- mapa_paraiba
 mapa_paraiba_custo_efetivo@data <- mapa_paraiba_custo_efetivo@data %>%
     left_join(obras.2013.pavimentacao,by = c("Nome_Munic" = "nome"))
 
-colors <- colorNumeric("viridis", domain = c(min(mapa_paraiba_custo_efetivo@data$custo_efetivo, na.rm = T), max(mapa_paraiba_custo_efetivo@data$custo_efetivo, na.rm = T)))
+colors <- colorNumeric("YlOrRd", domain = c(min(mapa_paraiba_custo_efetivo@data$custo_efetivo, na.rm = T), max(mapa_paraiba_custo_efetivo@data$custo_efetivo, na.rm = T)))
 
 mapa_paraiba_custo_efetivo %>% 
     leaflet() %>% 
