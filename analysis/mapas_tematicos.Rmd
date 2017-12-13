@@ -335,7 +335,7 @@ gasto.por.habitante.por.municipio <- obras.filtradas.valor %>%
 mapa_paraiba_gasto_habitante <- mapa_paraiba
 
 mapa_paraiba_gasto_habitante@data <- mapa_paraiba@data %>%
-  left_join(gastos.por.habitante.por.municipio,
+  left_join(gasto.por.habitante.por.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
 colors <- paleta.de.cores(dado = mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log)
