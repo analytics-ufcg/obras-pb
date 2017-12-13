@@ -286,15 +286,15 @@ mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
   left_join(quantidade.obras.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- paleta.de.cores(dado = mapa_paraiba_quantidade_obras@data$qtde.obras)
+colors <- paleta.de.cores(dado = mapa_paraiba_quantidade_obras@data$qtde.obras.log)
 
 cria.mapa(
     mapa_paraiba_quantidade_obras, 
-    mapa_paraiba_quantidade_obras@data$qtde.obras, 
+    mapa_paraiba_quantidade_obras@data$qtde.obras.log, 
     mapa_paraiba_quantidade_obras@data$Nome_Munic, 
     paste('Município: ', mapa_paraiba_quantidade_obras@data$Nome_Munic, '</br>Custo mediano das obras: R$ ', format(mapa_paraiba_quantidade_obras@data$valor.mediano, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), '</br>Número de obras: ', mapa_paraiba_quantidade_obras@data$qtde.obras), 
     colors, 
-    "Quantidade de obras por município"
+    "Log da quantidade de <br/> obras por município"
     )
 ```
 
@@ -348,15 +348,15 @@ mapa_paraiba_gasto_habitante@data <- mapa_paraiba_gasto_habitante@data %>%
   left_join(gasto.por.habitante.por.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- paleta.de.cores(dado = mapa_paraiba_gasto_habitante@data$gastos.por.habitante)
+colors <- paleta.de.cores(dado = mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log)
 
 cria.mapa(
     mapa_paraiba_gasto_habitante, 
-    mapa_paraiba_gasto_habitante@data$gastos.por.habitante, 
+    mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log, 
     mapa_paraiba_gasto_habitante@data$Nome_Munic, 
-    paste("Município: ", mapa_paraiba_gasto_habitante@data$Nome_Munic, "</br>Valor em obras por habitante: R$", format(mapa_paraiba_gasto_habitante@data$gastos.por.habitante, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Valor total das obras: R$", format(mapa_paraiba_gasto_habitante@data$valor.total.obras, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Quantidade de habitante: ", mapa_paraiba_gasto_habitante@data$populacao), 
+    paste("Município: ", mapa_paraiba_gasto_habitante@data$Nome_Munic, "</br>Valor em obras por habitante: R$", format(mapa_paraiba_gasto_habitante@data$gasto.por.habitante, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Valor total das obras: R$", format(mapa_paraiba_gasto_habitante@data$valor.total.obras, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Quantidade de habitante: ", mapa_paraiba_gasto_habitante@data$populacao), 
     colors, 
-    "Valor gasto em obras por habitante"
+    "Log do valor gasto em </br> obras por habitante"
     )
 ```
 
@@ -522,15 +522,15 @@ mapa_paraiba_custo_efetivo <- mapa_paraiba
 mapa_paraiba_custo_efetivo@data <- mapa_paraiba_custo_efetivo@data %>%
     left_join(obras.2013.pavimentacao,by = c("Nome_Munic" = "nome"))
 
-colors <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo_efetivo)
+colors <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
 
 cria.mapa(
     mapa_paraiba_custo_efetivo,
-    mapa_paraiba_custo_efetivo@data$custo_efetivo, 
+    mapa_paraiba_custo_efetivo@data$custo.efetivo.log, 
     mapa_paraiba_custo_efetivo@data$Nome_Munic, 
-    paste('Município: ', mapa_paraiba_custo_efetivo@data$Nome_Munic, '</br>Custo efetivo: R$', format(mapa_paraiba_custo_efetivo@data$custo_efetivo, digits = 2, big.mark=".", decimal.mark = ",", scientific = FALSE)), 
+    paste('Município: ', mapa_paraiba_custo_efetivo@data$Nome_Munic, '</br>Custo efetivo: R$', format(mapa_paraiba_custo_efetivo@data$custo.efetivo, digits = 2, big.mark=".", decimal.mark = ",", scientific = FALSE)), 
     colors, 
-    "Custo efetivo mediano das obras"
+    "Log do custo efetivo </br> mediano das obras"
     )
 ```
 
