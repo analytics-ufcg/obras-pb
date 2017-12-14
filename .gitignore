@@ -27,3 +27,4 @@ analysis/*.html
 **/*.Rhistory
 **/*.Rproj.user
 **/*.Rbuildignore
+.Rproj.user

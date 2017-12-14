@@ -4,7 +4,7 @@ library(rgdal)
 library(tidyverse)
 library(RColorBrewer)
 library(dygraphs)
-#install.packages("geopbutils.tar.gz", repos = NULL, type = "source")
+#devtools::install_github("analytics-ufcg/geopbutils")
 library(GeoPBUtils)
 library(RPostgreSQL)
 
