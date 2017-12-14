@@ -432,7 +432,7 @@ obras.2013 %>%
 Vejamos os municípios que não georreferenciam suas obras, onde os detalhes podem ser vistos clicando na obra:
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
-municipior.nao.georref.prop <- obras.2013 %>% 
+municipios.nao.georref.prop <- obras.2013 %>% 
     group_by(codigo_ibge, nome.x) %>% 
     summarise(
         total.nao.georref = n(),
@@ -443,7 +443,7 @@ municipior.nao.georref.prop <- obras.2013 %>%
 mapa_paraiba_nao_georreferenciada <- mapa_paraiba
 
 mapa_paraiba_nao_georreferenciada@data <- mapa_paraiba_nao_georreferenciada@data %>%
-  left_join(municipior.nao.georref.prop,
+  left_join(municipios.nao.georref.prop,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
 colors <- paleta.de.cores(dado = mapa_paraiba_nao_georreferenciada@data$prop.nao.georref)

@@ -23,7 +23,7 @@ analysis/data/
 analysis/config.yml
 analysis/*.html
 # R
-*.Rhistory
-*.Rproj.user
-analysis/.RData
-.Rproj.user
+**/*.RData
+**/*.Rhistory
+**/*.Rproj.user
+**/*.Rbuildignore
