@@ -44,7 +44,7 @@ plot.ranking <- function(dado, municipio) {
         
         dado %>% 
             arrange(prop.nao.georref) %>% 
-            head(9) %>% 
+            head(24) %>% 
             rbind(municipio.selecionado) %>% 
             distinct() %>% 
             ggplot(aes(x = reorder(nome.x, -prop.nao.georref), y = prop.nao.georref, fill = (nome.x == municipio))) +
@@ -52,7 +52,7 @@ plot.ranking <- function(dado, municipio) {
             guides(fill=FALSE) +
             labs(x = "Município",
                  y = "Proporção de obras não georreferenciadas", 
-                 title = "Top 9 municípios que mais \ngeorreferenciam + selecionado") +
+                 title = "Top 24 municípios que mais \ngeorreferenciam + selecionado") +
             coord_flip()
     })
 }
@@ -67,7 +67,7 @@ get.mapa.paraiba.nao.georref <- function(mapa_paraiba, municipios.nao.georref.pr
     mapa_paraiba_nao_georreferenciada
 }
 
-get.municipios.nao.georref.prop <- function(dado, ano.inicial = 0, ano.final = 3000) {
+get.municipios.nao.georref.prop <- function(dado, municipio.selecionado, ano.inicial = 0, ano.final = 3000) {
     dado %>%
         filter(ano >= ano.inicial,
                ano <= ano.final) %>%
@@ -76,6 +76,10 @@ get.municipios.nao.georref.prop <- function(dado, ano.inicial = 0, ano.final = 3
             total.nao.georref = n(),
             qtde.nao.georref = sum(is.inputado),
             prop.nao.georref = (qtde.nao.georref / total.nao.georref) * 100
+        ) %>% 
+        mutate(
+            cor.borda = if_else(nome.x == municipio.selecionado, "blue", "black"),
+            largura.borda = if_else(nome.x == municipio.selecionado, 5, 1)
         )
 }
 
@@ -85,7 +89,7 @@ municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinate
 obras.2013 <- get.georreferencia.inputada(obra, localidade, tipos.das.obras, municipios, obra.georref.centroide.sumarizado, 2013) %>% 
     filter(codigo_ibge != 0)
 
-municipios.nao.georref.prop <- get.municipios.nao.georref.prop(obras.2013)
+municipios.nao.georref.prop <- get.municipios.nao.georref.prop(obras.2013, "Não selecionado")
 
 mapa_paraiba_nao_georreferenciada <- get.mapa.paraiba.nao.georref(mapa_paraiba, municipios.nao.georref.prop)
 
@@ -122,7 +126,9 @@ server <- function(input, output, session) {
             mapa_paraiba_nao_georreferenciada@data$Nome_Munic, 
             paste0("Município: ", mapa_paraiba_nao_georreferenciada@data$Nome_Munic, "</br>Total de obras: ", mapa_paraiba_nao_georreferenciada@data$total.nao.georref, "</br>Quantidade de obras não georreferenciadas: ", mapa_paraiba_nao_georreferenciada@data$qtde.nao.georref, "</br>Proporção de obras não georreferenciadas em %: ", round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"), 
             cores, 
-            "Proporção de obras não</br> georreferenciadas em %"
+            "Proporção de obras não</br> georreferenciadas em %",
+            mapa_paraiba_nao_georreferenciada@data$cor.borda,
+            mapa_paraiba_nao_georreferenciada@data$largura.borda
         )
     })
     
@@ -158,7 +164,7 @@ server <- function(input, output, session) {
                 ano.final <<- ano2
                 municipio.selecionado <<- municipio
                 
-                municipios.nao.georref.prop <- get.municipios.nao.georref.prop(obras.2013, ano.inicial, ano.final)
+                municipios.nao.georref.prop <- get.municipios.nao.georref.prop(obras.2013, municipio.selecionado, ano.inicial, ano.final)
                 
                 updateSelectInput(session, inputId = "municipio", choices = municipios.nao.georref.prop$nome.x)
                 
@@ -167,7 +173,7 @@ server <- function(input, output, session) {
                 cores <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_nao_georreferenciada@data$prop.nao.georref)
                 
                 leafletProxy("map1", data = mapa_paraiba_nao_georreferenciada) %>%
-                    removeShape( layerId = ~GEOCODIG_M ) %>%
+                    clearGroup( group = "municipios-poligono" ) %>%
                     clearControls() %>%
                     adiciona.poligonos.e.legenda(cores,
                                                  mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 
@@ -180,7 +186,9 @@ server <- function(input, output, session) {
                                                         mapa_paraiba_nao_georreferenciada@data$qtde.nao.georref, 
                                                         "</br>Proporção de obras não georreferenciadas em %: ", 
                                                         round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"), 
-                                                 "Proporção de obras não</br> georreferenciadas em %")
+                                                 "Proporção de obras não</br> georreferenciadas em %",
+                                                 mapa_paraiba_nao_georreferenciada@data$cor.borda,
+                                                 mapa_paraiba_nao_georreferenciada@data$largura.borda)
                 
                 output$ranking1 <- plot.ranking(municipios.nao.georref.prop, input$select_municipio)
             }
