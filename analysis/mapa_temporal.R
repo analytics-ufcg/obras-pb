@@ -38,16 +38,21 @@ municipios.pb <- read.csv("municipios_pb.csv")
 mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
 
 # Funções que auxiliam plots
-plot.ranking <- function(dado) {
+plot.ranking <- function(dado, municipio) {
     renderPlot({
+        municipio.selecionado <- dado %>% filter(nome.x == municipio)
+        
         dado %>% 
             arrange(prop.nao.georref) %>% 
-            head(10) %>% 
-            ggplot(aes(x = reorder(nome.x, -prop.nao.georref), y = prop.nao.georref)) +
+            head(9) %>% 
+            rbind(municipio.selecionado) %>% 
+            distinct() %>% 
+            ggplot(aes(x = reorder(nome.x, -prop.nao.georref), y = prop.nao.georref, fill = (nome.x == municipio))) +
             geom_bar(stat="identity") +
+            guides(fill=FALSE) +
             labs(x = "Município",
                  y = "Proporção de obras não georreferenciadas", 
-                 title = "Top 10 municípios que\n mais georreferenciam") +
+                 title = "Top 9 municípios que mais \ngeorreferenciam + selecionado") +
             coord_flip()
     })
 }
@@ -88,7 +93,8 @@ mapa_paraiba_nao_georreferenciada <- get.mapa.paraiba.nao.georref(mapa_paraiba, 
 altura.mapa <- 400
 altura.linha.tempo <- 200
 ui <- fluidPage(
-    textOutput("message", container = h3),
+    selectInput("select_municipio", label = h3("Selecione o município"), 
+                choices = municipios.nao.georref.prop$nome.x),
     sidebarLayout(  
         sidebarPanel(
             plotOutput("ranking1", height = altura.mapa + altura.linha.tempo)  
@@ -135,20 +141,28 @@ server <- function(input, output, session) {
             dyLegend(show = "never")
     })
     
-    output$ranking1 <- plot.ranking(municipios.nao.georref.prop)
+    output$ranking1 <- plot.ranking(municipios.nao.georref.prop, input$select_municipio)
     
-    observeEvent(input$dygraph1_date_window, {
+    observeEvent({
+        input$select_municipio
+        input$dygraph1_date_window
+        }, {
         if(!is.null(input$dygraph1_date_window)){
             ano1 <- round(input$dygraph1_date_window[[1]])
             ano2 <- round(input$dygraph1_date_window[[2]])
+            municipio <- input$select_municipio
             
-            if (!exists("ano.inicial") || !exists("ano.final") || ano.inicial != ano1 || ano.final != ano2) {
+            if (!exists("ano.inicial") || !exists("ano.final") || !exists("municipio.selecionado") || 
+                ano.inicial != ano1 || ano.final != ano2 || municipio != municipio.selecionado) {
                 ano.inicial <<- ano1
                 ano.final <<- ano2
+                municipio.selecionado <<- municipio
                 
                 municipios.nao.georref.prop <- get.municipios.nao.georref.prop(obras.2013, ano.inicial, ano.final)
                 
-                mapa_paraiba_nao_georreferenciada <- mapa_paraiba_nao_georreferenciada <- get.mapa.paraiba.nao.georref(mapa_paraiba, municipios.nao.georref.prop)
+                updateSelectInput(session, inputId = "municipio", choices = municipios.nao.georref.prop$nome.x)
+                
+                mapa_paraiba_nao_georreferenciada <- get.mapa.paraiba.nao.georref(mapa_paraiba, municipios.nao.georref.prop)
                 
                 cores <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_nao_georreferenciada@data$prop.nao.georref)
                 
@@ -168,7 +182,7 @@ server <- function(input, output, session) {
                                                         round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"), 
                                                  "Proporção de obras não</br> georreferenciadas em %")
                 
-                output$ranking1 <- plot.ranking(municipios.nao.georref.prop)
+                output$ranking1 <- plot.ranking(municipios.nao.georref.prop, input$select_municipio)
             }
         }
     })
