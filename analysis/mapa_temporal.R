@@ -132,8 +132,26 @@ server <- function(input, output, session) {
                 
                 cores <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
                 
+                
+                municipios.georref.porc.top.3 <- municipios.georref.porc %>% 
+                    filter(codigo_ibge != 0) %>%
+                    arrange(-porc.georref) %>%
+                    head(3) %>%
+                    left_join(municipios, by = "codigo_ibge")
+                
+                
+                trofeu.icon <- icons(
+                    iconUrl = "trofeu.png",
+                    iconWidth = 38, iconHeight = 38,
+                    iconAnchorX = 19, iconAnchorY = 30
+                )
+            
+                
+                
                 leafletProxy("map1", data = mapa_paraiba_georreferenciada) %>%
                     clearGroup( group = "municipios-poligono" ) %>%
+                    addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.georref.porc.top.3) %>%
+                    clearMarkers() %>%
                     clearControls() %>%
                     adiciona.poligonos.e.legenda(cores,
                                                  mapa_paraiba_georreferenciada@data$porc.georref, 
@@ -145,7 +163,9 @@ server <- function(input, output, session) {
                                                            mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio),
                                                  "Obras georreferenciadas (%)",
                                                  mapa_paraiba_georreferenciada@data$cor.borda,
-                                                 mapa_paraiba_georreferenciada@data$largura.borda)
+                                                 mapa_paraiba_georreferenciada@data$largura.borda)  %>% 
+                    addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.georref.porc.top.3)
+                
                 
                 output$ranking1 <- renderPlot({
                     plot.ranking(municipios.georref.porc, input$select_municipio)
