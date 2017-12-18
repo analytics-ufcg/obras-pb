@@ -10,13 +10,11 @@ output:
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 library(tidyverse)
-library(RColorBrewer)
-library(RPostgreSQL)
 library(knitr)
 library(leaflet)
+library(RPostgreSQL)
 library(rgdal)
-library(rgeos)
-library(sp)
+library(GeoPBUtils)
 ```
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
@@ -30,11 +28,6 @@ con1 <- DBI::dbConnect(drv,
   dbname = config::get("dbname1")
 )
 
-obra <- dbGetQuery(con1, "select * from t_obra")        
-acompanhamento <- dbGetQuery(con1, "select * from t_acompanhamento")
-complexo <- dbGetQuery(con1, "select * from t_complexo")
-evolucao <- dbGetQuery(con1, "select * from t_evolucao")
-
 con2 <- DBI::dbConnect(drv, 
   host = config::get("host"),
   port = config::get("port"),
@@ -44,204 +37,24 @@ con2 <- DBI::dbConnect(drv,
   dbname = config::get("dbname2")
 )
 
-jurisdicionado_db2 <- dbGetQuery(con2, "select * from t_jurisdicionado")
-localidade <- dbGetQuery(con2, "select * from t_localidade")
-
 tipos.das.obras <- read.csv("tipos_obra.csv")
 municipios.pb <- read.csv("municipios_pb.csv")
 
 mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
+
+GeoPBUtils::get.data(con1, con2, mapa_paraiba)
+
 ```
 
 ## Introdução
 
 Nesta análise vamos identificar possíveis mapas temáticos para incorporar futuramente ao GeoPB, utilizando dados georreferenciados de obras da Paraíba. Para fazê-la, utilizaremos apenas dados de obras a partir de 2013. Quando utilizar o valor da obra, consideraremos apenas valores acima de R$ 1000,00 e quando utilizar a dimensão, consideraremos apenas obras com dimensão acima de 50 da respectiva unidade.
 
-```{r, warning=FALSE, message=FALSE, echo=FALSE}
-obra.georref <- acompanhamento %>% 
-    left_join(obra, by = c("fk_obra" = "id")) %>% 
-    left_join(localidade, by = c("fk_localidade" = "id"))
-```
-
-```{r, warning=FALSE, message=FALSE, echo=FALSE}
-# Associa para cada obra uma localização georreferenciada
-
-## Coloca o centróide no lugar de uma dista de localizações 
-
-obra.filtrada <- obra.georref %>% 
-    filter(tipo_georeferenciamento != 0)
-
-is.dentro.pb <- function(lat,lon) {
-    lon.min <- -38.770132
-    lat.min <- -8.316999
-    lon.max <- -34.786624
-    lat.max <- -5.995412
-    return(lon.min < lon && lon < lon.max && lat.min < lat && lat < lat.max)
-}
-
-is.dentro.municipio <- function(lat, lon, codigo_ibge) {
-    mapa_municipio <- subset(mapa_paraiba, GEOCODIG_M == codigo_ibge)
-    point <- data.frame(lat = lon, lon = lat)
-    point_spatial <- SpatialPoints(point, proj4string = CRS(proj4string(mapa_paraiba)))
-    #plot(mapa_municipio)
-    #plot(point_spatial, add=T, col="red")
-    return(gContains(mapa_municipio, point_spatial))
-    #teste <- over(point_spatial, mapa_municipio) PEGA A LINHA DO DATA FRAME DO MAPA QUE CORRESPONDE AO MUNICIPIO DO PONTO
-}
-
-```
-    
-    
-    
-```{r, warning=FALSE, message=FALSE, echo=FALSE}
-coord_divide <- function(value, parameter) {
-    return(
-        ifelse(value < parameter, 
-               coord_divide(value / 10, parameter),
-               value)
-    )
-}
-
-corrige.coords <- function(coord1, coord2){
-    coord1 <- if_else(coord1 > 0, coord1 * -1, coord1)
-    coord2 <- if_else(coord2 > 0, coord2 * -1, coord2)
-    
-    lat <- max(coord1, coord2)
-    lon <- min(coord1, coord2)
-    
-    lat <- coord_divide(lat, -10)
-    lon <- coord_divide(lon, -100)
-    
-    return(c(lat = lat, lon = lon))
-}
-
-format.geo <- function(mat) {
-    mat.pb <- data.frame(mat) %>% 
-        rowwise() %>% 
-        mutate(
-            lat = corrige.coords(X1, X2)["lat"],
-            lon = corrige.coords(X1, X2)["lon"]
-        ) %>% 
-        rowwise() %>% 
-        filter(is.dentro.pb(lat, lon))
-    
-    coord1 <- mean(mat.pb$X1)
-    coord2 <- mean(mat.pb$X2)
-    
-    coords <- corrige.coords(coord1, coord2)
-    
-    lat <- coords[1]
-    lon <- coords[2]
-    
-    paste(lat,lon, sep = ",")
-}
-
-centroide <- function(localizacao) {
-    
-    coords <- tryCatch( 
-        {
-            parsed.mat <- matrix(jsonlite::fromJSON(localizacao), ncol = 2)
-            
-            return(format.geo(parsed.mat))
-        },
-        error=function(cond) {
-            tryCatch(
-                {
-                    lista.loc.format <- strsplit(localizacao, "\\],")[[1]]
-                    lista.loc.format <- str_replace_all(lista.loc.format, "\\[|\\]", "")
-                    lista.coord <- unlist(strsplit(lista.loc.format, ","))
-                    lista.coord <- trimws(lista.coord, which = "both")
-                    lista.coord.format <- lapply(lista.coord, function(d){
-                        as.numeric(unlist(strsplit(d, " "))[1])
-                        })
-                    parsed.matrix <- matrix(unlist(lista.coord.format), ncol = 2, byrow = TRUE)
-                    
-                    return(format.geo(parsed.matrix))
-                },
-                error = function(cond) {
-                    return(localizacao)
-                }
-            )
-            return(localizacao)
-        }
-    )
-    coords
-}
-
-paleta.de.cores <- function(paleta = "YlOrRd", dado) {
-    colors <- colorNumeric(paleta, domain = c(min(dado, na.rm = T), max(dado, na.rm = T)))
-}
-
-cria.mapa <- function(dado, valor.municipio, tooltip, janela, cores, titulo) {
-    dado %>% 
-        leaflet() %>% 
-        addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
-        addPolygons(opacity = 0.5, 
-                  weight = 1, 
-                  fillColor = colors(valor.municipio),
-                  color = "black", 
-                  label = tooltip,
-                  popup = janela,
-                  fillOpacity = 1) %>%
-        addLegend(position = "bottomright", pal = cores, values = valor.municipio,
-                title = titulo,
-                opacity = 1)
-}
-
-obra.georref.corrigido <- obra.filtrada %>% 
-    rowwise() %>% 
-    mutate(
-        valor_georeferenciamento = ifelse(tipo_georeferenciamento != 1 & tipo_georeferenciamento != 3, 
-                                          valor_georeferenciamento, 
-                                          centroide(valor_georeferenciamento))
-    ) %>%
-    filter(
-        tipo_georeferenciamento != 2
-    ) %>% 
-    separate(
-        valor_georeferenciamento, 
-        c("lat", "lon"),
-        sep = ",",
-        remove = FALSE,
-        convert = TRUE
-    )
-
-obra.georref.corrigido <- obra.georref.corrigido %>%
-    filter(!is.na(lat) & !is.na(lon) & codigo_ibge != 0 & !is.na(codigo_ibge)) %>%
-    filter(
-        is.dentro.pb(lat,lon)
-    ) %>% mutate(
-        dentro_municipio =  is.dentro.municipio(lat, lon, codigo_ibge)
-    )
-
-
-obra.georref.centroide.sumarizado <- obra.georref.corrigido %>%
-    group_by(fk_obra) %>%
-    mutate(lat = mean(lat), lon = mean(lon)) %>%
-    select(-valor_georeferenciamento) %>% 
-    filter(!duplicated(fk_obra))
-
-#write_csv(obra.georref.centroide.sumarizado, "obras_georref_centroide_sumarizadas.csv")
-```
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
 municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
 
-obras.2013 <- obra %>% 
-    left_join(localidade, by = c("fk_localidade" = "id")) %>% 
-    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
-    mutate(ano = lubridate::year(data_inicio_obra)) %>% 
-    filter(
-        ano >= 2013
-    ) %>% 
-    left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
-    left_join(municipios, by = "codigo_ibge") %>% 
-    left_join(obra.georref.centroide.sumarizado %>% select(id,lat,lon,dentro_municipio), by = c("id" = "fk_obra")) %>% 
-    mutate(
-        lat = ifelse(is.na(lat.y), lat.x, lat.y), 
-        lon = ifelse(is.na(lon.y), lon.x, lon.y),
-        is.inputado = ((is.na(lat.y) & is.na(lon.y)) | (!is.na(dentro_municipio) & dentro_municipio == FALSE))
-    ) %>% select(-lat.x, -lat.y, -lon.x, -lon.y)
+obras.2013 <- GeoPBUtils::get.georreferencia.inputada(obra, localidade, tipos.das.obras, municipios, obra.georref.centroide.sumarizado, 2013)
     
 obras.filtradas.valor <- obras.2013 %>% 
     filter(valor_obra > 1000, valor_obra < 1000000000)
@@ -300,9 +113,9 @@ mapa_paraiba_quantidade_obras@data <- mapa_paraiba@data %>%
   left_join(quantidade.obras.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- paleta.de.cores(dado = mapa_paraiba_quantidade_obras@data$qtde.obras.log)
+colors <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_quantidade_obras@data$qtde.obras.log)
 
-cria.mapa(
+GeoPBUtils::cria.mapa(
     mapa_paraiba_quantidade_obras, 
     mapa_paraiba_quantidade_obras@data$qtde.obras.log, 
     mapa_paraiba_quantidade_obras@data$Nome_Munic, 
@@ -362,9 +175,9 @@ mapa_paraiba_gasto_habitante@data <- mapa_paraiba@data %>%
   left_join(gasto.por.habitante.por.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- paleta.de.cores(dado = mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log)
+colors <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log)
 
-cria.mapa(
+GeoPBUtils::cria.mapa(
     mapa_paraiba_gasto_habitante, 
     mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log, 
     mapa_paraiba_gasto_habitante@data$Nome_Munic, 
@@ -451,44 +264,30 @@ obras.2013 %>%
              clusterOptions = markerClusterOptions())
 ```
 
-### Obras não georreferenciadas
+### Obras georreferenciadas
 
-Vejamos os municípios que não georreferenciam suas obras, onde os detalhes podem ser vistos clicando na obra:
+Vejamos os municípios que mais georreferenciam suas obras, onde os detalhes podem ser vistos clicando na obra:
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
-municipios.nao.georref.prop <- obras.2013 %>% 
-    group_by(codigo_ibge, nome.x) %>% 
-    summarise(
-        possui.georref.mas.tem.coordenadas.fora.municipio = 
-            sum(
-                ifelse(!is.na(dentro_municipio) & dentro_municipio == FALSE, 1, 0)
-            ),
-        total.nao.georref = n(),
-        qtde.nao.georref = sum(is.inputado),
-        prop.nao.georref = (qtde.nao.georref / total.nao.georref) * 100
-    )
-    
-mapa_paraiba_nao_georreferenciada <- mapa_paraiba
+municipios.georref.porc <- GeoPBUtils::get.porc.municipios.georref(obras.2013)
 
-mapa_paraiba_nao_georreferenciada@data <- mapa_paraiba_nao_georreferenciada@data %>%
-  left_join(municipios.nao.georref.prop,
-            by = c("GEOCODIG_M" = "codigo_ibge"))
+mapa_paraiba_georreferenciada <- GeoPBUtils::get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
 
-colors <- paleta.de.cores(dado = mapa_paraiba_nao_georreferenciada@data$prop.nao.georref)
+colors <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
 
-cria.mapa(
-    mapa_paraiba_nao_georreferenciada, 
-    mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 
-    mapa_paraiba_nao_georreferenciada@data$Nome_Munic, 
-    paste0("Município: ", mapa_paraiba_nao_georreferenciada@data$Nome_Munic,
-           "</br>Total de obras: ", mapa_paraiba_nao_georreferenciada@data$total.nao.georref,
-           "</br>Quantidade de obras não georreferenciadas: ", mapa_paraiba_nao_georreferenciada@data$qtde.nao.georref,
+GeoPBUtils::cria.mapa(
+    mapa_paraiba_georreferenciada, 
+    mapa_paraiba_georreferenciada@data$porc.georref, 
+    mapa_paraiba_georreferenciada@data$Nome_Munic, 
+    paste0("Município: ", mapa_paraiba_georreferenciada@data$Nome_Munic,
+           "</br>Total de obras: ", mapa_paraiba_georreferenciada@data$total.obras,
+           "</br>Quantidade de obras georreferenciadas: ", mapa_paraiba_georreferenciada@data$qtde.georref,
            "</br>Obras com coordenadas fora do município: ",      
-           mapa_paraiba_nao_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio,
-           "</br>Proporção de obras não georreferenciadas em %: ", round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"
+           mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio,
+           "</br>Porcentagem de obras georreferenciadas: ", round(mapa_paraiba_georreferenciada@data$porc.georref, 2), "%"
            ), 
     colors, 
-    "Proporção de obras não</br> georreferenciadas em %"
+    "Porcentagem de obras</br> georreferenciadas"
     )
 
 ```
@@ -547,9 +346,9 @@ mapa_paraiba_custo_efetivo <- mapa_paraiba
 mapa_paraiba_custo_efetivo@data <- mapa_paraiba@data %>%
     left_join(obras.2013.pavimentacao,by = c("Nome_Munic" = "nome"))
 
-colors <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
+colors <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
 
-cria.mapa(
+GeoPBUtils::cria.mapa(
     mapa_paraiba_custo_efetivo,
     mapa_paraiba_custo_efetivo@data$custo.efetivo.log, 
     mapa_paraiba_custo_efetivo@data$Nome_Munic, 

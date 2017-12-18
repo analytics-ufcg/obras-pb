@@ -1,12 +1,17 @@
 library(shiny)
 library(leaflet)
+library(dygraphs)
 library(rgdal)
 library(tidyverse)
-library(RColorBrewer)
-library(dygraphs)
+library(RPostgreSQL)
 #devtools::install_github("analytics-ufcg/geopbutils")
 library(GeoPBUtils)
-library(RPostgreSQL)
+
+
+# Importa tabelas csv
+tipos.das.obras <- read.csv("tipos_obra.csv")
+municipios.pb <- read.csv("municipios_pb.csv")
+mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
 
 # Pega dados
 drv <- DBI::dbDriver("PostgreSQL")
@@ -27,16 +32,10 @@ con2 <- DBI::dbConnect(drv,
                        dbname = config::get("dbname2")
 )
 
-mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
-
-get.data(con1, con2, mapa_paraiba)
+GeoPBUtils::get.data(con1, con2, mapa_paraiba)
 
 dbDisconnect(con1)
 dbDisconnect(con2)
-
-# Importa tabelas restantes
-tipos.das.obras <- read.csv("tipos_obra.csv")
-municipios.pb <- read.csv("municipios_pb.csv")
 
 # Manipulação de dados
 municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
@@ -82,7 +81,7 @@ server <- function(input, output, session) {
             get.popup.georref(mapa_paraiba_georreferenciada@data$Nome_Munic, 
                       mapa_paraiba_georreferenciada@data$total.obras, 
                       mapa_paraiba_georreferenciada@data$qtde.georref, 
-                      mapa_paraiba_georreferenciada@data$porc.georref, 
+                      mapa_paraiba_georreferenciada@data$porc.georref,
                       mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio),
             cores, 
             "Obras georreferenciadas (%)",
