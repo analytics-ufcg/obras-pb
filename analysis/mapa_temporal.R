@@ -32,12 +32,10 @@ con2 <- DBI::dbConnect(drv,
                        dbname = config::get("dbname2")
 )
 
-
 GeoPBUtils::get.data(con1, con2, mapa_paraiba)
 
 dbDisconnect(con1)
 dbDisconnect(con2)
-
 
 # Manipulação de dados
 municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
@@ -86,7 +84,7 @@ server <- function(input, output, session) {
                       mapa_paraiba_georreferenciada@data$porc.georref,
                       mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio),
             cores, 
-            "Proporção de obras</br> georreferenciadas em %",
+            "Obras georreferenciadas (%)",
             mapa_paraiba_georreferenciada@data$cor.borda,
             mapa_paraiba_georreferenciada@data$largura.borda
         )
@@ -145,7 +143,7 @@ server <- function(input, output, session) {
                                                            mapa_paraiba_georreferenciada@data$qtde.georref, 
                                                            mapa_paraiba_georreferenciada@data$porc.georref,
                                                            mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio),
-                                                 "Proporção de obras</br> georreferenciadas em %",
+                                                 "Obras georreferenciadas (%)",
                                                  mapa_paraiba_georreferenciada@data$cor.borda,
                                                  mapa_paraiba_georreferenciada@data$largura.borda)
                 
