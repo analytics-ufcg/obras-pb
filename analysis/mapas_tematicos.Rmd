@@ -15,6 +15,8 @@ library(RPostgreSQL)
 library(knitr)
 library(leaflet)
 library(rgdal)
+library(rgeos)
+library(sp)
 ```
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
@@ -37,6 +39,7 @@ con2 <- DBI::dbConnect(drv,
   host = config::get("host"),
   port = config::get("port"),
   user = config::get("user"),
+  
   password = config::get("password"),
   dbname = config::get("dbname2")
 )
@@ -76,6 +79,21 @@ is.dentro.pb <- function(lat,lon) {
     return(lon.min < lon && lon < lon.max && lat.min < lat && lat < lat.max)
 }
 
+is.dentro.municipio <- function(lat, lon, codigo_ibge) {
+    mapa_municipio <- subset(mapa_paraiba, GEOCODIG_M == codigo_ibge)
+    point <- data.frame(lat = lon, lon = lat)
+    point_spatial <- SpatialPoints(point, proj4string = CRS(proj4string(mapa_paraiba)))
+    #plot(mapa_municipio)
+    #plot(point_spatial, add=T, col="red")
+    return(gContains(mapa_municipio, point_spatial))
+    #teste <- over(point_spatial, mapa_municipio) PEGA A LINHA DO DATA FRAME DO MAPA QUE CORRESPONDE AO MUNICIPIO DO PONTO
+}
+
+```
+    
+    
+    
+```{r}
 coord_divide <- function(value, parameter) {
     return(
         ifelse(value < parameter, 
@@ -187,9 +205,13 @@ obra.georref.corrigido <- obra.filtrada %>%
         remove = FALSE,
         convert = TRUE
     ) %>% 
+    filter(!is.na(lat) & !is.na(lon) & codigo_ibge != 0 & !is.na(codigo_ibge)) %>%
     filter(
         is.dentro.pb(lat,lon)
+    ) %>% mutate(
+        dentro_municipio =  is.dentro.municipio(lat, lon, codigo_ibge)
     )
+
 
 obra.georref.centroide.sumarizado <- obra.georref.corrigido %>%
     group_by(fk_obra) %>%
@@ -212,7 +234,7 @@ obras.2013 <- obra %>%
     ) %>% 
     left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
     left_join(municipios, by = "codigo_ibge") %>% 
-    left_join(obra.georref.centroide.sumarizado %>% select(id,lat,lon), by = c("id" = "fk_obra")) %>% 
+    left_join(obra.georref.centroide.sumarizado %>% select(id,lat,lon,dentro_municipio), by = c("id" = "fk_obra")) %>% 
     mutate(
         lat = ifelse(is.na(lat.y), lat.x, lat.y), 
         lon = ifelse(is.na(lon.y), lon.x, lon.y),
@@ -438,6 +460,34 @@ municipior.nao.georref.prop <- obras.2013 %>%
         total.nao.georref = n(),
         qtde.nao.georref = sum(is.inputado),
         prop.nao.georref = (qtde.nao.georref / total.nao.georref) * 100
+    )
+    
+mapa_paraiba_nao_georreferenciada <- mapa_paraiba
+
+mapa_paraiba_nao_georreferenciada@data <- mapa_paraiba_nao_georreferenciada@data %>%
+  left_join(municipior.nao.georref.prop,
+            by = c("GEOCODIG_M" = "codigo_ibge"))
+
+colors <- paleta.de.cores(dado = mapa_paraiba_nao_georreferenciada@data$prop.nao.georref)
+
+cria.mapa(
+    mapa_paraiba_nao_georreferenciada, 
+    mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 
+    mapa_paraiba_nao_georreferenciada@data$Nome_Munic, 
+    paste0("Município: ", mapa_paraiba_nao_georreferenciada@data$Nome_Munic, "</br>Total de obras: ", mapa_paraiba_nao_georreferenciada@data$total.nao.georref, "</br>Quantidade de obras não georreferenciadas: ", mapa_paraiba_nao_georreferenciada@data$qtde.nao.georref, "</br>Proporção de obras não georreferenciadas em %: ", round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"), 
+    colors, 
+    "Proporção de obras não</br> georreferenciadas em %"
+    )
+
+
+
+municipior.nao.georref.prop <- obras.2013 %>%
+    group_by(codigo_ibge, nome.x) %>% 
+    summarise(
+        total.nao.georref = n(),
+        total.fora.municipio = sum(dentro_municipio == FALSE),
+        qtde.nao.georref = sum(is.inputado),
+        prop.nao.georref = ((qtde.nao.georref + total.fora.municipio) / total.nao.georref) * 100
     )
     
 mapa_paraiba_nao_georreferenciada <- mapa_paraiba
