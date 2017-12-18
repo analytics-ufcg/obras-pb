@@ -15,9 +15,11 @@ library(RPostgreSQL)
 library(knitr)
 library(leaflet)
 library(rgdal)
+library(rgeos)
+library(sp)
 ```
 
-```{r, warning=FALSE, message=FALSE, echo=FALSE}
+```{r message=FALSE, warning=FALSE, include=FALSE}
 drv <- DBI::dbDriver("PostgreSQL")
 
 con1 <- DBI::dbConnect(drv, 
@@ -37,6 +39,7 @@ con2 <- DBI::dbConnect(drv,
   host = config::get("host"),
   port = config::get("port"),
   user = config::get("user"),
+  
   password = config::get("password"),
   dbname = config::get("dbname2")
 )
@@ -76,6 +79,21 @@ is.dentro.pb <- function(lat,lon) {
     return(lon.min < lon && lon < lon.max && lat.min < lat && lat < lat.max)
 }
 
+is.dentro.municipio <- function(lat, lon, codigo_ibge) {
+    mapa_municipio <- subset(mapa_paraiba, GEOCODIG_M == codigo_ibge)
+    point <- data.frame(lat = lon, lon = lat)
+    point_spatial <- SpatialPoints(point, proj4string = CRS(proj4string(mapa_paraiba)))
+    #plot(mapa_municipio)
+    #plot(point_spatial, add=T, col="red")
+    return(gContains(mapa_municipio, point_spatial))
+    #teste <- over(point_spatial, mapa_municipio) PEGA A LINHA DO DATA FRAME DO MAPA QUE CORRESPONDE AO MUNICIPIO DO PONTO
+}
+
+```
+    
+    
+    
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
 coord_divide <- function(value, parameter) {
     return(
         ifelse(value < parameter, 
@@ -186,10 +204,16 @@ obra.georref.corrigido <- obra.filtrada %>%
         sep = ",",
         remove = FALSE,
         convert = TRUE
-    ) %>% 
+    )
+
+obra.georref.corrigido <- obra.georref.corrigido %>%
+    filter(!is.na(lat) & !is.na(lon) & codigo_ibge != 0 & !is.na(codigo_ibge)) %>%
     filter(
         is.dentro.pb(lat,lon)
+    ) %>% mutate(
+        dentro_municipio =  is.dentro.municipio(lat, lon, codigo_ibge)
     )
+
 
 obra.georref.centroide.sumarizado <- obra.georref.corrigido %>%
     group_by(fk_obra) %>%
@@ -212,11 +236,11 @@ obras.2013 <- obra %>%
     ) %>% 
     left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
     left_join(municipios, by = "codigo_ibge") %>% 
-    left_join(obra.georref.centroide.sumarizado %>% select(id,lat,lon), by = c("id" = "fk_obra")) %>% 
+    left_join(obra.georref.centroide.sumarizado %>% select(id,lat,lon,dentro_municipio), by = c("id" = "fk_obra")) %>% 
     mutate(
         lat = ifelse(is.na(lat.y), lat.x, lat.y), 
         lon = ifelse(is.na(lon.y), lon.x, lon.y),
-        is.inputado = (is.na(lat.y) & is.na(lon.y))
+        is.inputado = ((is.na(lat.y) & is.na(lon.y)) | (!is.na(dentro_municipio) & dentro_municipio == FALSE))
     ) %>% select(-lat.x, -lat.y, -lon.x, -lon.y)
     
 obras.filtradas.valor <- obras.2013 %>% 
@@ -435,6 +459,10 @@ Vejamos os municípios que não georreferenciam suas obras, onde os detalhes pod
 municipior.nao.georref.prop <- obras.2013 %>% 
     group_by(codigo_ibge, nome.x) %>% 
     summarise(
+        possui.georref.mas.tem.coordenadas.fora.municipio = 
+            sum(
+                ifelse(!is.na(dentro_municipio) & dentro_municipio == FALSE, 1, 0)
+            ),
         total.nao.georref = n(),
         qtde.nao.georref = sum(is.inputado),
         prop.nao.georref = (qtde.nao.georref / total.nao.georref) * 100
@@ -452,10 +480,17 @@ cria.mapa(
     mapa_paraiba_nao_georreferenciada, 
     mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 
     mapa_paraiba_nao_georreferenciada@data$Nome_Munic, 
-    paste0("Município: ", mapa_paraiba_nao_georreferenciada@data$Nome_Munic, "</br>Total de obras: ", mapa_paraiba_nao_georreferenciada@data$total.nao.georref, "</br>Quantidade de obras não georreferenciadas: ", mapa_paraiba_nao_georreferenciada@data$qtde.nao.georref, "</br>Proporção de obras não georreferenciadas em %: ", round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"), 
+    paste0("Município: ", mapa_paraiba_nao_georreferenciada@data$Nome_Munic,
+           "</br>Total de obras: ", mapa_paraiba_nao_georreferenciada@data$total.nao.georref,
+           "</br>Quantidade de obras não georreferenciadas: ", mapa_paraiba_nao_georreferenciada@data$qtde.nao.georref,
+           "</br>Obras com coordenadas fora do município: ",      
+           mapa_paraiba_nao_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio,
+           "</br>Proporção de obras não georreferenciadas em %: ", round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"
+           ), 
     colors, 
     "Proporção de obras não</br> georreferenciadas em %"
     )
+
 ```
 
 Vemos que a maior parte das obras não são georreferenciadas nos municípios paraibanos entre 2013 e 2017, onde apenas 5 municípios tem mais de 10% das obras georreferenciadas.
