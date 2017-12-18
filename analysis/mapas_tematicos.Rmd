@@ -9,10 +9,12 @@ output:
 ---
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
+library(tidyverse)
 library(knitr)
 library(leaflet)
+library(RPostgreSQL)
+library(rgdal)
 library(GeoPBUtils)
-
 ```
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
@@ -262,16 +264,16 @@ obras.2013 %>%
              clusterOptions = markerClusterOptions())
 ```
 
-### Obras não georreferenciadas
+### Obras georreferenciadas
 
-Vejamos os municípios que não georreferenciam suas obras, onde os detalhes podem ser vistos clicando na obra:
+Vejamos os municípios que mais georreferenciam suas obras, onde os detalhes podem ser vistos clicando na obra:
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 municipios.georref.porc <- GeoPBUtils::get.porc.municipios.georref(obras.2013)
 
 mapa_paraiba_georreferenciada <- GeoPBUtils::get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
 
-colors <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref)
+colors <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
 
 GeoPBUtils::cria.mapa(
     mapa_paraiba_georreferenciada, 
