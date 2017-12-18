@@ -204,7 +204,9 @@ obra.georref.corrigido <- obra.filtrada %>%
         sep = ",",
         remove = FALSE,
         convert = TRUE
-    ) %>% 
+    )
+
+obra.georref.corrigido <- obra.georref.corrigido %>%
     filter(!is.na(lat) & !is.na(lon) & codigo_ibge != 0 & !is.na(codigo_ibge)) %>%
     filter(
         is.dentro.pb(lat,lon)
@@ -238,7 +240,7 @@ obras.2013 <- obra %>%
     mutate(
         lat = ifelse(is.na(lat.y), lat.x, lat.y), 
         lon = ifelse(is.na(lon.y), lon.x, lon.y),
-        is.inputado = (is.na(lat.y) & is.na(lon.y))
+        is.inputado = ((is.na(lat.y) & is.na(lon.y)) | (!is.na(dentro_municipio) & dentro_municipio == FALSE))
     ) %>% select(-lat.x, -lat.y, -lon.x, -lon.y)
     
 obras.filtradas.valor <- obras.2013 %>% 
@@ -457,6 +459,10 @@ Vejamos os municípios que não georreferenciam suas obras, onde os detalhes pod
 municipior.nao.georref.prop <- obras.2013 %>% 
     group_by(codigo_ibge, nome.x) %>% 
     summarise(
+        possui.georref.mas.tem.coordenadas.fora.municipio = 
+            sum(
+                ifelse(!is.na(dentro_municipio) & dentro_municipio == FALSE, 1, 0)
+            ),
         total.nao.georref = n(),
         qtde.nao.georref = sum(is.inputado),
         prop.nao.georref = (qtde.nao.georref / total.nao.georref) * 100
@@ -474,38 +480,17 @@ cria.mapa(
     mapa_paraiba_nao_georreferenciada, 
     mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 
     mapa_paraiba_nao_georreferenciada@data$Nome_Munic, 
-    paste0("Município: ", mapa_paraiba_nao_georreferenciada@data$Nome_Munic, "</br>Total de obras: ", mapa_paraiba_nao_georreferenciada@data$total.nao.georref, "</br>Quantidade de obras não georreferenciadas: ", mapa_paraiba_nao_georreferenciada@data$qtde.nao.georref, "</br>Proporção de obras não georreferenciadas em %: ", round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"), 
+    paste0("Município: ", mapa_paraiba_nao_georreferenciada@data$Nome_Munic,
+           "</br>Total de obras: ", mapa_paraiba_nao_georreferenciada@data$total.nao.georref,
+           "</br>Quantidade de obras não georreferenciadas: ", mapa_paraiba_nao_georreferenciada@data$qtde.nao.georref,
+           "</br>Obras com coordenadas fora do município: ",      
+           mapa_paraiba_nao_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio,
+           "</br>Proporção de obras não georreferenciadas em %: ", round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"
+           ), 
     colors, 
     "Proporção de obras não</br> georreferenciadas em %"
     )
 
-
-
-municipior.nao.georref.prop <- obras.2013 %>%
-    group_by(codigo_ibge, nome.x) %>% 
-    summarise(
-        total.nao.georref = n(),
-        total.fora.municipio = sum(dentro_municipio == FALSE),
-        qtde.nao.georref = sum(is.inputado),
-        prop.nao.georref = ((qtde.nao.georref + total.fora.municipio) / total.nao.georref) * 100
-    )
-    
-mapa_paraiba_nao_georreferenciada <- mapa_paraiba
-
-mapa_paraiba_nao_georreferenciada@data <- mapa_paraiba_nao_georreferenciada@data %>%
-  left_join(municipior.nao.georref.prop,
-            by = c("GEOCODIG_M" = "codigo_ibge"))
-
-colors <- paleta.de.cores(dado = mapa_paraiba_nao_georreferenciada@data$prop.nao.georref)
-
-cria.mapa(
-    mapa_paraiba_nao_georreferenciada, 
-    mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 
-    mapa_paraiba_nao_georreferenciada@data$Nome_Munic, 
-    paste0("Município: ", mapa_paraiba_nao_georreferenciada@data$Nome_Munic, "</br>Total de obras: ", mapa_paraiba_nao_georreferenciada@data$total.nao.georref, "</br>Quantidade de obras não georreferenciadas: ", mapa_paraiba_nao_georreferenciada@data$qtde.nao.georref, "</br>Proporção de obras não georreferenciadas em %: ", round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"), 
-    colors, 
-    "Proporção de obras não</br> georreferenciadas em %"
-    )
 ```
 
 Vemos que a maior parte das obras não são georreferenciadas nos municípios paraibanos entre 2013 e 2017, onde apenas 5 municípios tem mais de 10% das obras georreferenciadas.
