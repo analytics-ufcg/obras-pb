@@ -19,7 +19,7 @@ library(rgeos)
 library(sp)
 ```
 
-```{r, warning=FALSE, message=FALSE, echo=FALSE}
+```{r message=FALSE, warning=FALSE, include=FALSE}
 drv <- DBI::dbDriver("PostgreSQL")
 
 con1 <- DBI::dbConnect(drv, 
@@ -93,7 +93,7 @@ is.dentro.municipio <- function(lat, lon, codigo_ibge) {
     
     
     
-```{r}
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
 coord_divide <- function(value, parameter) {
     return(
         ifelse(value < parameter, 
