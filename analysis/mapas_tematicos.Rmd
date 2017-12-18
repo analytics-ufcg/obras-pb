@@ -276,16 +276,15 @@ mapa_paraiba_georreferenciada <- GeoPBUtils::get.mapa.paraiba.georref(mapa_parai
 colors <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
 municipios.georref.porc.top.3 <- municipios.georref.porc %>% 
     filter(codigo_ibge != 0) %>%
-    arrange(porc.georref) %>%
+    arrange(-porc.georref) %>%
     head(3) %>%
     left_join(municipios, by = "codigo_ibge")
     
 
 trofeu.icon <- icons(
-    iconUrl = "http://www.freeiconspng.com/img/30572",
-   iconWidth = 38, iconHeight = 95,
-  iconAnchorX = 19, iconAnchorY = 94
-    
+    iconUrl = "trofeu.png",
+   iconWidth = 38, iconHeight = 38,
+  iconAnchorX = 19, iconAnchorY = 30
     )
 
 GeoPBUtils::cria.mapa(
@@ -301,7 +300,7 @@ GeoPBUtils::cria.mapa(
            ), 
     colors, 
     "Porcentagem de obras</br> georreferenciadas") %>% 
-    addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.nao.georref.prop.top.3)
+    addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.georref.porc.top.3)
 
 ```
 
