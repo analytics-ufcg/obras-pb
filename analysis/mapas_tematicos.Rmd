@@ -475,6 +475,20 @@ mapa_paraiba_nao_georreferenciada@data <- mapa_paraiba_nao_georreferenciada@data
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
 colors <- paleta.de.cores(dado = mapa_paraiba_nao_georreferenciada@data$prop.nao.georref)
+municipios.nao.georref.prop.top.3 <- municipios.nao.georref.prop %>% 
+    filter(codigo_ibge != 0) %>%
+    arrange(prop.nao.georref) %>%
+    head(3) %>%
+    left_join(municipios, by = "codigo_ibge")
+    
+
+
+trofeu.icon <- icons(
+    iconUrl = "http://www.freeiconspng.com/img/30572",
+   iconWidth = 38, iconHeight = 95,
+  iconAnchorX = 19, iconAnchorY = 94
+    
+    )
 
 cria.mapa(
     mapa_paraiba_nao_georreferenciada, 
@@ -488,8 +502,10 @@ cria.mapa(
            "</br>Proporção de obras não georreferenciadas em %: ", round(mapa_paraiba_nao_georreferenciada@data$prop.nao.georref, 2), "%"
            ), 
     colors, 
-    "Proporção de obras não</br> georreferenciadas em %"
-    )
+    "Proporção de obras não</br> georreferenciadas em %") %>% 
+    
+    addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.nao.georref.prop.top.3)
+
 
 ```
 
