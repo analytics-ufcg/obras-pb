@@ -7,7 +7,6 @@ library(RPostgreSQL)
 #devtools::install_github("analytics-ufcg/geopbutils")
 library(GeoPBUtils)
 
-
 # Importa tabelas csv
 tipos.das.obras <- read.csv("tipos_obra.csv")
 municipios.pb <- read.csv("municipios_pb.csv")
@@ -71,6 +70,14 @@ ui <- fluidPage(
 server <- function(input, output, session) {
     v <- reactiveValues(msg = "")
 
+    municipios.georref.porc.top.3 <<- get.top.3.municipios.georref(municipios.georref.porc, municipios)
+    
+    trofeu.icon <- icons(
+        iconUrl = "trofeu.png",
+        iconWidth = 38, iconHeight = 38,
+        iconAnchorX = 19, iconAnchorY = 30
+    )
+    
     cores <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
     
     output$map1 <- renderLeaflet({
@@ -87,7 +94,8 @@ server <- function(input, output, session) {
             "Obras georreferenciadas (%)",
             mapa_paraiba_georreferenciada@data$cor.borda,
             mapa_paraiba_georreferenciada@data$largura.borda
-        )
+        ) %>% 
+            addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.georref.porc.top.3)
     })
     
     output$dygraph1 <- renderDygraph({
@@ -132,25 +140,10 @@ server <- function(input, output, session) {
                 
                 cores <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
                 
-                
-                municipios.georref.porc.top.3 <- municipios.georref.porc %>% 
-                    filter(codigo_ibge != 0) %>%
-                    arrange(-porc.georref) %>%
-                    head(3) %>%
-                    left_join(municipios, by = "codigo_ibge")
-                
-                
-                trofeu.icon <- icons(
-                    iconUrl = "trofeu.png",
-                    iconWidth = 38, iconHeight = 38,
-                    iconAnchorX = 19, iconAnchorY = 30
-                )
+                municipios.georref.porc.top.3 <<- get.top.3.municipios.georref(municipios.georref.porc, municipios)
             
-                
-                
                 leafletProxy("map1", data = mapa_paraiba_georreferenciada) %>%
                     clearGroup( group = "municipios-poligono" ) %>%
-                    addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.georref.porc.top.3) %>%
                     clearMarkers() %>%
                     clearControls() %>%
                     adiciona.poligonos.e.legenda(cores,
@@ -163,9 +156,8 @@ server <- function(input, output, session) {
                                                            mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio),
                                                  "Obras georreferenciadas (%)",
                                                  mapa_paraiba_georreferenciada@data$cor.borda,
-                                                 mapa_paraiba_georreferenciada@data$largura.borda)  %>% 
+                                                 mapa_paraiba_georreferenciada@data$largura.borda) %>% 
                     addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.georref.porc.top.3)
-                
                 
                 output$ranking1 <- renderPlot({
                     plot.ranking(municipios.georref.porc, input$select_municipio)
