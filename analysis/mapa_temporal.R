@@ -67,27 +67,38 @@ ui <- dashboardPage(
         disable = TRUE
     ),
     dashboardBody(
-        fluidRow(
-            column(width = 8,
-               box(width = NULL, solidHeader = TRUE,
-                   leafletOutput("map1", height = altura.mapa)
-               ),
-               box(width = NULL,
-                   dygraphOutput("dygraph1", height = altura.linha.tempo)
-               )
-            ),
-            column(width = 4,
-               box(width = NULL,
-                   height = altura.input.municipio,
-                   status = "warning",
-                   selectInput("select_municipio", label = h3("Selecione o município"), 
-                               choices = municipios.georref.porc$nome.x)
-               ),
-               box(width = NULL,
-                   status = "warning",
-                   plotOutput("ranking1", height = altura.mapa + altura.linha.tempo - altura.input.municipio + altura.ajusta.margem)
-               )
-            )  
+        
+        tabsetPanel(type = "tabs",
+            tabPanel(
+                "Obras georreferenciadas por município", 
+                     fluidRow(
+                         column(width = 8,
+                                box(width = NULL, solidHeader = TRUE,
+                                    leafletOutput("map1", height = altura.mapa)
+                                ),
+                                box(width = NULL,
+                                    dygraphOutput("dygraph1", height = altura.linha.tempo)
+                                )
+                         ),
+                         column(width = 4,
+                                box(width = NULL,
+                                    height = altura.input.municipio,
+                                    status = "warning",
+                                    selectInput("select_municipio", label = h3("Selecione o município"), 
+                                                choices = municipios.georref.porc$nome.x)
+                                ),
+                                box(width = NULL,
+                                    status = "warning",
+                                    plotOutput("ranking1", height = altura.mapa + altura.linha.tempo - altura.input.municipio + altura.ajusta.margem)
+                                )
+                         )  
+                     )
+                     
+                 ),
+            tabPanel(
+                "Tipoos de obras", 
+                 p("Inserir aqui mapa dos tipos de obras")
+            )
         )
     )
 )
