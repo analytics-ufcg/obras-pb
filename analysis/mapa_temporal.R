@@ -13,6 +13,25 @@ tipos.das.obras <- read.csv("tipos_obra.csv")
 municipios.pb <- read.csv("municipios_pb.csv")
 mapa_paraiba <- readOGR("mapa_paraiba_ibge/Municipios.shp")
 
+get.custos.efetivos <- function(dado) {
+    dado %>% 
+        filter(valor_obra > 1000,
+               dimensao > 50) %>% 
+        rename(tipo_obra = nome.y)
+}
+
+get.custo.efetivo.tipo <- function(dado, tipo.obra) {
+    dado %>%
+        filter(tipo_obra == tipo.obra) %>%
+        select(valor_obra, dimensao, nome, descricao_sucinta_obra) %>%
+        mutate(custo.efetivo = valor_obra/dimensao) %>% 
+        group_by(nome) %>%
+        summarise(
+            custo.efetivo = median(custo.efetivo),
+            custo.efetivo.log = log(custo.efetivo)
+        )
+}
+
 # Pega dados
 drv <- DBI::dbDriver("PostgreSQL")
 
@@ -43,7 +62,11 @@ municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinate
 obras.2013 <- get.georreferencia.inputada(obra, localidade, tipos.das.obras, municipios, obra.georref.centroide.sumarizado, 2013) %>% 
     filter(codigo_ibge != 0)
 
+custo.efetivo.obras <- get.custos.efetivos(obras.2013)
+
 municipios.georref.porc <<- get.porc.municipios.georref(obras.2013, "Não selecionado")
+
+municipios.tipo.obra.custo.efetivo <<- get.porc.municipios.georref(obras.2013, "Não selecionado")
 
 mapa_paraiba_georreferenciada <- get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
 
@@ -60,8 +83,10 @@ ui <- fluidPage(
         
         # Create a spot for the barplot
         mainPanel(
-            leafletOutput("map1", height = altura.mapa),
-            dygraphOutput("dygraph1", height = altura.linha.tempo)
+            leafletOutput("mapa_georref", height = altura.mapa),
+            dygraphOutput("dygraph_georref", height = altura.linha.tempo),
+            leafletOutput("mapa_tipo_obra", height = altura.mapa),
+            dygraphOutput("dygraph_tipo_obra", height = altura.linha.tempo)
         ),
         position = "right"
     )
@@ -73,7 +98,7 @@ server <- function(input, output, session) {
 
     cores <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
     
-    output$map1 <- renderLeaflet({
+    output$mapa_georref <- renderLeaflet({
         cria.mapa(
             mapa_paraiba_georreferenciada, 
             mapa_paraiba_georreferenciada@data$porc.georref, 
@@ -90,7 +115,24 @@ server <- function(input, output, session) {
         )
     })
     
-    output$dygraph1 <- renderDygraph({
+    output$mapa_tipo_obra <- renderLeaflet({
+        cria.mapa(
+            mapa_paraiba_georreferenciada, 
+            mapa_paraiba_georreferenciada@data$porc.georref, 
+            mapa_paraiba_georreferenciada@data$Nome_Munic, 
+            get.popup.georref(mapa_paraiba_georreferenciada@data$Nome_Munic, 
+                              mapa_paraiba_georreferenciada@data$total.obras, 
+                              mapa_paraiba_georreferenciada@data$qtde.georref, 
+                              mapa_paraiba_georreferenciada@data$porc.georref,
+                              mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio),
+            cores, 
+            "Obras georreferenciadas (%)",
+            mapa_paraiba_georreferenciada@data$cor.borda,
+            mapa_paraiba_georreferenciada@data$largura.borda
+        )
+    })
+    
+    output$dygraph_georref <- renderDygraph({
         # start dygraph with all the states
         obras.2013 %>% 
             group_by(ano) %>% 
@@ -111,11 +153,11 @@ server <- function(input, output, session) {
     
     observeEvent({
         input$select_municipio
-        input$dygraph1_date_window
+        input$dygraph_georref_date_window
         }, {
-        if(!is.null(input$dygraph1_date_window)){
-            ano1 <- round(input$dygraph1_date_window[[1]])
-            ano2 <- round(input$dygraph1_date_window[[2]])
+        if(!is.null(input$dygraph_georref_date_window)){
+            ano1 <- round(input$dygraph_georref_date_window[[1]])
+            ano2 <- round(input$dygraph_georref_date_window[[2]])
             municipio <- input$select_municipio
             
             if (!exists("ano.inicial") || !exists("ano.final") || !exists("municipio.selecionado") || 
@@ -132,7 +174,7 @@ server <- function(input, output, session) {
                 
                 cores <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
                 
-                leafletProxy("map1", data = mapa_paraiba_georreferenciada) %>%
+                leafletProxy("mapa_georref", data = mapa_paraiba_georreferenciada) %>%
                     clearGroup( group = "municipios-poligono" ) %>%
                     clearControls() %>%
                     adiciona.poligonos.e.legenda(cores,
