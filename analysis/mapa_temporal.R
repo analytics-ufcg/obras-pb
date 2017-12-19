@@ -1,4 +1,5 @@
 library(shiny)
+library(shinydashboard)
 library(leaflet)
 library(dygraphs)
 library(rgdal)
@@ -47,22 +48,47 @@ municipios.georref.porc <<- get.porc.municipios.georref(obras.2013, "Não seleci
 mapa_paraiba_georreferenciada <- get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
 
 # Interface do usuário
-altura.mapa <- 400
+altura.mapa <- 650
 altura.linha.tempo <- 200
-ui <- fluidPage(
-    selectInput("select_municipio", label = h3("Selecione o município"), 
-                choices = municipios.georref.porc$nome.x),
-    sidebarLayout(  
-        sidebarPanel(
-            plotOutput("ranking1", height = altura.mapa + altura.linha.tempo)  
-        ),
-        
-        # Create a spot for the barplot
-        mainPanel(
-            leafletOutput("map1", height = altura.mapa),
-            dygraphOutput("dygraph1", height = altura.linha.tempo)
-        ),
-        position = "right"
+altura.input.municipio <- 150
+altura.ajusta.margem <- 20
+
+ui <- dashboardPage(
+    dashboardHeader( 
+        title = span(
+                    tagList(
+                        img(src = "tce-cropped.png", height = 45), 
+                        "Obras georreferenciadas"
+                    )
+                ),
+        titleWidth = 400
+    ),
+    dashboardSidebar( 
+        disable = TRUE
+    ),
+    dashboardBody(
+        fluidRow(
+            column(width = 8,
+               box(width = NULL, solidHeader = TRUE,
+                   leafletOutput("map1", height = altura.mapa)
+               ),
+               box(width = NULL,
+                   dygraphOutput("dygraph1", height = altura.linha.tempo)
+               )
+            ),
+            column(width = 4,
+               box(width = NULL,
+                   height = altura.input.municipio,
+                   status = "warning",
+                   selectInput("select_municipio", label = h3("Selecione o município"), 
+                               choices = municipios.georref.porc$nome.x)
+               ),
+               box(width = NULL,
+                   status = "warning",
+                   plotOutput("ranking1", height = altura.mapa + altura.linha.tempo - altura.input.municipio + altura.ajusta.margem)
+               )
+            )  
+        )
     )
 )
 
