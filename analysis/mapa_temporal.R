@@ -43,9 +43,14 @@ municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinate
 obras.2013 <- get.georreferencia.inputada(obra, localidade, tipos.das.obras, municipios, obra.georref.centroide.sumarizado, 2013) %>% 
     filter(codigo_ibge != 0)
 
+custo.efetivo.obras <- get.custos.efetivos(obras.2013)
+
 municipios.georref.porc <<- get.porc.municipios.georref(obras.2013, "Não selecionado")
+municipios.tipo.obra.custo.efetivo <<- get.custo.efetivo.tipo.obra(custo.efetivo.obras, "Não selecionado",
+                                                                   get.top.10.tipo.obra(custo.efetivo.obras)[1])
 
 mapa_paraiba_georreferenciada <- get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
+mapa_paraiba_custo_efetivo <- get.mapa.paraiba.custo.efetivo(mapa_paraiba, municipios.tipo.obra.custo.efetivo)
 
 # Interface do usuário
 altura.mapa <- 650
@@ -67,37 +72,62 @@ ui <- dashboardPage(
         disable = TRUE
     ),
     dashboardBody(
-        
         tabsetPanel(type = "tabs",
             tabPanel(
                 "Obras georreferenciadas por município", 
                  fluidRow(
                      column(width = 8,
                             box(width = NULL, solidHeader = TRUE,
-                                leafletOutput("map1", height = altura.mapa)
+                                leafletOutput("mapa_georref", height = altura.mapa)
                             ),
                             box(width = NULL,
-                                dygraphOutput("dygraph1", height = altura.linha.tempo)
+                                dygraphOutput("dygraph_georref", height = altura.linha.tempo)
                             )
                      ),
                      column(width = 4,
                             box(width = NULL,
                                 height = altura.input.municipio,
                                 status = "warning",
-                                selectInput("select_municipio", label = h3("Selecione o município"), 
+                                selectInput("select_municipio_georref", label = h3("Selecione o município"), 
                                             choices = municipios.georref.porc$nome.x)
                             ),
                             box(width = NULL,
                                 status = "warning",
-                                plotOutput("ranking1", height = altura.mapa + altura.linha.tempo - altura.input.municipio + altura.ajusta.margem)
+                                plotOutput("ranking_georref", height = altura.mapa + altura.linha.tempo - altura.input.municipio + altura.ajusta.margem)
                             )
                      )  
                  )
-                     
              ),
             tabPanel(
-                "Tipoos de obras", 
-                 p("Inserir aqui mapa dos tipos de obras")
+                "Tipos de obras",
+                fluidRow(
+                    column(width = 8,
+                           box(width = NULL, solidHeader = TRUE,
+                               leafletOutput("mapa_tipo_obra", height = altura.mapa)
+                           ),
+                           box(width = NULL,
+                               dygraphOutput("dygraph_tipo_obra", height = altura.linha.tempo)
+                           )
+                    ),
+                    column(width = 4,
+                           box(width = NULL,
+                               height = altura.input.municipio,
+                               status = "warning",
+                               selectInput("select_tipo_obra", label = h3("Selecione o tipo da obra"),
+                                           choices = get.top.10.tipo.obra(custo.efetivo.obras))
+                           ),
+                           box(width = NULL,
+                               height = altura.input.municipio,
+                               status = "warning",
+                               selectInput("select_municipio_tipo_obra", label = h3("Selecione o município"),
+                                           choices = municipios.tipo.obra.custo.efetivo$nome)
+                           ),
+                           box(width = NULL,
+                               status = "warning",
+                               plotOutput("ranking_tipo_obra", height = altura.mapa + altura.linha.tempo - altura.input.municipio - altura.input.municipio + altura.ajusta.margem)
+                           )
+                    )
+                )
             )
         )
     )
@@ -108,6 +138,7 @@ server <- function(input, output, session) {
     v <- reactiveValues(msg = "")
 
     municipios.georref.porc.top.3 <<- get.top.3.municipios.georref(municipios.georref.porc, municipios)
+    municipios.custo.efetivo.top.3 <<- get.top.3.municipios.custo.efetivo(municipios.tipo.obra.custo.efetivo, municipios)
     
     trofeu.icon <- icons(
         iconUrl = "trofeu.png",
@@ -115,9 +146,10 @@ server <- function(input, output, session) {
         iconAnchorX = 19, iconAnchorY = 30
     )
     
-    cores <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
+    cores.georref <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
+    cores.custo.efetivo <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
     
-    output$map1 <- renderLeaflet({
+    output$mapa_georref <- renderLeaflet({
         cria.mapa(
             mapa_paraiba_georreferenciada, 
             mapa_paraiba_georreferenciada@data$porc.georref, 
@@ -127,15 +159,35 @@ server <- function(input, output, session) {
                       mapa_paraiba_georreferenciada@data$qtde.georref, 
                       mapa_paraiba_georreferenciada@data$porc.georref,
                       mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio),
-            cores, 
+            cores.georref, 
             "Obras georreferenciadas (%)",
+            "municipios-poligono-georref",
             mapa_paraiba_georreferenciada@data$cor.borda,
             mapa_paraiba_georreferenciada@data$largura.borda
         ) %>% 
             addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.georref.porc.top.3)
     })
     
-    output$dygraph1 <- renderDygraph({
+    output$mapa_tipo_obra <- renderLeaflet({
+        cria.mapa(
+            mapa_paraiba_custo_efetivo, 
+            mapa_paraiba_custo_efetivo@data$custo.efetivo.log, 
+            mapa_paraiba_custo_efetivo@data$Nome_Munic, 
+            paste("Município: ", mapa_paraiba_custo_efetivo@data$Nome_Munic, 
+                  "</br>Custo efetivo: R$", format(mapa_paraiba_custo_efetivo@data$custo.efetivo, 
+                                                   digits = 2, big.mark=".", decimal.mark = ",", 
+                                                   scientific = FALSE)
+                  ),
+            cores.custo.efetivo, 
+            "Custo efetivo das obras",
+            "municipios-poligono-custo-efetivo",
+            mapa_paraiba_custo_efetivo@data$cor.borda,
+            mapa_paraiba_custo_efetivo@data$largura.borda
+        ) %>% 
+            addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.custo.efetivo.top.3)
+    })
+    
+    output$dygraph_georref <- renderDygraph({
         # start dygraph with all the states
         obras.2013 %>% 
             group_by(ano) %>% 
@@ -150,18 +202,24 @@ server <- function(input, output, session) {
             dyLegend(show = "never")
     })
     
-    output$ranking1 <- renderPlot({
-        plot.ranking(municipios.georref.porc, input$select_municipio)
+    output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, get.top.10.tipo.obra(custo.efetivo.obras)[1])
+    
+    output$ranking_georref <- renderPlot({
+        plot.ranking.georref(municipios.georref.porc, input$select_municipio_georref)
+    })
+    
+    output$ranking_tipo_obra <- renderPlot({
+        plot.ranking.tipo.obra(municipios.tipo.obra.custo.efetivo, input$select_municipio_tipo_obra)
     })
     
     observeEvent({
-        input$select_municipio
-        input$dygraph1_date_window
+        input$select_municipio_georref
+        input$dygraph_georref_date_window
         }, {
-        if(!is.null(input$dygraph1_date_window)){
-            ano1 <- round(input$dygraph1_date_window[[1]])
-            ano2 <- round(input$dygraph1_date_window[[2]])
-            municipio <- input$select_municipio
+        if(!is.null(input$dygraph_georref_date_window)){
+            ano1 <- round(input$dygraph_georref_date_window[[1]])
+            ano2 <- round(input$dygraph_georref_date_window[[2]])
+            municipio <- input$select_municipio_georref
             
             if (!exists("ano.inicial") || !exists("ano.final") || !exists("municipio.selecionado") || 
                 ano.inicial != ano1 || ano.final != ano2 || municipio != municipio.selecionado) {
@@ -175,15 +233,15 @@ server <- function(input, output, session) {
                 
                 mapa_paraiba_georreferenciada <- get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
                 
-                cores <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
+                cores.georref <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
                 
                 municipios.georref.porc.top.3 <<- get.top.3.municipios.georref(municipios.georref.porc, municipios)
             
-                leafletProxy("map1", data = mapa_paraiba_georreferenciada) %>%
-                    clearGroup( group = "municipios-poligono" ) %>%
+                leafletProxy("mapa_georref", data = mapa_paraiba_georreferenciada) %>%
+                    clearGroup( group = "municipios-poligono-georref" ) %>%
                     clearMarkers() %>%
                     clearControls() %>%
-                    adiciona.poligonos.e.legenda(cores,
+                    adiciona.poligonos.e.legenda(cores.georref,
                                                  mapa_paraiba_georreferenciada@data$porc.georref, 
                                                  mapa_paraiba_georreferenciada@data$Nome_Munic, 
                                                  get.popup.georref(mapa_paraiba_georreferenciada@data$Nome_Munic, 
@@ -192,12 +250,80 @@ server <- function(input, output, session) {
                                                            mapa_paraiba_georreferenciada@data$porc.georref,
                                                            mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio),
                                                  "Obras georreferenciadas (%)",
+                                                 "municipios-poligono-georref",
                                                  mapa_paraiba_georreferenciada@data$cor.borda,
                                                  mapa_paraiba_georreferenciada@data$largura.borda) %>% 
                     addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.georref.porc.top.3)
                 
-                output$ranking1 <- renderPlot({
-                    plot.ranking(municipios.georref.porc, input$select_municipio)
+                output$ranking_georref <- renderPlot({
+                    plot.ranking.georref(municipios.georref.porc, input$select_municipio_georref)
+                })
+            }
+        }
+    })
+    
+    observeEvent({
+        input$select_municipio_tipo_obra
+        input$select_tipo_obra
+        input$dygraph_tipo_obra_date_window
+    }, {
+        if(!is.null(input$dygraph_tipo_obra_date_window)){
+            ano1 <- round(input$dygraph_tipo_obra_date_window[[1]])
+            ano2 <- round(input$dygraph_tipo_obra_date_window[[2]])
+            tipo.obra <- input$select_tipo_obra
+            municipio <- input$select_municipio_tipo_obra
+            
+            if (!exists("ano.inicial.tipo.obra") || !exists("ano.final.tipo.obra") || !exists("tipo.obra.selecionada") || !exists("municipio.selecionado.tipo.obra") || 
+                ano.inicial.tipo.obra != ano1 || ano.final.tipo.obra != ano2 || tipo.obra != tipo.obra.selecionada || municipio != municipio.selecionado.tipo.obra) {
+                
+                ano.inicial.tipo.obra <<- ano1
+                ano.final.tipo.obra <<- ano2
+                
+                
+                municipios.tipo.obra.custo.efetivo <<- get.custo.efetivo.tipo.obra(custo.efetivo.obras, 
+                                                                                   municipio, 
+                                                                                   tipo.obra,
+                                                                                   ano.inicial.tipo.obra, 
+                                                                                   ano.final.tipo.obra)
+                
+                if (exists("municipio.selecionado.tipo.obra") && municipio == municipio.selecionado.tipo.obra) {
+                    updateSelectInput(session, inputId = "select_municipio_tipo_obra", 
+                                      choices = municipios.tipo.obra.custo.efetivo %>% arrange(nome) %>% pull(nome))
+                }
+                
+                if (exists("tipo.obra.selecionada") && tipo.obra != tipo.obra.selecionada){
+                    output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra)
+                }
+                
+                tipo.obra.selecionada <<- tipo.obra
+                municipio.selecionado.tipo.obra <<- municipio
+                
+                mapa_paraiba_custo_efetivo <- get.mapa.paraiba.custo.efetivo(mapa_paraiba, municipios.tipo.obra.custo.efetivo)
+                
+                cores.custo.efetivo <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
+                
+                municipios.custo.efetivo.top.3 <<- get.top.3.municipios.custo.efetivo(municipios.tipo.obra.custo.efetivo, municipios)
+                
+                leafletProxy("mapa_tipo_obra", data = mapa_paraiba_custo_efetivo) %>%
+                    clearGroup( group = "municipios-poligono-custo-efetivo" ) %>%
+                    clearMarkers() %>%
+                    clearControls() %>%
+                    adiciona.poligonos.e.legenda(cores.custo.efetivo,
+                                                 mapa_paraiba_custo_efetivo@data$custo.efetivo.log,
+                                                 mapa_paraiba_custo_efetivo@data$Nome_Munic,
+                                                 paste("Município: ", mapa_paraiba_custo_efetivo@data$Nome_Munic,
+                                                       "</br>Custo efetivo: R$", format(mapa_paraiba_custo_efetivo@data$custo.efetivo,
+                                                                                        digits = 2, big.mark=".", decimal.mark = ",",
+                                                                                        scientific = FALSE)
+                                                 ),
+                                                 "Custo efetivo das obras",
+                                                 "municipios-poligono-tipo-obra",
+                                                 mapa_paraiba_custo_efetivo@data$cor.borda,
+                                                 mapa_paraiba_custo_efetivo@data$largura.borda) %>%
+                    addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.custo.efetivo.top.3)
+                
+                output$ranking_tipo_obra <- renderPlot({
+                    plot.ranking.tipo.obra(municipios.tipo.obra.custo.efetivo, input$select_municipio_tipo_obra)
                 })
             }
         }
