@@ -121,7 +121,9 @@ GeoPBUtils::cria.mapa(
     mapa_paraiba_quantidade_obras@data$Nome_Munic, 
     paste('Município: ', mapa_paraiba_quantidade_obras@data$Nome_Munic, '</br>Custo mediano das obras: R$ ', format(mapa_paraiba_quantidade_obras@data$valor.mediano, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), '</br>Número de obras: ', mapa_paraiba_quantidade_obras@data$qtde.obras), 
     colors, 
-    "Log da quantidade de <br/> obras por município"
+    "Log da quantidade de <br/> obras por município",
+    "municipios-poligono-georref"
+    
     )
 ```
 
@@ -183,7 +185,8 @@ GeoPBUtils::cria.mapa(
     mapa_paraiba_gasto_habitante@data$Nome_Munic, 
     paste("Município: ", mapa_paraiba_gasto_habitante@data$Nome_Munic, "</br>Valor em obras por habitante: R$", format(mapa_paraiba_gasto_habitante@data$gasto.por.habitante, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Valor total das obras: R$", format(mapa_paraiba_gasto_habitante@data$valor.total.obras, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Quantidade de habitante: ", mapa_paraiba_gasto_habitante@data$populacao), 
     colors, 
-    "Log do valor gasto em </br> obras por habitante"
+    "Log do valor gasto em </br> obras por habitante",
+    "municipios-poligono-georref"
     )
 ```
 
@@ -286,9 +289,9 @@ GeoPBUtils::cria.mapa(
            mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio,
            "</br>Porcentagem de obras georreferenciadas: ", round(mapa_paraiba_georreferenciada@data$porc.georref, 2), "%"
            ), 
-    colors, 
-    "Porcentagem de obras</br> georreferenciadas")
-
+    colors,
+    "Porcentagem de obras</br> georreferenciadas",
+    "municipios-poligono-georref")
 ```
 
 Vemos que a maior parte das obras não são georreferenciadas nos municípios paraibanos entre 2013 e 2017, onde apenas 5 municípios tem mais de 10% das obras georreferenciadas.
@@ -353,7 +356,8 @@ GeoPBUtils::cria.mapa(
     mapa_paraiba_custo_efetivo@data$Nome_Munic, 
     paste('Município: ', mapa_paraiba_custo_efetivo@data$Nome_Munic, '</br>Custo efetivo: R$', format(mapa_paraiba_custo_efetivo@data$custo.efetivo, digits = 2, big.mark=".", decimal.mark = ",", scientific = FALSE)), 
     colors, 
-    "Log do custo efetivo </br> mediano das obras"
+    "Log do custo efetivo </br> mediano das obras",
+    "municipios-poligono-georref"
     )
 ```
 
