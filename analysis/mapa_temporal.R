@@ -38,7 +38,11 @@ get.custos.efetivos <- function(dado) {
 
 get.custo.efetivo.tipo.obra <- function(dado, municipio.selecionado, tipo.obra = "PAVIMENTAÇÃO PARALEPÍPEDO", ano.inicial = 0, ano.final = 3000) {
     dado %>%
-        filter(tipo_obra == tipo.obra) %>%
+        filter(
+            tipo_obra == tipo.obra,
+            ano >= ano.inicial,
+            ano <= ano.final
+            ) %>%
         select(valor_obra, dimensao, nome, codigo_ibge) %>%
         mutate(custo.efetivo = valor_obra/dimensao) %>% 
         group_by(nome, codigo_ibge) %>%
@@ -106,6 +110,45 @@ dygraph.tipo.obra <- function(dado, tipo.obra) {
             dyRangeSelector() %>%
             dyLegend(show = "never")
     })
+}
+
+plot.ranking.tipo.obra <- function(dado, municipio) {
+    municipio.selecionado <- dado %>% filter(nome == municipio)
+    
+    plot <- dado %>%
+        arrange(custo.efetivo) %>%
+        head(24) %>%
+        rbind(municipio.selecionado) %>%
+        distinct() %>%
+        ggplot(aes(x = reorder(nome, -custo.efetivo),
+                   y = custo.efetivo,
+                   fill = custo.efetivo.log)) +
+        geom_bar(stat="identity") +
+        guides(fill=FALSE, colour = FALSE) +
+        labs(x = "Município",
+             y = "Custo efetivo por m2") +
+        scale_fill_distiller(palette = "YlOrRd", direction = 1) +
+        coord_flip() +
+        theme(legend.position="bottom")
+    
+    top.25 <- dado %>% arrange(custo.efetivo) %>% head(25)
+    
+    if ((top.25 %>% filter(municipio == nome) %>% ungroup() %>% count()) == 0) {
+        plot <- plot +
+            labs(title = "Top 24 municípios com menor \ncusto efetivo + selecionado") +
+            facet_grid(nome == municipio ~ ., scales = "free_y", space = "free_y")
+    } else {
+        plot <- plot +
+            labs(title = "Top 25 municípios com menor \ncusto efetivo")
+    }
+    
+    plot +
+        geom_text(
+            data = filter(dado, municipio == nome),
+            aes(label = "selecionado"),
+            y = max(top.25$custo.efetivo) / 2
+        ) +
+        theme_bw()
 }
 
 # Pega dados
@@ -216,11 +259,11 @@ ui <- dashboardPage(
                                status = "warning",
                                selectInput("select_municipio_tipo_obra", label = h3("Selecione o município"),
                                            choices = municipios.tipo.obra.custo.efetivo$nome)
-                           )#,
-                           # box(width = NULL,
-                           #     status = "warning",
-                           #     plotOutput("ranking_tipo_obra", height = altura.mapa + altura.linha.tempo - altura.input.municipio + altura.ajusta.margem)
-                           # )
+                           ),
+                           box(width = NULL,
+                               status = "warning",
+                               plotOutput("ranking_tipo_obra", height = altura.mapa + altura.linha.tempo - altura.input.municipio - altura.input.municipio + altura.ajusta.margem)
+                           )
                     )
                 )
             )
@@ -301,6 +344,10 @@ server <- function(input, output, session) {
     
     output$ranking_georref <- renderPlot({
         plot.ranking(municipios.georref.porc, input$select_municipio_georref)
+    })
+    
+    output$ranking_tipo_obra <- renderPlot({
+        plot.ranking.tipo.obra(municipios.tipo.obra.custo.efetivo, input$select_municipio_tipo_obra)
     })
     
     observeEvent({
@@ -412,6 +459,10 @@ server <- function(input, output, session) {
                                                  mapa_paraiba_custo_efetivo@data$cor.borda,
                                                  mapa_paraiba_custo_efetivo@data$largura.borda) %>%
                     addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.custo.efetivo.top.3)
+                
+                output$ranking_tipo_obra <- renderPlot({
+                    plot.ranking.tipo.obra(municipios.tipo.obra.custo.efetivo, input$select_municipio_tipo_obra)
+                })
             }
         }
     })
