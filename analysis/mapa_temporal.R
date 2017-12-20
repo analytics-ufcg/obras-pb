@@ -136,15 +136,6 @@ ui <- dashboardPage(
 # Lógica do sistema
 server <- function(input, output, session) {
     v <- reactiveValues(msg = "")
-
-    municipios.georref.porc.top.3 <<- get.top.3.municipios.georref(municipios.georref.porc, municipios)
-    municipios.custo.efetivo.top.3 <<- get.top.3.municipios.custo.efetivo(municipios.tipo.obra.custo.efetivo, municipios)
-    
-    trofeu.icon <- icons(
-        iconUrl = "trofeu.png",
-        iconWidth = 38, iconHeight = 38,
-        iconAnchorX = 19, iconAnchorY = 30
-    )
     
     cores.georref <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
     cores.custo.efetivo <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
@@ -164,8 +155,7 @@ server <- function(input, output, session) {
             "municipios-poligono-georref",
             mapa_paraiba_georreferenciada@data$cor.borda,
             mapa_paraiba_georreferenciada@data$largura.borda
-        ) %>% 
-            addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.georref.porc.top.3)
+        )
     })
     
     output$mapa_tipo_obra <- renderLeaflet({
@@ -183,8 +173,7 @@ server <- function(input, output, session) {
             "municipios-poligono-custo-efetivo",
             mapa_paraiba_custo_efetivo@data$cor.borda,
             mapa_paraiba_custo_efetivo@data$largura.borda
-        ) %>% 
-            addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.custo.efetivo.top.3)
+        )
     })
     
     output$dygraph_georref <- renderDygraph({
@@ -234,12 +223,10 @@ server <- function(input, output, session) {
                 mapa_paraiba_georreferenciada <- get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
                 
                 cores.georref <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
-                
-                municipios.georref.porc.top.3 <<- get.top.3.municipios.georref(municipios.georref.porc, municipios)
+    
             
                 leafletProxy("mapa_georref", data = mapa_paraiba_georreferenciada) %>%
                     clearGroup( group = "municipios-poligono-georref" ) %>%
-                    clearMarkers() %>%
                     clearControls() %>%
                     adiciona.poligonos.e.legenda(cores.georref,
                                                  mapa_paraiba_georreferenciada@data$porc.georref, 
@@ -252,8 +239,7 @@ server <- function(input, output, session) {
                                                  "Obras georreferenciadas (%)",
                                                  "municipios-poligono-georref",
                                                  mapa_paraiba_georreferenciada@data$cor.borda,
-                                                 mapa_paraiba_georreferenciada@data$largura.borda) %>% 
-                    addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.georref.porc.top.3)
+                                                 mapa_paraiba_georreferenciada@data$largura.borda)
                 
                 output$ranking_georref <- renderPlot({
                     plot.ranking.georref(municipios.georref.porc, input$select_municipio_georref)
@@ -302,11 +288,8 @@ server <- function(input, output, session) {
                 
                 cores.custo.efetivo <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
                 
-                municipios.custo.efetivo.top.3 <<- get.top.3.municipios.custo.efetivo(municipios.tipo.obra.custo.efetivo, municipios)
-                
                 leafletProxy("mapa_tipo_obra", data = mapa_paraiba_custo_efetivo) %>%
                     clearGroup( group = "municipios-poligono-custo-efetivo" ) %>%
-                    clearMarkers() %>%
                     clearControls() %>%
                     adiciona.poligonos.e.legenda(cores.custo.efetivo,
                                                  mapa_paraiba_custo_efetivo@data$custo.efetivo.log,
@@ -319,8 +302,7 @@ server <- function(input, output, session) {
                                                  "Custo efetivo das obras",
                                                  "municipios-poligono-tipo-obra",
                                                  mapa_paraiba_custo_efetivo@data$cor.borda,
-                                                 mapa_paraiba_custo_efetivo@data$largura.borda) %>%
-                    addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.custo.efetivo.top.3)
+                                                 mapa_paraiba_custo_efetivo@data$largura.borda) 
                 
                 output$ranking_tipo_obra <- renderPlot({
                     plot.ranking.tipo.obra(municipios.tipo.obra.custo.efetivo, input$select_municipio_tipo_obra)

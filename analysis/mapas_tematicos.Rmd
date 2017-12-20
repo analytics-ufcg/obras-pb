@@ -277,18 +277,6 @@ municipios.georref.porc <- GeoPBUtils::get.porc.municipios.georref(obras.2013)
 mapa_paraiba_georreferenciada <- GeoPBUtils::get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
 
 colors <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
-municipios.georref.porc.top.3 <- municipios.georref.porc %>% 
-    filter(codigo_ibge != 0) %>%
-    arrange(-porc.georref) %>%
-    head(3) %>%
-    left_join(municipios, by = "codigo_ibge")
-    
-
-trofeu.icon <- icons(
-    iconUrl = "trofeu.png",
-   iconWidth = 38, iconHeight = 38,
-  iconAnchorX = 19, iconAnchorY = 30
-    )
 
 GeoPBUtils::cria.mapa(
     mapa_paraiba_georreferenciada, 
@@ -301,13 +289,9 @@ GeoPBUtils::cria.mapa(
            mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio,
            "</br>Porcentagem de obras georreferenciadas: ", round(mapa_paraiba_georreferenciada@data$porc.georref, 2), "%"
            ), 
-    colors, 
+    colors,
     "Porcentagem de obras</br> georreferenciadas",
-    "municipios-poligono-georref"
-    ) %>% 
-    
-    addMarkers(lng = ~lon, lat = ~lat, icon = trofeu.icon, data = municipios.georref.porc.top.3)
-
+    "municipios-poligono-georref")
 ```
 
 Vemos que a maior parte das obras não são georreferenciadas nos municípios paraibanos entre 2013 e 2017, onde apenas 5 municípios tem mais de 10% das obras georreferenciadas.
