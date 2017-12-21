@@ -53,11 +53,6 @@ mapa_paraiba_georreferenciada <- get.mapa.paraiba.georref(mapa_paraiba, municipi
 mapa_paraiba_custo_efetivo <- get.mapa.paraiba.custo.efetivo(mapa_paraiba, municipios.tipo.obra.custo.efetivo)
 
 # Interface do usuário
-altura.mapa <- 650
-altura.linha.tempo <- 200
-altura.input.municipio <- 150
-altura.ajusta.margem <- 20
-
 ui <- dashboardPage(
     dashboardHeader( 
         title = span(
@@ -75,56 +70,62 @@ ui <- dashboardPage(
         tabsetPanel(type = "tabs",
             tabPanel(
                 "Obras georreferenciadas por município", 
-                 fluidRow(
-                     column(width = 8,
-                            box(width = NULL, solidHeader = TRUE,
-                                leafletOutput("mapa_georref", height = altura.mapa)
-                            ),
-                            box(width = NULL,
-                                dygraphOutput("dygraph_georref", height = altura.linha.tempo)
-                            )
-                     ),
-                     column(width = 4,
-                            box(width = NULL,
-                                height = altura.input.municipio,
-                                status = "warning",
-                                selectInput("select_municipio_georref", label = h3("Selecione o município"), 
-                                            choices = municipios.georref.porc$nome.x)
-                            ),
-                            box(width = NULL,
-                                status = "warning",
-                                plotOutput("ranking_georref", height = altura.mapa + altura.linha.tempo - altura.input.municipio + altura.ajusta.margem)
-                            )
-                     )  
-                 )
-             ),
+                fluidRow(
+                    height = "100vh",
+                         column(width = 7,
+                                box(width = NULL, solidHeader = TRUE,
+                                    leafletOutput("mapa_georref", height = "50vh")
+                                ),
+                                box(width = NULL,
+                                    dygraphOutput("dygraph_georref",  height = "25vh")
+                                )
+                         ),
+                         column(width = 5,
+                                height = "100vh",
+                                box(width = NULL,
+                                    height = "15vh",
+                                    status = "warning",
+                                    selectInput("select_municipio_georref", label = h3("Selecione o município"), 
+                                                choices = municipios.georref.porc$nome.x)
+                                ),
+                                box(height = "64vh",
+                                    width = "50vw",
+                                    status = "warning",
+                                    plotOutput("ranking_georref", height = "60vh")
+                                )
+                         )  
+                )
+            ),
             tabPanel(
                 "Tipos de obras",
                 fluidRow(
-                    column(width = 8,
+                    height = "100vh",
+                    column(width = 7,
                            box(width = NULL, solidHeader = TRUE,
-                               leafletOutput("mapa_tipo_obra", height = altura.mapa)
+                               leafletOutput("mapa_tipo_obra", height = "50vh")
                            ),
                            box(width = NULL,
-                               dygraphOutput("dygraph_tipo_obra", height = altura.linha.tempo)
+                               dygraphOutput("dygraph_tipo_obra", height = "25vh")
                            )
                     ),
-                    column(width = 4,
+                    column(width = 5,
+                           height = "100vh",
                            box(width = NULL,
-                               height = altura.input.municipio,
+                               height = "15vh",
                                status = "warning",
                                selectInput("select_tipo_obra", label = h3("Selecione o tipo da obra"),
                                            choices = get.top.10.tipo.obra(custo.efetivo.obras))
                            ),
                            box(width = NULL,
-                               height = altura.input.municipio,
+                               height = "15vh",
                                status = "warning",
                                selectInput("select_municipio_tipo_obra", label = h3("Selecione o município"),
                                            choices = municipios.tipo.obra.custo.efetivo$nome)
                            ),
                            box(width = NULL,
+                               height = "47vh",
                                status = "warning",
-                               plotOutput("ranking_tipo_obra", height = altura.mapa + altura.linha.tempo - altura.input.municipio - altura.input.municipio + altura.ajusta.margem)
+                               plotOutput("ranking_tipo_obra", height = "45vh")
                            )
                     )
                 )
