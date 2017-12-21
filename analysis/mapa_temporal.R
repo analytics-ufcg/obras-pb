@@ -45,9 +45,12 @@ obras.2013 <- get.georreferencia.inputada(obra, localidade, tipos.das.obras, mun
 
 custo.efetivo.obras <- get.custos.efetivos(obras.2013)
 
-municipios.georref.porc <<- get.porc.municipios.georref(obras.2013, "Não selecionado")
-municipios.tipo.obra.custo.efetivo <<- get.custo.efetivo.tipo.obra(custo.efetivo.obras, "Não selecionado",
+municipios.georref.porc <<- get.porc.municipios.georref(obras.2013, cidade.default(obras.2013, "nome.x"))
+municipios.tipo.obra.custo.efetivo <<- get.custo.efetivo.tipo.obra(custo.efetivo.obras, cidade.default(custo.efetivo.obras, "nome"),
                                                                    get.top.10.tipo.obra(custo.efetivo.obras)[1])
+
+municipios.tipo.obra.custo.efetivo <<- add.borda(municipios.tipo.obra.custo.efetivo, 
+                                                 cidade.default(municipios.tipo.obra.custo.efetivo, "nome"))
 
 mapa_paraiba_georreferenciada <- get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
 mapa_paraiba_custo_efetivo <- get.mapa.paraiba.custo.efetivo(mapa_paraiba, municipios.tipo.obra.custo.efetivo)
@@ -89,7 +92,8 @@ ui <- dashboardPage(
                                 height = altura.input.municipio,
                                 status = "warning",
                                 selectInput("select_municipio_georref", label = h3("Selecione o município"), 
-                                            choices = municipios.georref.porc$nome.x)
+                                            choices = municipios.georref.porc$nome.x, 
+                                            selected = cidade.default(municipios.georref.porc, "nome.x"))
                             ),
                             box(width = NULL,
                                 status = "warning",
@@ -120,7 +124,8 @@ ui <- dashboardPage(
                                height = altura.input.municipio,
                                status = "warning",
                                selectInput("select_municipio_tipo_obra", label = h3("Selecione o município"),
-                                           choices = municipios.tipo.obra.custo.efetivo$nome)
+                                           choices = municipios.tipo.obra.custo.efetivo$nome, 
+                                           selected = cidade.default(municipios.tipo.obra.custo.efetivo, "nome"))
                            ),
                            box(width = NULL,
                                status = "warning",
@@ -284,6 +289,8 @@ server <- function(input, output, session) {
                 } else {
                     municipio.selecionado.tipo.obra <<- municipio
                 }
+                
+                municipios.tipo.obra.custo.efetivo <<- add.borda(municipios.tipo.obra.custo.efetivo, municipio.selecionado.tipo.obra)
                 
                 if (exists("tipo.obra.selecionada") && tipo.obra != tipo.obra.selecionada){
                     output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra)
