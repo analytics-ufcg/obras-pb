@@ -45,12 +45,17 @@ obras.2013 <- get.georreferencia.inputada(obra, localidade, tipos.das.obras, mun
 
 custo.efetivo.obras <- get.custos.efetivos(obras.2013)
 
+tipo.obra.selecionada <<- get.top.10.tipo.obra(custo.efetivo.obras)[1]
+
 municipios.georref.porc <<- get.porc.municipios.georref(obras.2013, cidade.default(obras.2013, "nome.x"))
 municipios.tipo.obra.custo.efetivo <<- get.custo.efetivo.tipo.obra(custo.efetivo.obras, cidade.default(custo.efetivo.obras, "nome"),
-                                                                   get.top.10.tipo.obra(custo.efetivo.obras)[1])
+                                                                   tipo.obra.selecionada)
 
-municipios.tipo.obra.custo.efetivo <<- add.borda(municipios.tipo.obra.custo.efetivo, 
-                                                 cidade.default(municipios.tipo.obra.custo.efetivo, "nome"))
+municipio.selecionado.tipo.obra <<- cidade.default(municipios.tipo.obra.custo.efetivo, "nome")
+ano.inicial.tipo.obra <<- 0
+ano.final.tipo.obra <<- 3000
+
+municipios.tipo.obra.custo.efetivo <<- add.borda(municipios.tipo.obra.custo.efetivo, municipio.selecionado.tipo.obra)
 
 mapa_paraiba_georreferenciada <- get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
 mapa_paraiba_custo_efetivo <- get.mapa.paraiba.custo.efetivo(mapa_paraiba, municipios.tipo.obra.custo.efetivo)
@@ -118,14 +123,15 @@ ui <- dashboardPage(
                                height = altura.input.municipio,
                                status = "warning",
                                selectInput("select_tipo_obra", label = h3("Selecione o tipo da obra"),
-                                           choices = get.top.10.tipo.obra(custo.efetivo.obras))
+                                           choices = get.top.10.tipo.obra(custo.efetivo.obras),
+                                           selected = tipo.obra.selecionada)
                            ),
                            box(width = NULL,
                                height = altura.input.municipio,
                                status = "warning",
                                selectInput("select_municipio_tipo_obra", label = h3("Selecione o município"),
                                            choices = municipios.tipo.obra.custo.efetivo$nome, 
-                                           selected = cidade.default(municipios.tipo.obra.custo.efetivo, "nome"))
+                                           selected = municipio.selecionado.tipo.obra)
                            ),
                            box(width = NULL,
                                status = "warning",
@@ -252,76 +258,103 @@ server <- function(input, output, session) {
         }
     })
     
+    muda.input.municipio.tipo.obra <- function(municipios.tipo.obra.custo.efetivo) {
+        municipios.input <- municipios.tipo.obra.custo.efetivo %>% arrange(nome) %>% pull(nome)
+        if (!municipio.selecionado.tipo.obra %in% municipios.input) {
+            municipio.selecionado.tipo.obra <<- municipios.input[1]
+        } 
+        updateSelectInput(session, inputId = "select_municipio_tipo_obra", 
+                          choices = municipios.input,
+                          selected = municipio.selecionado.tipo.obra)
+    }
+    
+    muda.mapa.tipo.obra <- function(municipios.tipo.obra.custo.efetivo) {
+        mapa_paraiba_custo_efetivo <- get.mapa.paraiba.custo.efetivo(mapa_paraiba, municipios.tipo.obra.custo.efetivo)
+        
+        cores.custo.efetivo <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
+        
+        leafletProxy("mapa_tipo_obra", data = mapa_paraiba_custo_efetivo) %>%
+            clearGroup( group = "municipios-poligono-custo-efetivo" ) %>%
+            clearControls() %>%
+            adiciona.poligonos.e.legenda(cores.custo.efetivo,
+                                         mapa_paraiba_custo_efetivo@data$custo.efetivo.log,
+                                         mapa_paraiba_custo_efetivo@data$Nome_Munic,
+                                         paste("Município: ", mapa_paraiba_custo_efetivo@data$Nome_Munic,
+                                               "</br>Custo efetivo: R$", format(mapa_paraiba_custo_efetivo@data$custo.efetivo,
+                                                                                digits = 2, big.mark=".", decimal.mark = ",",
+                                                                                scientific = FALSE)
+                                         ),
+                                         "Custo efetivo das obras",
+                                         "municipios-poligono-tipo-obra",
+                                         mapa_paraiba_custo_efetivo@data$cor.borda,
+                                         mapa_paraiba_custo_efetivo@data$largura.borda)
+    }
+    
+    get.municipios.tipo.obra.custo.efetivo <- function() {
+        municipios.tipo.obra.custo.efetivo <- get.custo.efetivo.tipo.obra(custo.efetivo.obras, 
+                                                                          municipio.selecionado.tipo.obra, 
+                                                                          tipo.obra.selecionada,
+                                                                          ano.inicial.tipo.obra, 
+                                                                          ano.final.tipo.obra)
+        
+        municipios.tipo.obra.custo.efetivo %>% 
+            add.borda(municipio.selecionado.tipo.obra)
+    }
+    
+    muda.mapa.tipo.obra.e.ranking <- function(municipios.tipo.obra.custo.efetivo) {
+        muda.mapa.tipo.obra(municipios.tipo.obra.custo.efetivo)
+        
+        output$ranking_tipo_obra <- renderPlot({
+            plot.ranking.tipo.obra(municipios.tipo.obra.custo.efetivo, municipio.selecionado.tipo.obra)
+        })
+    }
+    
     observeEvent({
         input$select_tipo_obra
+    }, {
+        if(!is.null(input$dygraph_tipo_obra_date_window)){
+            tipo.obra.selecionada <<- input$select_tipo_obra
+            
+            municipios.tipo.obra.custo.efetivo <- get.municipios.tipo.obra.custo.efetivo()
+            muda.input.municipio.tipo.obra(municipios.tipo.obra.custo.efetivo)
+            
+            output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra.selecionada)
+            
+            muda.mapa.tipo.obra.e.ranking(municipios.tipo.obra.custo.efetivo)
+        }
+    })
+    
+    observeEvent({
         input$dygraph_tipo_obra_date_window
-        input$select_municipio_tipo_obra
     }, {
         if(!is.null(input$dygraph_tipo_obra_date_window)){
             ano1 <- round(input$dygraph_tipo_obra_date_window[[1]])
             ano2 <- round(input$dygraph_tipo_obra_date_window[[2]])
-            tipo.obra <- input$select_tipo_obra
-            municipio <- input$select_municipio_tipo_obra
             
-            if (!exists("ano.inicial.tipo.obra") || !exists("ano.final.tipo.obra") || !exists("tipo.obra.selecionada") || 
-                !exists("municipio.selecionado.tipo.obra") || !exists("date_window_anterior") ||
-                ano.inicial.tipo.obra != ano1 || ano.final.tipo.obra != ano2 || tipo.obra != tipo.obra.selecionada ||
-                (municipio != municipio.selecionado.tipo.obra && date_window_anterior == input$dygraph_tipo_obra_date_window)) {
+            if (!exists("ano.inicial.tipo.obra") || !exists("ano.final.tipo.obra") ||
+                ano.inicial.tipo.obra != ano1 || ano.final.tipo.obra != ano2) {
                 
-                date_window_anterior <<- input$dygraph_tipo_obra_date_window
                 ano.inicial.tipo.obra <<- ano1
                 ano.final.tipo.obra <<- ano2
                 
-                municipios.tipo.obra.custo.efetivo <<- get.custo.efetivo.tipo.obra(custo.efetivo.obras, 
-                                                                                   municipio, 
-                                                                                   tipo.obra,
-                                                                                   ano.inicial.tipo.obra, 
-                                                                                   ano.final.tipo.obra)
+                municipios.tipo.obra.custo.efetivo <- get.municipios.tipo.obra.custo.efetivo()
                 
-                if (exists("municipio.selecionado.tipo.obra") && municipio == municipio.selecionado.tipo.obra) {
-                    municipios.input <- municipios.tipo.obra.custo.efetivo %>% arrange(nome) %>% pull(nome)
-                    if (!municipio %in% municipios.input) {
-                        municipio.selecionado.tipo.obra <<- municipios.input[1]
-                    } 
-                    updateSelectInput(session, inputId = "select_municipio_tipo_obra", 
-                                      choices = municipios.input,
-                                      selected = municipio.selecionado.tipo.obra)
-                } else {
-                    municipio.selecionado.tipo.obra <<- municipio
-                }
+                muda.input.municipio.tipo.obra(municipios.tipo.obra.custo.efetivo)
                 
-                municipios.tipo.obra.custo.efetivo <<- add.borda(municipios.tipo.obra.custo.efetivo, municipio.selecionado.tipo.obra)
-                
-                if (exists("tipo.obra.selecionada") && tipo.obra != tipo.obra.selecionada){
-                    output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra)
-                }
-                
-                tipo.obra.selecionada <<- tipo.obra
-                
-                mapa_paraiba_custo_efetivo <- get.mapa.paraiba.custo.efetivo(mapa_paraiba, municipios.tipo.obra.custo.efetivo)
-                
-                cores.custo.efetivo <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
-                
-                leafletProxy("mapa_tipo_obra", data = mapa_paraiba_custo_efetivo) %>%
-                    clearGroup( group = "municipios-poligono-custo-efetivo" ) %>%
-                    clearControls() %>%
-                    adiciona.poligonos.e.legenda(cores.custo.efetivo,
-                                                 mapa_paraiba_custo_efetivo@data$custo.efetivo.log,
-                                                 mapa_paraiba_custo_efetivo@data$Nome_Munic,
-                                                 paste("Município: ", mapa_paraiba_custo_efetivo@data$Nome_Munic,
-                                                       "</br>Custo efetivo: R$", format(mapa_paraiba_custo_efetivo@data$custo.efetivo,
-                                                                                        digits = 2, big.mark=".", decimal.mark = ",",
-                                                                                        scientific = FALSE)
-                                                 ),
-                                                 "Custo efetivo das obras",
-                                                 "municipios-poligono-tipo-obra",
-                                                 mapa_paraiba_custo_efetivo@data$cor.borda,
-                                                 mapa_paraiba_custo_efetivo@data$largura.borda)
-                
-                output$ranking_tipo_obra <- renderPlot({
-                    plot.ranking.tipo.obra(municipios.tipo.obra.custo.efetivo, municipio.selecionado.tipo.obra)
-                })
+                muda.mapa.tipo.obra.e.ranking(municipios.tipo.obra.custo.efetivo)
             }
+        }
+    })
+    
+    observeEvent({
+        input$select_municipio_tipo_obra
+    }, {
+        if(!is.null(input$dygraph_tipo_obra_date_window)){
+            municipio.selecionado.tipo.obra <<- input$select_municipio_tipo_obra
+            
+            municipios.tipo.obra.custo.efetivo <- get.municipios.tipo.obra.custo.efetivo()
+            
+            muda.mapa.tipo.obra.e.ranking(municipios.tipo.obra.custo.efetivo)
         }
     })
 }
