@@ -211,16 +211,33 @@ server <- function(input, output, session) {
             municipio <- input$select_municipio_georref
             
             if (!exists("ano.inicial") || !exists("ano.final") || !exists("municipio.selecionado") || 
+               
                 ano.inicial != ano1 || ano.final != ano2 || municipio != municipio.selecionado) {
                 ano.inicial <<- ano1
                 ano.final <<- ano2
                 municipio.selecionado <<- municipio
                 
+
+                
+                
                 municipios.georref.porc <<- get.porc.municipios.georref(obras.2013, municipio.selecionado, ano.inicial, ano.final)
                 
-                updateSelectInput(session, inputId = "municipio", choices = municipios.georref.porc$nome.x)
-                
                 mapa_paraiba_georreferenciada <- get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
+                
+                if (ano1 == ano.inicial || ano2 == ano.final){
+                    municipios.input <- municipios.georref.porc %>% arrange(nome.x) %>% pull(nome.x)
+                    if (municipio.selecionado %in% municipios.input) { 
+                        updateSelectInput(session, inputId = "select_municipio_georref", 
+                                      choices = municipios.input,
+                                      selected = municipio.selecionado)
+                    } else {
+                        updateSelectInput(session, inputId = "select_municipio_georref", 
+                                      choices = municipios.input,
+                                      selected = municipios.input[1])
+                        municipio.selecionado <<- municipios.input[1]
+                                      
+                    }
+                }
                 
                 cores.georref <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
 
@@ -241,7 +258,7 @@ server <- function(input, output, session) {
                                                  mapa_paraiba_georreferenciada@data$largura.borda)
                 
                 output$ranking_georref <- renderPlot({
-                    plot.ranking.georref(municipios.georref.porc, input$select_municipio_georref)
+                    plot.ranking.georref(municipios.georref.porc, municipio.selecionado)
                 })
             }
         }
