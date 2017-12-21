@@ -224,7 +224,8 @@ server <- function(input, output, session) {
                 
                 mapa_paraiba_georreferenciada <- get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
                 
-                municipios.input <- municipios.georref.porc %>% arrange(nome.x) %>% pull(nome.x)
+                if (ano1 == ano.inicial || ano2 == ano.final){
+                    municipios.input <- municipios.georref.porc %>% arrange(nome.x) %>% pull(nome.x)
                     if (municipio.selecionado %in% municipios.input) { 
                         updateSelectInput(session, inputId = "select_municipio_georref", 
                                       choices = municipios.input,
@@ -234,7 +235,8 @@ server <- function(input, output, session) {
                                       choices = municipios.input,
                                       selected = municipios.input[1])
                         municipio.selecionado <<- municipios.input[1]
-                                     
+                                      
+                    }
                 }
                 
                 cores.georref <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
