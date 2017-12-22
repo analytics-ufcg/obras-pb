@@ -113,7 +113,7 @@ mapa_paraiba_quantidade_obras@data <- mapa_paraiba@data %>%
   left_join(quantidade.obras.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_quantidade_obras@data$qtde.obras.log)
+colors <- GeoPBUtils::paleta.de.cores(paleta = "viridis", dado = mapa_paraiba_quantidade_obras@data$qtde.obras.log)
 
 GeoPBUtils::cria.mapa(
     mapa_paraiba_quantidade_obras, 
@@ -123,7 +123,6 @@ GeoPBUtils::cria.mapa(
     colors, 
     "Log da quantidade de <br/> obras por município",
     "municipios-poligono-georref"
-    
     )
 ```
 
@@ -177,7 +176,7 @@ mapa_paraiba_gasto_habitante@data <- mapa_paraiba@data %>%
   left_join(gasto.por.habitante.por.municipio,
             by = c("GEOCODIG_M" = "codigo_ibge"))
 
-colors <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log)
+colors <- GeoPBUtils::paleta.de.cores(paleta = "plasma", dado = mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log)
 
 GeoPBUtils::cria.mapa(
     mapa_paraiba_gasto_habitante, 
