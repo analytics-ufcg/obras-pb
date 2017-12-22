@@ -54,6 +54,7 @@ municipios.tipo.obra.custo.efetivo <<- get.custo.efetivo.tipo.obra(custo.efetivo
 municipio.selecionado.tipo.obra <<- cidade.default(municipios.tipo.obra.custo.efetivo, "nome")
 ano.inicial.tipo.obra <<- 0
 ano.final.tipo.obra <<- 3000
+tag.mapa.custo.efetivo <<- "municipios-poligono-custo-efetivo"
 
 municipios.tipo.obra.custo.efetivo <<- add.borda(municipios.tipo.obra.custo.efetivo, municipio.selecionado.tipo.obra)
 
@@ -182,7 +183,7 @@ server <- function(input, output, session) {
                   ),
             cores.custo.efetivo, 
             "Custo efetivo das obras",
-            "municipios-poligono-custo-efetivo",
+            tag.mapa.custo.efetivo,
             mapa_paraiba_custo_efetivo@data$cor.borda,
             mapa_paraiba_custo_efetivo@data$largura.borda
         )
@@ -292,7 +293,7 @@ server <- function(input, output, session) {
         cores.custo.efetivo <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
         
         leafletProxy("mapa_tipo_obra", data = mapa_paraiba_custo_efetivo) %>%
-            clearGroup( group = "municipios-poligono-custo-efetivo" ) %>%
+            clearGroup( group = tag.mapa.custo.efetivo ) %>%
             clearControls() %>%
             adiciona.poligonos.e.legenda(cores.custo.efetivo,
                                          mapa_paraiba_custo_efetivo@data$custo.efetivo.log,
@@ -303,7 +304,7 @@ server <- function(input, output, session) {
                                                                                 scientific = FALSE)
                                          ),
                                          "Custo efetivo das obras",
-                                         "municipios-poligono-tipo-obra",
+                                         tag.mapa.custo.efetivo,
                                          mapa_paraiba_custo_efetivo@data$cor.borda,
                                          mapa_paraiba_custo_efetivo@data$largura.borda)
     }
