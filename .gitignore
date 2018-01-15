@@ -20,8 +20,8 @@ server.pid
 conf/application.conf
 # Data
 analysis/data/
-analysis/config.yml
-analysis/*.html
+analysis/config/config.yml
+analysis/**/*.html
 # R
 **/*.RData
 **/*.Rhistory
