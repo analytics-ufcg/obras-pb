@@ -1,0 +1,29 @@
+# Ignore Play! working directory #
+bin/
+/db
+.eclipse
+/lib/
+/logs/
+/modules
+/project/project
+/project/target
+/target
+tmp/
+test-result
+server.pid
+*.eml
+/dist/
+.cache
+# IntelliJ
+.idea/
+# Configuration files
+conf/application.conf
+# Data
+analysis/config/config.yml
+analysis/*/*.html
+# R
+**/*.RData
+**/*.Rhistory
+**/*.Rproj.user
+**/*.Rbuildignore
+.Rproj.user
