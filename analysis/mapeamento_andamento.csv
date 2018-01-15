@@ -1,8 +1,0 @@
-codigo,status
-1,"Em Execução Normal (Dentro do Cronograma)"
-2,"Atrasada (Cronograma Atrasado)"
-3,"Paralisada (Sem Execução)"
-4,"Inacabada (Não Concluída Após Término do Contrato)"
-7,"Finalizada por Conclusão de Construção"
-8,"Finalizada Administrativa ou Judicialmente"
-9,"Abandonada"

@@ -1,0 +1,366 @@
+---
+title: "Mapas Temáticos"
+output: 
+    html_document:
+        toc: true
+        toc_float: true
+        fig_width: 10
+        fig_heigth: 8 
+---
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+library(tidyverse)
+library(knitr)
+library(leaflet)
+library(RPostgreSQL)
+library(rgdal)
+library(GeoPBUtils)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+drv <- DBI::dbDriver("PostgreSQL")
+CONFIG_FILE_PATH = "../config/config.yml"
+
+con1 <- DBI::dbConnect(drv, 
+  host = config::get("host", file = CONFIG_FILE_PATH),
+  port = config::get("port", file = CONFIG_FILE_PATH),
+  user = config::get("user", file = CONFIG_FILE_PATH),
+  password = config::get("password", file = CONFIG_FILE_PATH),
+  dbname = config::get("dbname1", file = CONFIG_FILE_PATH)
+)
+
+con2 <- DBI::dbConnect(drv, 
+  host = config::get("host", file = CONFIG_FILE_PATH),
+  port = config::get("port", file = CONFIG_FILE_PATH),
+  user = config::get("user", file = CONFIG_FILE_PATH),
+  
+  password = config::get("password", file = CONFIG_FILE_PATH),
+  dbname = config::get("dbname2", file = CONFIG_FILE_PATH)
+)
+
+tipos.das.obras <- read.csv("../dados/tipos_obra.csv")
+municipios.pb <- read.csv("../dados/municipios_pb.csv")
+
+mapa_paraiba <- readOGR("../dados/mapa-paraiba-ibge/Municipios.shp")
+
+GeoPBUtils::get.data(con1, con2, mapa_paraiba)
+
+```
+
+## Introdução
+
+Nesta análise vamos identificar possíveis mapas temáticos para incorporar futuramente ao GeoPB, utilizando dados georreferenciados de obras da Paraíba. Para fazê-la, utilizaremos apenas dados de obras a partir de 2013. Quando utilizar o valor da obra, consideraremos apenas valores acima de R$ 1000,00 e quando utilizar a dimensão, consideraremos apenas obras com dimensão acima de 50 da respectiva unidade.
+
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, lat = coordinates(mapa_paraiba)[,2], lon = coordinates(mapa_paraiba)[,1])
+
+obras.2013 <- GeoPBUtils::get.georreferencia.inputada(obra, localidade, tipos.das.obras, municipios, obra.georref.centroide.sumarizado, 2013)
+    
+obras.filtradas.valor <- obras.2013 %>% 
+    filter(valor_obra > 1000, valor_obra < 1000000000)
+```
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+# Municípios que mudaram de nome ou que estão com o nome errado
+levels_mapa = levels(mapa_paraiba@data$Nome_Munic)
+levels_mapa[51] = "Tacima"
+levels_mapa[156] = "Quixaba"
+levels_mapa[173] = "Joca Claudino"
+levels_mapa[179] = "São Domingos de Pombal"
+levels_mapa[200] = "São Vicente do Seridó"
+
+levels(mapa_paraiba@data$Nome_Munic) = levels_mapa
+```
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+# Vamos elencar as variáveis disponíveis para mostrar nos mapas:
+# 
+# * Localidade
+#     + Mesoregião
+#     + Microregião
+#     + Nome
+#     + georreferencia
+# * Valor
+# * Dimensão
+# * Tipo da obra
+#     + Nome
+#     + Unidade de medida
+# * Obra incorporável ao patrimônio
+# * Cancelada
+# * Data:
+#     + Ano
+#     + Início da obra
+#     + Previsão de conclusão
+# * Andamento
+```
+
+## Quantidade de obras 2013-2017
+
+Vejamos primeiramente a quantidade de obras por município, onde os detalhes podem ser vistos clicando no município:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+mapa_paraiba_quantidade_obras <- mapa_paraiba
+
+quantidade.obras.municipio <- obras.2013 %>% 
+    group_by(nome.x, codigo_ibge) %>% 
+    summarise(
+        valor.mediano = median(valor_obra),
+        qtde.obras = n(),
+        qtde.obras.log = log(qtde.obras)
+    )
+
+mapa_paraiba_quantidade_obras@data <- mapa_paraiba@data %>%
+  left_join(quantidade.obras.municipio,
+            by = c("GEOCODIG_M" = "codigo_ibge"))
+
+colors <- GeoPBUtils::paleta.de.cores(paleta = "viridis", dado = mapa_paraiba_quantidade_obras@data$qtde.obras.log)
+
+GeoPBUtils::cria.mapa(
+    mapa_paraiba_quantidade_obras, 
+    mapa_paraiba_quantidade_obras@data$qtde.obras.log, 
+    mapa_paraiba_quantidade_obras@data$Nome_Munic, 
+    paste('Município: ', mapa_paraiba_quantidade_obras@data$Nome_Munic, '</br>Custo mediano das obras: R$ ', format(mapa_paraiba_quantidade_obras@data$valor.mediano, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), '</br>Número de obras: ', mapa_paraiba_quantidade_obras@data$qtde.obras), 
+    colors, 
+    "Log da quantidade de <br/> obras por município",
+    "municipios-poligono-georref"
+    )
+```
+
+É possível ver que o município de Manaíra se destaca dos demais, por ser uma cidade pequena e ter uma grande quantidade de obras. O motivo de acontecer isso é porque nesta cidade existem várias observações para um mesmo contrato, ou seja, existem vários casos de ter um mesmo contrato, mas a obra ocorre em várias ruas, seja para calçamento, rede de esgotamento, entre outros tipos de obra.
+
+## Cidades que mais gastam 2013-2017
+
+Vejamos as cidades que mais gastam com obras na Paraíba:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obras.filtradas.valor %>% 
+    group_by(nome.x) %>%
+    summarise(
+        valor.total = sum(valor_obra),
+        lat = mean(lat),
+        lon = mean(lon)
+    ) %>% 
+    mutate(
+        popup = paste(
+            "Município:", nome.x,
+            "</br>Valor total em obras: R$", format(valor.total, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE)
+        )
+    ) %>% 
+    leaflet() %>% 
+    addProviderTiles(providers$OpenStreetMap.Mapnik) %>%
+    addCircles(
+        weight = 1, 
+        radius = ~sqrt(valor.total), 
+        popup = ~popup
+    )
+```
+
+## Gasto por habitante 2013-2017
+
+Vejamos agora um o valor gasto em obras por habitante em cada município, onde os detalhes podem ser vistos clicando no município:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+gasto.por.habitante.por.municipio <- obras.filtradas.valor %>% 
+    group_by(codigo_ibge) %>% 
+    summarise(valor.total.obras = sum(valor_obra)) %>% 
+    left_join(municipios.pb %>% rename("codigo_ibge" = "Código", "populacao" = "População.estimada...pessoas") %>% select(codigo_ibge, populacao),
+              by = "codigo_ibge") %>% 
+    mutate(
+        gasto.por.habitante = valor.total.obras / populacao,
+        gasto.por.habitante.log = log(gasto.por.habitante)
+    )
+
+mapa_paraiba_gasto_habitante <- mapa_paraiba
+
+mapa_paraiba_gasto_habitante@data <- mapa_paraiba@data %>%
+  left_join(gasto.por.habitante.por.municipio,
+            by = c("GEOCODIG_M" = "codigo_ibge"))
+
+colors <- GeoPBUtils::paleta.de.cores(paleta = "plasma", dado = mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log)
+
+GeoPBUtils::cria.mapa(
+    mapa_paraiba_gasto_habitante, 
+    mapa_paraiba_gasto_habitante@data$gasto.por.habitante.log, 
+    mapa_paraiba_gasto_habitante@data$Nome_Munic, 
+    paste("Município: ", mapa_paraiba_gasto_habitante@data$Nome_Munic, "</br>Valor em obras por habitante: R$", format(mapa_paraiba_gasto_habitante@data$gasto.por.habitante, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Valor total das obras: R$", format(mapa_paraiba_gasto_habitante@data$valor.total.obras, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE), "</br>Quantidade de habitante: ", mapa_paraiba_gasto_habitante@data$populacao), 
+    colors, 
+    "Log do valor gasto em </br> obras por habitante",
+    "municipios-poligono-georref"
+    )
+```
+
+Vejamos as obras de São Francisco mais caras:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obras.filtradas.valor %>% 
+    filter(nome.x == "São Francisco") %>% 
+    arrange(-valor_obra) %>% select(nome.x, ano, valor_obra, descricao_sucinta_obra, descricao_localidade) %>%
+    top_n(5) %>% 
+    kable()
+```
+
+Provavelmente o gasto por habitante com obras foi elevado devido à primeira obra, a qual custou 28 mi de reais.
+
+## Obras georreferenciadas 2013-2017
+
+Vejamos agora o mapa de pontos das obras georreferenciadas, onde os detalhes podem ser vistos clicando na obra:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obra.georref.centroide.sumarizado %>% 
+    left_join(
+        evolucao %>% 
+            mutate(ano = lubridate::year(data_inicio_obra)) %>% 
+            select(fk_obra, ano),
+        by = c("id" = "fk_obra")
+    ) %>% 
+    filter(ano >= 2013) %>% 
+    mutate(
+        label = str_to_upper(
+            ifelse(
+                nchar(descricao_sucinta_obra) <= 30,
+                descricao_sucinta_obra,
+                paste0(substr(descricao_sucinta_obra, 1, 30), "...")
+            )
+        ),
+        popup = paste(
+            "Descrição:", str_to_upper(descricao_sucinta_obra), "</br>",
+            "Cidade:", nome, "</br>",
+            "Valor pago: R$", format(valor_obra, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE)
+        )
+    ) %>% 
+    leaflet() %>% 
+        addProviderTiles(providers$OpenStreetMap.Mapnik) %>%
+        setView(lng = -36.623, lat = -7.548, zoom = 7)  %>% 
+        addTiles() %>%
+        addMarkers(~lon, ~lat, label = ~label, 
+                 popup = ~popup,
+                 clusterOptions = markerClusterOptions())
+```
+
+### Dados inválidos inputados
+
+E agora os pontos georreferenciados, substituindo a localização pelo centro da cidade quando o dado é inexistente, onde os detalhes podem ser vistos clicando na obra:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obras.2013 %>% 
+    mutate(
+        label = str_to_upper(
+            ifelse(
+                nchar(descricao_sucinta_obra) <= 30,
+                descricao_sucinta_obra,
+                paste0(substr(descricao_sucinta_obra, 1, 30), "...")
+           )
+        ),
+        popup = paste(
+            "Descrição:", str_to_upper(descricao_sucinta_obra), "</br>",
+            "Cidade:", nome.x, "</br>",
+            "Valor pago: R$", format(valor_obra, big.mark=".", decimal.mark = ",", nsmall = 2, scientific = FALSE)
+        )
+    ) %>% 
+    leaflet() %>% 
+        addProviderTiles(providers$OpenStreetMap.Mapnik) %>%
+        setView(lng = -36.623, lat = -7.548, zoom = 7)  %>% 
+        addTiles() %>%
+        addMarkers(~lon, ~lat, label = ~label, 
+             popup = ~popup,
+             clusterOptions = markerClusterOptions())
+```
+
+### Obras georreferenciadas
+
+Vejamos os municípios que mais georreferenciam suas obras, onde os detalhes podem ser vistos clicando na obra:
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+municipios.georref.porc <- GeoPBUtils::get.porc.municipios.georref(obras.2013)
+
+mapa_paraiba_georreferenciada <- GeoPBUtils::get.mapa.paraiba.georref(mapa_paraiba, municipios.georref.porc)
+
+colors <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
+
+GeoPBUtils::cria.mapa(
+    mapa_paraiba_georreferenciada, 
+    mapa_paraiba_georreferenciada@data$porc.georref, 
+    mapa_paraiba_georreferenciada@data$Nome_Munic, 
+    paste0("Município: ", mapa_paraiba_georreferenciada@data$Nome_Munic,
+           "</br>Total de obras: ", mapa_paraiba_georreferenciada@data$total.obras,
+           "</br>Quantidade de obras georreferenciadas: ", mapa_paraiba_georreferenciada@data$qtde.georref,
+           "</br>Obras com coordenadas fora do município: ",      
+           mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio,
+           "</br>Porcentagem de obras georreferenciadas: ", round(mapa_paraiba_georreferenciada@data$porc.georref, 2), "%"
+           ), 
+    colors,
+    "Porcentagem de obras</br> georreferenciadas",
+    "municipios-poligono-georref")
+```
+
+Vemos que a maior parte das obras não são georreferenciadas nos municípios paraibanos entre 2013 e 2017, onde apenas 5 municípios tem mais de 10% das obras georreferenciadas.
+
+## Custo efetivo 2013-2017
+
+Agora vamos verificar o custo efetivo das obras, selecionando apenas as obras com valor maior que 1000 reais e dimensão maior que zero.
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obras.2013.custo.efetivo <- obra %>% 
+    left_join(localidade, by = c("fk_localidade" = "id")) %>% 
+    left_join(evolucao, by = c("id" = "fk_obra")) %>% 
+    mutate(ano = lubridate::year(data_inicio_obra)) %>% 
+    filter(
+        ano >= 2013 &
+        valor_obra > 1000
+    ) %>% 
+    left_join(tipos.das.obras %>% mutate(tipo_obra = nome) %>% select(-nome), by = c("fk_tipo_obra" = "id"))
+```
+
+Para isso, vamos ver os cinco tipos de obra mais executados, visto que faz mais sentido comparar o custo efetivo de obras do mesmo tipo.
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obras.2013.custo.efetivo %>%
+    group_by(tipo_obra) %>%
+    filter(dimensao > 0) %>%
+    count() %>%
+    arrange(-n) %>% 
+    head(5) %>% 
+    kable()
+```
+
+### Pavimentação de paralelepípedo
+
+Como o tipo mais frequente é PAVIMENTAÇÃO PARALEPÍPEDO, vamos selecionar apenas este tipo e obras com dimensão maior do que 50m2.
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+obras.2013.pavimentacao <- obras.2013.custo.efetivo %>%
+    filter(tipo_obra == 'PAVIMENTAÇÃO PARALEPÍPEDO' & dimensao > 50) %>%
+    select(valor_obra, dimensao, nome, descricao_sucinta_obra) %>%
+    mutate(custo.efetivo = valor_obra/dimensao) %>% 
+    group_by(nome) %>%
+    summarise(
+        custo.efetivo = median(custo.efetivo),
+        custo.efetivo.log = log(custo.efetivo)
+    )
+```
+
+Vejamos agora o mapa do custo efetivo por metro quadrado das obras de pavimentação em todo o estado.
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+mapa_paraiba_custo_efetivo <- mapa_paraiba
+
+mapa_paraiba_custo_efetivo@data <- mapa_paraiba@data %>%
+    left_join(obras.2013.pavimentacao,by = c("Nome_Munic" = "nome"))
+
+colors <- GeoPBUtils::paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
+
+GeoPBUtils::cria.mapa(
+    mapa_paraiba_custo_efetivo,
+    mapa_paraiba_custo_efetivo@data$custo.efetivo.log, 
+    mapa_paraiba_custo_efetivo@data$Nome_Munic, 
+    paste('Município: ', mapa_paraiba_custo_efetivo@data$Nome_Munic, '</br>Custo efetivo: R$', format(mapa_paraiba_custo_efetivo@data$custo.efetivo, digits = 2, big.mark=".", decimal.mark = ",", scientific = FALSE)), 
+    colors, 
+    "Log do custo efetivo </br> mediano das obras",
+    "municipios-poligono-georref"
+    )
+```
+
+Obs: A cidade que possui o maior custo efetivo do estado (São José de Princesa) parece ser fruto de dados errôneos, uma vez que este município efetuou apenas uma obra de pavimentação desde 2013 e esta obra foi orçada no valor R$368.346,40 e a dimensão da mesma consta como apenas 100 metros quadrados.
+
+---
