@@ -73,10 +73,11 @@ obras.data %>%
     group_by(ano) %>% 
     summarise(quantidade = n()) %>% 
     ggplot(aes(x = ano, y = quantidade)) +
-        geom_line() +
+        geom_line(color =  "blue") +
         labs(y = "quantidade de obras",
              title = "Quantidade de obras por ano",
-             subtitle = "Considerando obras depois de 1900")
+             subtitle = "Considerando obras depois de 1900") + 
+     theme(legend.position="none")
 ```
 
 Existem 163 obras cadastradas em 01/01/1900, o que consideramos como dados de data de inicio da obra faltante, além de 2016 obras com a data de início da obra nula. Podemos perceber no gráfico que a as obras começaram a ser cadastradas a partir de 2003 e a quantidade de obras fica entre 1500 e 2500, com exceção das obras posteriores à 2015, onde é perceptível uma grande queda na quantidade de obras.
@@ -93,7 +94,7 @@ Como a maior parte das obras foi cadastradas a partir de 2003, consideraremos da
 ```{r}
 obras.filtradas %>% 
     ggplot(aes(x = "ano", y = ano)) +
-        geom_boxplot() +
+        geom_boxplot(color = "blue") +
         coord_flip() +
         labs(x = "ano",
              title = "Dispersão das obras ao longo dos anos")
@@ -138,7 +139,7 @@ geolocalizacao.temporal <- geolocalizacao %>%
 geolocalizacao.temporal %>%     
     filter(ano >= 2003) %>% 
     ggplot(aes(x = ano, y = porcentagem.localizacao.disponivel)) +
-        geom_line() +
+        geom_line(color = "blue") +
         scale_y_continuous(labels=scales::percent) +
         labs(y = "porcentagem das obras georeferenciadas disponíveis", 
              title = "Porcentagem das obras georeferenciadas disponíveis ao longo do tempo")
@@ -152,7 +153,7 @@ Vejamos em números absoutos:
 geolocalizacao.temporal %>%     
     filter(ano >= 2003) %>% 
     ggplot(aes(x = ano, y = obras.geolocalizadas)) +
-        geom_line() +
+        geom_line(color = "blue") +
         labs(y = "quantidade de obras georeferenciadas", 
              title = "Quantidade de obras georeferenciadas ao longo do tempo")
 ```
@@ -197,11 +198,13 @@ obras.agrup.tipo.geo <- geolocalizacao %>%
     )
 
 obras.agrup.tipo.geo %>% 
-    ggplot(aes(x = reorder(tipo_georeferenciamento, -proporcao), y = proporcao)) +
+    ggplot(aes(x = reorder(tipo_georeferenciamento, -proporcao), y = proporcao, fill=factor(tipo_georeferenciamento))) +
         geom_bar(stat = "identity") +
+        scale_fill_brewer(palette = "Accent")+
         scale_y_continuous(label = scales::percent) +
         labs(x = "tipo georeferenciamento",
-             title = "Proporção dos tipos de georeferenciamento")
+             title = "Proporção dos tipos de georeferenciamento") + 
+        theme(legend.position="none") 
 ```
 
 Vemos que pouco mais de 50% dos dados utilizam no georeferenciamento o tipo 1, pouco mais de 30% utilizam o tipo 3 e cerca de 15% utiliza o tipo 2.
@@ -248,7 +251,7 @@ Vejamos a proporção de obras com valores válidos:
 ```{r, echo=FALSE}
 obra.temporal %>% 
     ggplot(aes(x = ano, y = proporcao.valor.disponivel)) +
-        geom_line() +
+        geom_line(color = "blue") +
         scale_y_continuous(labels = scales::percent) +
         labs(y = "proporção de obras com valor disponível", 
              title = "Proporção de obras com valor disponível ao longo do tempo")
@@ -303,12 +306,13 @@ Vejamos a dispersão do valor das obras ao longo do tempo:
 ```{r, echo=FALSE}
 obra.data.filtrado %>% 
     filter(valor_obra < 1000000000) %>% 
-    ggplot(aes(x = ano, y = valor_obra, group = ano)) +
+    ggplot(aes(x = ano, y = valor_obra, group = ano, color = factor(ano))) +
         geom_boxplot() +
         scale_y_continuous(labels = scales::comma) +
         labs(y = "valor da obra", 
              title = "Valor das obras agrupados por ano ao longo do tempo",
-             subtitle = "Considerando obras a partir de 2013")
+             subtitle = "Considerando obras a partir de 2013") + 
+        theme(legend.position="none") 
 ```
 
 Como comentado anteriormente, os valores das obras são bem concentrados, mas existem alguns outliers que elevam a média.
@@ -344,7 +348,7 @@ obra.dimensao.temporal <- obra.dimensao.data %>%
 
 obra.dimensao.temporal %>% 
     ggplot(aes(x = ano, y = prop.dimensoes.validas)) +
-        geom_line() +
+        geom_line(color = "blue") +
         scale_y_continuous(labels = scales::percent) +
         labs(y = "proporção das dimensões disponíveis",
              title = "Proporção de dimensões das obras disponíveis ao longo do tempo")
@@ -357,7 +361,7 @@ Vejamos em valores absolutos:
 ```{r, echo=FALSE}
 obra.dimensao.temporal %>% 
     ggplot(aes(x = ano, y = dimensoes.validas)) +
-        geom_line() +
+        geom_line(color = "blue") +
         labs(y = "quantidade de dimensões válidas",
              title = "Quantidade de dimensões das obras válidas ao longo do tempo")
 ```
@@ -387,11 +391,12 @@ Vemos que a mediana se mantém quase constante ao longo do tempo, tendo valor pe
 ```{r, echo=FALSE}
 obra.dimensao.data %>% 
     filter(dimensao > 0) %>% 
-    ggplot(aes(x = ano, y = dimensao, group = ano)) +
+    ggplot(aes(x = ano, y = dimensao, group = ano, color = factor(ano))) +
         geom_boxplot() +
         scale_y_continuous(labels = scales::comma) +
         labs(title = "Dimensão das obras agrupada por ano ao longo do tempo",
-             subtitle = "Considerando obras com dimensão maior que zero")
+             subtitle = "Considerando obras com dimensão maior que zero") +
+        theme(legend.position="none") 
 ```
 
 ## Tipo da obra temporalmente
@@ -410,11 +415,12 @@ tipo.obra <- obras.filtradas %>%
 tipo.obra %>% 
     group_by(tipo_da_obra) %>% 
     summarise(quantidade = n()) %>% 
-    ggplot(aes(x = reorder(tipo_da_obra, quantidade), y = quantidade)) +
+    ggplot(aes(x = reorder(tipo_da_obra, quantidade), y = quantidade, fill = tipo_da_obra)) +
         geom_bar(stat="identity") +
         labs(x = "tipo da obra") +
         coord_flip() +
-        labs(title = "Disponibilidade dos tipos das obras")
+        labs(title = "Disponibilidade dos tipos das obras") + 
+    theme(legend.position="none") 
 ```
 
 Vemos que o tipo de obra mais presente nos dados é o tipo "outras", seguido de "pavimentação paralelepípedo" e "escola". Vemos que existem uma pequena quantidade de dados faltantes.
@@ -430,7 +436,7 @@ tipo.obra %>%
         prop.dados.disponiveis = quantidade.dados.disponiveis / total
     ) %>% 
     ggplot(aes(x = ano, y = prop.dados.disponiveis)) +
-        geom_line() +
+        geom_line(color = "blue") +
         scale_y_continuous(labels = scales::percent) +
         labs(y = "proporção dos tipos das obras disponíveis",
              title = "Proporção dos tipos das obras disponíveis ao longo do tempo")
@@ -501,10 +507,12 @@ obra.jurisdicionado %>%
         total = n()
       ) %>%
     top_n(10, total) %>%
-    ggplot(aes(x = reorder(nome, -total), y = total)) + 
+    ggplot(aes(x = reorder(nome, -total), y = total, fill = factor(nome))) + 
+    scale_fill_brewer(palette = "Set3") +
     geom_col() + 
     coord_flip() + 
-    labs(x = "Jurisdicionado", y = "Quantidade de obras", title = "Top 10 jurisdicionados com maior quantidade de obras")
+    labs(x = "Jurisdicionado", y = "Quantidade de obras", title = "Top 10 jurisdicionados com maior quantidade de obras") + 
+    theme(legend.position="none") 
 
 ```
 
@@ -568,7 +576,7 @@ obra.evolucao %>%
     filter(andamento == 1) %>%
     ggplot(aes(x = ano, y = porcentagem)) + 
     scale_x_continuous(breaks = seq(2003, 2017, by = 1)) +
-    geom_line() + 
+    geom_line(color = "blue") + 
     labs(title = "Total de obras em execução temporalmente")
 ```
 
@@ -597,12 +605,15 @@ orgaos_menos_obras_em_andamento <-
     top_n(15, -porcentagem)
 
 orgaos_menos_obras_em_andamento %>%
-    ggplot(aes(x = reorder(nome, -porcentagem), y = porcentagem)) +
+    ggplot(aes(x = reorder(nome, -porcentagem), y = porcentagem, fill = porcentagem)) +
+    scale_fill_gradient(low = "green", high = "orangered") + 
     geom_col() + 
     coord_flip() +
-    labs(title = "Top 15 orgãos com menos obras com status em execução", x = "Orgão Público")
+    labs(title = "Top 15 orgãos com menos obras com status em execução", x = "Orgão Público") + 
+    theme(legend.position="none") 
 
-```
+
+    ```
 
 
 #### De 2015 até os dias atuais
@@ -622,10 +633,12 @@ orgaos_menos_obras_em_andamento <-
     top_n(15, -porcentagem)
 
 orgaos_menos_obras_em_andamento %>%
-    ggplot(aes(x = reorder(nome, -porcentagem), y = porcentagem)) +
+    ggplot(aes(x = reorder(nome, -porcentagem), y = porcentagem, fill = porcentagem)) +
+    scale_fill_gradient(low = "green", high = "orangered") + 
     geom_col() + 
     coord_flip() +
-    labs(title = "Top 15 orgãos com menos obras com status em execução (2015-atualmente)", x = "Orgão Público")
+    labs(title = "Top 15 orgãos com menos obras com status em execução (2015-atualmente)", x = "Orgão Público") + 
+    theme(legend.position="none") 
 
 
 
