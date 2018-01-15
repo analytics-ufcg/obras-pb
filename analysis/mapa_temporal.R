@@ -68,6 +68,7 @@ mapa_paraiba_custo_efetivo <- get.mapa.paraiba.custo.efetivo(mapa_paraiba, munic
 
 # Interface do usuário
 ui <- dashboardPage(
+    title = "Obras georreferenciadas",
     dashboardHeader( 
         title = span(
                     tagList(
@@ -81,6 +82,7 @@ ui <- dashboardPage(
         disable = TRUE
     ),
     dashboardBody(
+        tags$head(tags$link(rel="shortcut icon", href="tce-cropped.png")),
         tabsetPanel(type = "tabs",
             tabPanel(
                 "Obras georreferenciadas por município", 
