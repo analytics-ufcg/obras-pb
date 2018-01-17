@@ -48,15 +48,20 @@
 
         <!-- begin navbar -->
         <md-toolbar layout="row" ng-controller="HomeController as homeCtrl" layout-align="space-between center" class="md-hue-2" style="position: fixed; top: 0px;">
-            <div layout="row">
+            <div layout="row" style="min-width: 250px;">
                 <img src="assets/resources/images/tce_128.png" height="50px;" layout-margin>
-                <h3>Obras - PB</h3>
+                <h4>Obras - PB</h4>
             </div>
+
+            <div style="padding-right: 40px;" layout-fill>
+                <a style="float: right; color: white; text-decoration: none; font-size: 16px;" href="http://150.165.85.44:9090/">Mapa interativo</a>
+            </div>
+
             <md-input-container>
 
-                  <md-select layout-align="space-between center " class="mySelect" ng-model="homeCtrl.relatorios" placeholder="Selecione um relatório" >
+                <md-select layout-align="space-between center " class="mySelect" ng-model="homeCtrl.relatorios" placeholder="Selecione um relatório" >
                     <md-option  ng-repeat="relatorio in homeCtrl.relatorios" ng-value="relatorio.nome" ng-click="homeCtrl.redireciona(relatorio.referencia)">
-              {{relatorio.nome}}
+                        {{relatorio.nome}}
 
                     </md-option>
                 </md-select>
