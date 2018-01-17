@@ -85,6 +85,20 @@ ui <- dashboardPage(
     ),
     dashboardBody(
         tags$head(tags$link(rel="shortcut icon", href="tce-cropped.png")),
+        tags$head(
+            HTML("<script>
+                     var socket_timeout_interval
+                     var n = 0
+                     $(document).on('shiny:connected', function(event) {
+                     socket_timeout_interval = setInterval(function(){
+                     Shiny.onInputChange('count', n++)
+                     }, 15000)
+                     });
+                     $(document).on('shiny:disconnected', function(event) {
+                     clearInterval(socket_timeout_interval)
+                     });
+                 </script>")
+        ),
         tabsetPanel(type = "tabs",
             tabPanel(
                 "Obras georreferenciadas por município", 
@@ -157,6 +171,11 @@ ui <- dashboardPage(
 
 # Lógica do sistema
 server <- function(input, output, session) {
+    output$keepAlive <- renderText({
+        req(input$count)
+        paste("keep alive ", input$count)
+    })
+    
     v <- reactiveValues(msg = "")
     
     cores.georref <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
