@@ -115,16 +115,23 @@ ui <- dashboardPage(
                          column(width = 5,
                                 height = "100vh",
                                 box(width = NULL,
-                                    height = "15vh",
+                                    height = "18vh",
                                     status = "warning",
-                                    selectInput("select_municipio_georref", label = h3("Selecione o município"), 
-                                                choices = municipios.georref.porc$nome.x, 
+                                    radioButtons("select_tipo_localidade_georref", "Tipo de localidade:",
+                                                 c("Município" = "municipio",
+                                                   "Microrregião" = "microrregiao",
+                                                   "Mesorregião" = "mesorregiao"),
+                                                 inline = TRUE
+                                    ),
+                                    selectInput("select_municipio_georref", label = h3("Selecione o município"),
+                                                choices = municipios.georref.porc$nome.x,
                                                 selected = cidade.default(municipios.georref.porc, "nome.x"))
+                                    
                                 ),
-                                box(height = "64vh",
-                                    width = "50vw",
+                                box(height = "61vh",
+                                    width = "50vh",
                                     status = "warning",
-                                    plotOutput("ranking_georref", height = "60vh")
+                                    plotOutput("ranking_georref", height = "57vh")
                                 )
                          )  
                 )
@@ -144,23 +151,25 @@ ui <- dashboardPage(
                     column(width = 5,
                            height = "100vh",
                            box(width = NULL,
-                               height = "15vh",
+                               height = "26vh",
                                status = "warning",
+                               radioButtons("select_tipo_localidade_georref", "Tipo de localidade:",
+                                            c("Município" = "municipio",
+                                              "Microrregião" = "microrregiao",
+                                              "Mesorregião" = "mesorregiao"),
+                                            inline = TRUE
+                               ),
                                selectInput("select_tipo_obra", label = h3("Selecione o tipo da obra"),
                                            choices = get.top.10.tipo.obra(custo.efetivo.obras),
-                                           selected = tipo.obra.selecionada)
-                           ),
-                           box(width = NULL,
-                               height = "15vh",
-                               status = "warning",
+                                           selected = tipo.obra.selecionada),
                                selectInput("select_municipio_tipo_obra", label = h3("Selecione o município"),
                                            choices = municipios.tipo.obra.custo.efetivo$nome, 
                                            selected = municipio.selecionado.tipo.obra)
                            ),
                            box(width = NULL,
-                               height = "47vh",
+                               height = "53vh",
                                status = "warning",
-                               plotOutput("ranking_tipo_obra", height = "45vh")
+                               plotOutput("ranking_tipo_obra", height = "51vh")
                            )
                     )
                 )
