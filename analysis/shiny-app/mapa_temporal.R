@@ -110,54 +110,47 @@ ui <- dashboardPage(
                 "Obras georreferenciadas por município", 
                 fluidRow(
                     height = "100vh",
-                         column(width = 7,
-                                box(width = NULL, solidHeader = TRUE,
-                                    leafletOutput("mapa_georref", height = "50vh")
-                                ),
-                                box(width = NULL,
-                                    dygraphOutput("dygraph_georref",  height = "25vh")
-                                )
-                         ),
-                         column(width = 5,
-                                height = "100vh",
-                                box(width = NULL,
-                                    height = "18vh",
-                                    status = "warning",
-                                    radioButtons("select_tipo_localidade_georref", "Tipo de localidade:",
-                                                 c("Município" = "municipio",
-                                                   "Microrregião" = "microrregiao",
-                                                   "Mesorregião" = "mesorregiao"),
-                                                 inline = TRUE
-                                    ),
-                                    selectInput("select_municipio_georref", label = h3("Selecione o município"),
-                                                choices = municipios.georref.porc$nome.x,
-                                                selected = cidade.default(municipios.georref.porc, "nome.x"))
-                                    
-                                ),
-                                box(height = "61vh",
-                                    width = "50vh",
-                                    status = "warning",
-                                    plotOutput("ranking_georref", height = "57vh")
-                                )
-                         )  
+                    column(width = 12,
+                           height = "100vh",
+                           tags$br(),
+                           box(width = NULL,
+                               height = "18vh",
+                               status = "warning",
+                               radioButtons("select_tipo_localidade_georref", "Tipo de localidade:",
+                                            c("Município" = "municipio",
+                                              "Microrregião" = "microrregiao",
+                                              "Mesorregião" = "mesorregiao"),
+                                            inline = TRUE
+                               ),
+                               selectInput("select_municipio_georref", label = h3("Selecione o município"),
+                                           choices = municipios.georref.porc$nome.x,
+                                           selected = cidade.default(municipios.georref.porc, "nome.x"))
+                               
+                           )
+                    ),  
+                    column(width = 12,
+                        box(width = NULL, solidHeader = TRUE,
+                            leafletOutput("mapa_georref", height = "50vh")
+                        ),
+                        box(width = NULL,
+                            dygraphOutput("dygraph_georref",  height = "25vh")
+                        ),
+                        box(height = "61vh",
+                            width = "50vh",
+                            status = "warning",
+                            plotOutput("ranking_georref", height = "57vh")
+                        )
+                    )
                 )
             ),
             tabPanel(
                 "Tipos de obras",
                 fluidRow(
                     height = "100vh",
-                    column(width = 7,
-                           box(width = NULL, solidHeader = TRUE,
-                               leafletOutput("mapa_tipo_obra", height = "50vh")
-                           ),
+                    column(width = 12,
+                           tags$br(),
                            box(width = NULL,
-                               dygraphOutput("dygraph_tipo_obra", height = "25vh")
-                           )
-                    ),
-                    column(width = 5,
-                           height = "100vh",
-                           box(width = NULL,
-                               height = "26vh",
+                               height = "30vh",
                                status = "warning",
                                radioButtons("select_tipo_localidade_tipo_obra", "Tipo de localidade:",
                                             c("Município" = "municipio",
@@ -172,6 +165,16 @@ ui <- dashboardPage(
                                            choices = municipios.tipo.obra.custo.efetivo$nome, 
                                            selected = municipio.selecionado.tipo.obra)
                            ),
+                           tags$br(),
+                           box(width = NULL, solidHeader = TRUE,
+                               leafletOutput("mapa_tipo_obra", height = "50vh")
+                           ),
+                           box(width = NULL,
+                               dygraphOutput("dygraph_tipo_obra", height = "25vh")
+                           )
+                    ),
+                    column(width = 12,
+                           height = "100vh",
                            box(width = NULL,
                                height = "53vh",
                                status = "warning",
