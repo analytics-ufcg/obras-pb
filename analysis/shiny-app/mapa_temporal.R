@@ -93,6 +93,7 @@ ui <- dashboardPage(
         )
     ),
     dashboardBody(
+        tags$head(tags$style(HTML('.box-header {min-height: 35px;}'))),
         tags$head(tags$link(rel="shortcut icon", href="tce-cropped.png")),
         tags$head(
             HTML("<script>
@@ -114,11 +115,9 @@ ui <- dashboardPage(
                 fluidRow(
                     height = "100vh",
                     column(width = 12,
-                           height = "100vh",
-                           tags$br(),
                            box(width = NULL,
-                               height = "18vh",
-                               status = "warning",
+                               solidHeader = TRUE,
+                               collapsible = TRUE,
                                radioButtons("select_tipo_localidade_georref", "Tipo de localidade:",
                                             c("Município" = "municipio",
                                               "Microrregião" = "microrregiao",
@@ -132,15 +131,16 @@ ui <- dashboardPage(
                            )
                     ),  
                     column(width = 12,
-                        box(width = NULL, solidHeader = TRUE,
+                        box(width = NULL,
+                            collapsible = TRUE,
                             leafletOutput("mapa_georref", height = "50vh")
                         ),
                         box(width = NULL,
+                            collapsible = TRUE,
                             dygraphOutput("dygraph_georref",  height = "25vh")
                         ),
-                        box(height = "61vh",
-                            width = "50vh",
-                            status = "warning",
+                        box(width = "50vh",
+                            collapsible = TRUE,
                             plotOutput("ranking_georref", height = "57vh")
                         )
                     )
@@ -149,12 +149,10 @@ ui <- dashboardPage(
             tabItem(
                 tabName = "tipos-obras",
                 fluidRow(
-                    height = "100vh",
                     column(width = 12,
-                           tags$br(),
                            box(width = NULL,
-                               height = "30vh",
-                               status = "warning",
+                               solidHeader = TRUE,
+                               collapsible = TRUE,
                                radioButtons("select_tipo_localidade_tipo_obra", "Tipo de localidade:",
                                             c("Município" = "municipio",
                                               "Microrregião" = "microrregiao",
@@ -168,19 +166,18 @@ ui <- dashboardPage(
                                            choices = localidades.custo.efetivo$nome, 
                                            selected = localidade.selecionada.tipo.obra)
                            ),
-                           tags$br(),
-                           box(width = NULL, solidHeader = TRUE,
+                           box(width = NULL,
+                               collapsible = TRUE,
                                leafletOutput("mapa_tipo_obra", height = "50vh")
                            ),
                            box(width = NULL,
+                               collapsible = TRUE,
                                dygraphOutput("dygraph_tipo_obra", height = "25vh")
                            )
                     ),
                     column(width = 12,
-                           height = "100vh",
                            box(width = NULL,
-                               height = "53vh",
-                               status = "warning",
+                               collapsible = TRUE,
                                plotOutput("ranking_tipo_obra", height = "51vh")
                            )
                     )
