@@ -84,10 +84,13 @@ ui <- dashboardPage(
                         "Obras georreferenciadas"
                     )
                 ),
-        titleWidth = 400
+        titleWidth = 330
     ),
     dashboardSidebar( 
-        disable = TRUE
+        sidebarMenu(
+            menuItem("Obras georreferenciadas", tabName = "obras-georref", icon = icon("map-marker")),
+            menuItem("Tipos de obras", icon = icon("th"), tabName = "tipos-obras", badgeLabel = "new", badgeColor = "green")
+        )
     ),
     dashboardBody(
         tags$head(tags$link(rel="shortcut icon", href="tce-cropped.png")),
@@ -105,9 +108,9 @@ ui <- dashboardPage(
                      });
                  </script>")
         ),
-        tabsetPanel(type = "tabs",
-            tabPanel(
-                "Obras georreferenciadas por município", 
+        tabItems(
+            tabItem(
+                tabName = "obras-georref",
                 fluidRow(
                     height = "100vh",
                     column(width = 12,
@@ -143,8 +146,8 @@ ui <- dashboardPage(
                     )
                 )
             ),
-            tabPanel(
-                "Tipos de obras",
+            tabItem(
+                tabName = "tipos-obras",
                 fluidRow(
                     height = "100vh",
                     column(width = 12,
