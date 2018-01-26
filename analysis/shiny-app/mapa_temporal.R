@@ -323,15 +323,13 @@ server <- function(input, output, session) {
     muda.input.localidades.georref <- function(localidades.georref) {
         if (tipo.localidade.selecionada.georref == "municipio") {
             localidades.input <- localidades.georref %>% arrange(nome.x) %>% pull(nome.x)
-            if (!localidade.selecionada.georref %in% localidades.input) { 
-                localidade.selecionada.georref <<- localidades.input[1]
-            }
-        } else {
-            if (tipo.localidade.selecionada.georref == "microrregiao") {
+        } else if (tipo.localidade.selecionada.georref == "microrregiao") {
                 localidades.input <- localidades.georref %>% arrange(microregiao) %>% pull(microregiao)
-            } else {
-                localidades.input <- localidades.georref %>% arrange(mesoregiao) %>% pull(mesoregiao)
-            }
+        } else {
+            localidades.input <- localidades.georref %>% arrange(mesoregiao) %>% pull(mesoregiao)
+        }
+        
+        if (!localidade.selecionada.georref %in% localidades.input) { 
             localidade.selecionada.georref <<- localidades.input[1]
         }
         
@@ -376,15 +374,13 @@ server <- function(input, output, session) {
     muda.input.localidade.tipo.obra <- function(localidades.custo.efetivo) {
         if (tipo.localidade.selecionada.tipo.obra == "municipio") {
             localidades.input <- localidades.custo.efetivo %>% arrange(nome) %>% pull(nome)
-            if (!localidade.selecionada.tipo.obra %in% localidades.input) {
-                localidade.selecionada.tipo.obra <<- localidades.input[1]
-            }
+        } else if (tipo.localidade.selecionada.tipo.obra == "microrregiao") {
+            localidades.input <- localidades.custo.efetivo %>% arrange(microregiao) %>% pull(microregiao)
         } else {
-            if (tipo.localidade.selecionada.tipo.obra == "microrregiao") {
-                localidades.input <- localidades.custo.efetivo %>% arrange(microregiao) %>% pull(microregiao)
-            } else {
-                localidades.input <- localidades.custo.efetivo %>% arrange(mesoregiao) %>% pull(mesoregiao)
-            }
+            localidades.input <- localidades.custo.efetivo %>% arrange(mesoregiao) %>% pull(mesoregiao)
+        }
+        
+        if (!localidade.selecionada.tipo.obra %in% localidades.input) {
             localidade.selecionada.tipo.obra <<- localidades.input[1]
         }
          
