@@ -209,6 +209,10 @@ server <- function(input, output, session) {
             cores.georref, 
             "Obras georreferenciadas (%)",
             tag.mapa.georref,
+            mapa_paraiba_georreferenciada@data$GEOCODIG_M, 
+            municipio.selecionado.georref,
+            tipo.localidade.selecionada.georref,
+            localidades.desc,
             mapa_paraiba_georreferenciada@data$cor.borda,
             mapa_paraiba_georreferenciada@data$largura.borda
         )
@@ -227,6 +231,10 @@ server <- function(input, output, session) {
             cores.custo.efetivo, 
             "Custo efetivo das obras",
             tag.mapa.custo.efetivo,
+            mapa_paraiba_custo_efetivo@data$GEOCODIG_M, 
+            municipio.selecionado.tipo.obra,
+            tipo.localidade.selecionada.tipo.obra,
+            localidades.desc,
             mapa_paraiba_custo_efetivo@data$cor.borda,
             mapa_paraiba_custo_efetivo@data$largura.borda
         )
@@ -276,6 +284,14 @@ server <- function(input, output, session) {
         
         cores.georref <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
         
+        if (tipo.localidade.selecionada.georref == "microrregiao") {
+            localidades <- mapa_paraiba_georreferenciada@data$microregiao
+        } else if (tipo.localidade.selecionada.georref == "mesorregiao") {
+            localidades <- mapa_paraiba_georreferenciada@data$mesoregiao
+        } else {
+            localidades <- mapa_paraiba_georreferenciada@data$Nome_Munic
+        }
+        
         leafletProxy("mapa_georref", data = mapa_paraiba_georreferenciada) %>%
             clearGroup( group = tag.mapa.georref ) %>%
             clearControls() %>%
@@ -289,6 +305,10 @@ server <- function(input, output, session) {
                                                            mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio),
                                          "Obras georreferenciadas (%)",
                                          tag.mapa.georref,
+                                         mapa_paraiba_georreferenciada@data$GEOCODIG_M, 
+                                         municipio.selecionado.georref,
+                                         tipo.localidade.selecionada.georref,
+                                         localidades.desc,
                                          mapa_paraiba_georreferenciada@data$cor.borda,
                                          mapa_paraiba_georreferenciada@data$largura.borda)
         
@@ -389,6 +409,14 @@ server <- function(input, output, session) {
         
         cores.custo.efetivo <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
         
+        if (tipo.localidade.selecionada.tipo.obra == "microrregiao") {
+            localidades <- mapa_paraiba_custo_efetivo@data$microregiao
+        } else if (tipo.localidade.selecionada.tipo.obra == "mesorregiao") {
+            localidades <- mapa_paraiba_custo_efetivo@data$mesoregiao
+        } else {
+            localidades <- mapa_paraiba_custo_efetivo@data$Nome_Munic
+        }
+        
         leafletProxy("mapa_tipo_obra", data = mapa_paraiba_custo_efetivo) %>%
             clearGroup( group = tag.mapa.custo.efetivo ) %>%
             clearControls() %>%
@@ -402,6 +430,10 @@ server <- function(input, output, session) {
                                          ),
                                          "Custo efetivo das obras",
                                          tag.mapa.custo.efetivo,
+                                         mapa_paraiba_custo_efetivo@data$GEOCODIG_M, 
+                                         municipio.selecionado.tipo.obra,
+                                         tipo.localidade.selecionada.tipo.obra,
+                                         localidades.desc,
                                          mapa_paraiba_custo_efetivo@data$cor.borda,
                                          mapa_paraiba_custo_efetivo@data$largura.borda)
         
