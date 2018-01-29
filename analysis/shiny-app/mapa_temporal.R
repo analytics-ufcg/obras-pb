@@ -243,22 +243,62 @@ server <- function(input, output, session) {
         )
     })
     
-    output$dygraph_georref <- renderDygraph({
-        # start dygraph with all the states
-        obras.2013 %>% 
-            group_by(ano) %>% 
-            summarise(
-                total.obras = n(),
-                qtde.georref = sum(!is.inputado),
-                porc.georref = (qtde.georref / total.obras) * 100
-            ) %>% 
-            select(ano, porc.georref) %>% 
-            dygraph() %>% 
-            dyRangeSelector() %>%
-            dyLegend(show = "never")
-    })
+    dygraph.georref <- function(dado, tipo.localidade.selecionada, localidade.selecionada) {
+        if (tipo.localidade.selecionada == "microrregiao") {
+            dado.filtr <- dado %>% 
+                filter(microregiao == localidade.selecionada)
+        } else if (tipo.localidade.selecionada == "mesorregiao") {
+            dado.filtr <- dado %>% 
+                filter(mesoregiao == localidade.selecionada)
+        } else {
+            dado.filtr <- dado
+        }
+        
+        renderDygraph({
+            dado.filtr %>% 
+                group_by(ano) %>% 
+                summarise(
+                    total.obras = n(),
+                    qtde.georref = sum(!is.inputado),
+                    porc.georref = (qtde.georref / total.obras) * 100
+                ) %>% 
+                select(ano, porc.georref) %>% 
+                dygraph() %>% 
+                dyRangeSelector() %>%
+                dyLegend(show = "never")
+        })
+    }
     
-    output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, get.top.10.tipo.obra(custo.efetivo.obras)[1])
+    dygraph.tipo.obra <- function(dado, tipo.obra, tipo.localidade.selecionada, localidade.selecionada) {
+        if (tipo.localidade.selecionada == "microrregiao") {
+            dado.filtr <- dado %>% 
+                filter(microregiao == localidade.selecionada)
+        } else if (tipo.localidade.selecionada == "mesorregiao") {
+            dado.filtr <- dado %>% 
+                filter(mesoregiao == localidade.selecionada)
+        } else {
+            dado.filtr <- dado
+        }
+        
+        renderDygraph({
+            dado.filtr %>%
+                filter(tipo_obra == tipo.obra) %>%
+                mutate(custo.efetivo = valor_obra/dimensao) %>%
+                group_by(ano) %>%
+                summarise(
+                    custo.efetivo = median(custo.efetivo)
+                ) %>%
+                select(ano, custo.efetivo) %>%
+                dygraph() %>%
+                dyRangeSelector() %>%
+                dyLegend(show = "never")
+        })
+    }
+    
+    output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, localidade.selecionada.georref)
+    
+    output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, get.top.10.tipo.obra(custo.efetivo.obras)[1], 
+                                                  tipo.localidade.selecionada.tipo.obra, municipio.selecionado.tipo.obra)
     
     output$ranking_georref <- renderPlot({
         plot.ranking.georref(municipios.georref.porc, input$select_municipio_georref)
@@ -365,10 +405,14 @@ server <- function(input, output, session) {
     }, {
         if(!is.null(input$dygraph_georref_date_window)){
             municipio.selecionado.georref <<- input$select_municipio_georref
+            if(tipo.localidade.selecionada.georref != "municipio") {
+                output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, municipio.selecionado.georref)
+            }
 
             municipios.georref.porc <- get.porc.municipios.georref(obras.2013, localidades.desc, municipio.selecionado.georref, ano.inicial.georref, ano.final.georref)
 
             muda.mapa.e.ranking.georref(municipios.georref.porc)
+            
         }
     },
     priority = 1)
@@ -448,13 +492,15 @@ server <- function(input, output, session) {
     observeEvent({
         input$select_tipo_obra
     }, {
+        print("input$select_tipo_obra")
         if(!is.null(input$dygraph_tipo_obra_date_window)){
             tipo.obra.selecionada <<- input$select_tipo_obra
             
             municipios.tipo.obra.custo.efetivo <- get.municipios.tipo.obra.custo.efetivo(localidades.desc)
             muda.input.municipio.tipo.obra(municipios.tipo.obra.custo.efetivo)
             
-            output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra.selecionada)
+            output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra.selecionada, 
+                                                          tipo.localidade.selecionada.tipo.obra, municipio.selecionado.tipo.obra)
             
             muda.mapa.tipo.obra.e.ranking(municipios.tipo.obra.custo.efetivo)
         }
@@ -469,6 +515,7 @@ server <- function(input, output, session) {
             
             if (!exists("ano.inicial.tipo.obra") || !exists("ano.final.tipo.obra") ||
                 ano.inicial.tipo.obra != ano1 || ano.final.tipo.obra != ano2) {
+                print("input$dygraph_tipo_obra_date_window")
                 
                 ano.inicial.tipo.obra <<- ano1
                 ano.final.tipo.obra <<- ano2
@@ -487,6 +534,15 @@ server <- function(input, output, session) {
     }, {
         if(!is.null(input$dygraph_tipo_obra_date_window)){
             municipio.selecionado.tipo.obra <<- input$select_municipio_tipo_obra
+            if (tipo.localidade.selecionada.tipo.obra != "municipio") {
+                print("input$select_municipio_tipo_obra")
+                output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra.selecionada, 
+                                                              tipo.localidade.selecionada.tipo.obra, 
+                                                              municipio.selecionado.tipo.obra)
+
+                ano.inicial.tipo.obra <<- round(input$dygraph_tipo_obra_date_window[[1]])
+                ano.final.tipo.obra <<- round(input$dygraph_tipo_obra_date_window[[2]])
+            }
             
             municipios.tipo.obra.custo.efetivo <- get.municipios.tipo.obra.custo.efetivo(localidades.desc)
             
