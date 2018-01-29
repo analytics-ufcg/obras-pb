@@ -124,7 +124,7 @@ ui <- dashboardPage(
                                               "Mesorregião" = "mesorregiao"),
                                             inline = TRUE
                                ),
-                               selectInput("select_localidade_georref", label = h3("Selecione o município"),
+                               selectInput("select_localidade_georref", label = h3("Selecione a localidade"),
                                            choices = localidades.georref$nome.x,
                                            selected = cidade.default(localidades.georref, "nome.x"))
                                
@@ -162,7 +162,7 @@ ui <- dashboardPage(
                                selectInput("select_tipo_obra", label = h3("Selecione o tipo da obra"),
                                            choices = get.top.10.tipo.obra(custo.efetivo.obras),
                                            selected = tipo.obra.selecionada),
-                               selectInput("select_localidade_tipo_obra", label = h3("Selecione o município"),
+                               selectInput("select_localidade_tipo_obra", label = h3("Selecione a localidade"),
                                            choices = localidades.custo.efetivo$nome, 
                                            selected = localidade.selecionada.tipo.obra)
                            ),
@@ -390,7 +390,7 @@ server <- function(input, output, session) {
                 ano.final.georref <<- ano2
                 localidades.georref <- get.porc.municipios.georref(obras.2013, localidades.desc, localidade.selecionada.georref, ano.inicial.georref, ano.final.georref)
 
-                 muda.input.localidade.tipo.obra(localidades.georref)
+                muda.input.localidades.georref(localidades.georref)
                 
                 muda.mapa.e.ranking.georref(localidades.georref)
             }
@@ -403,6 +403,7 @@ server <- function(input, output, session) {
     }, {
         if(!is.null(input$dygraph_georref_date_window)){
             localidade.selecionada.georref <<- input$select_localidade_georref
+            
             if(tipo.localidade.selecionada.georref != "municipio") {
                 output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, localidade.selecionada.georref)
             }
@@ -410,7 +411,6 @@ server <- function(input, output, session) {
             localidades.georref <- get.porc.municipios.georref(obras.2013, localidades.desc, localidade.selecionada.georref, ano.inicial.georref, ano.final.georref)
 
             muda.mapa.e.ranking.georref(localidades.georref)
-            
         }
     },
     priority = 1)
@@ -427,7 +427,7 @@ server <- function(input, output, session) {
         if (!localidade.selecionada.tipo.obra %in% localidades.input) {
             localidade.selecionada.tipo.obra <<- localidades.input[1]
         }
-        
+
         updateSelectInput(session, inputId = "select_localidade_tipo_obra", 
                           choices = localidades.input,
                           selected = localidade.selecionada.tipo.obra)
@@ -552,7 +552,8 @@ server <- function(input, output, session) {
         tipo.localidade.selecionada.georref <<- input$select_tipo_localidade_georref
         localidades.georref <- get.porc.municipios.georref(obras.2013, localidades.desc, localidade.selecionada.georref, ano.inicial.georref, ano.final.georref)
         
-         muda.input.localidade.tipo.obra(localidades.georref)
+
+        muda.input.localidades.georref(localidades.georref)
         
         muda.mapa.e.ranking.georref(localidades.georref)
     })
