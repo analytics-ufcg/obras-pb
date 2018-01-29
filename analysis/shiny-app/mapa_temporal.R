@@ -53,26 +53,26 @@ custo.efetivo.obras <- get.custos.efetivos(obras.2013)
 
 tipo.obra.selecionada <<- get.top.10.tipo.obra(custo.efetivo.obras)[1]
 
-municipios.georref.porc <<- get.porc.municipios.georref(obras.2013, localidades.desc, cidade.default(obras.2013, "nome.x"))
-municipios.tipo.obra.custo.efetivo <<- get.custo.efetivo.tipo.obra(custo.efetivo.obras, cidade.default(custo.efetivo.obras, "nome"),
+localidades.georref <<- get.porc.municipios.georref(obras.2013, localidades.desc, cidade.default(obras.2013, "nome.x"))
+localidades.custo.efetivo <<- get.custo.efetivo.tipo.obra(custo.efetivo.obras, cidade.default(custo.efetivo.obras, "nome"),
                                                                    tipo.obra.selecionada)
 
 tipo.localidade.selecionada.tipo.obra <<- "municipio"
-municipio.selecionado.tipo.obra <<- cidade.default(municipios.tipo.obra.custo.efetivo, "nome")
+localidade.selecionada.tipo.obra <<- cidade.default(localidades.custo.efetivo, "nome")
 ano.inicial.tipo.obra <<- 0
 ano.final.tipo.obra <<- 3000
 tag.mapa.custo.efetivo <<- "municipios-poligono-custo-efetivo"
 
 tipo.localidade.selecionada.georref <<- "municipio"
-municipio.selecionado.georref <<- cidade.default(municipios.georref.porc, "nome.x")
+localidade.selecionada.georref <<- cidade.default(localidades.georref, "nome.x")
 ano.inicial.georref <<- 0
 ano.final.georref <<- 3000
 tag.mapa.georref <<- "municipios-poligono-georref"
 
-municipios.tipo.obra.custo.efetivo <<- add.borda(municipios.tipo.obra.custo.efetivo, municipio.selecionado.tipo.obra)
+localidades.custo.efetivo <<- add.borda(localidades.custo.efetivo, localidade.selecionada.tipo.obra)
 
-mapa_paraiba_georreferenciada <- get.mapa.paraiba(mapa_paraiba, municipios.georref.porc, tipo.localidade.selecionada.georref, municipio.selecionado.georref)
-mapa_paraiba_custo_efetivo <- get.mapa.paraiba(mapa_paraiba, municipios.tipo.obra.custo.efetivo, tipo.localidade.selecionada.tipo.obra, municipio.selecionado.tipo.obra)
+mapa_paraiba_georreferenciada <- get.mapa.paraiba(mapa_paraiba, localidades.georref, tipo.localidade.selecionada.georref, localidade.selecionada.georref)
+mapa_paraiba_custo_efetivo <- get.mapa.paraiba(mapa_paraiba, localidades.custo.efetivo, tipo.localidade.selecionada.tipo.obra, localidade.selecionada.tipo.obra)
 
 # Interface do usuário
 ui <- dashboardPage(
@@ -124,9 +124,9 @@ ui <- dashboardPage(
                                               "Mesorregião" = "mesorregiao"),
                                             inline = TRUE
                                ),
-                               selectInput("select_municipio_georref", label = h3("Selecione o município"),
-                                           choices = municipios.georref.porc$nome.x,
-                                           selected = cidade.default(municipios.georref.porc, "nome.x"))
+                               selectInput("select_localidade_georref", label = h3("Selecione o município"),
+                                           choices = localidades.georref$nome.x,
+                                           selected = cidade.default(localidades.georref, "nome.x"))
                                
                            )
                     ),  
@@ -162,9 +162,9 @@ ui <- dashboardPage(
                                selectInput("select_tipo_obra", label = h3("Selecione o tipo da obra"),
                                            choices = get.top.10.tipo.obra(custo.efetivo.obras),
                                            selected = tipo.obra.selecionada),
-                               selectInput("select_municipio_tipo_obra", label = h3("Selecione o município"),
-                                           choices = municipios.tipo.obra.custo.efetivo$nome, 
-                                           selected = municipio.selecionado.tipo.obra)
+                               selectInput("select_localidade_tipo_obra", label = h3("Selecione o município"),
+                                           choices = localidades.custo.efetivo$nome, 
+                                           selected = localidade.selecionada.tipo.obra)
                            ),
                            box(width = NULL,
                                collapsible = TRUE,
@@ -213,7 +213,7 @@ server <- function(input, output, session) {
             "Obras georreferenciadas (%)",
             tag.mapa.georref,
             mapa_paraiba_georreferenciada@data$GEOCODIG_M, 
-            municipio.selecionado.georref,
+            localidade.selecionada.georref,
             tipo.localidade.selecionada.georref,
             localidades.desc,
             mapa_paraiba_georreferenciada@data$cor.borda,
@@ -235,7 +235,7 @@ server <- function(input, output, session) {
             "Custo efetivo das obras",
             tag.mapa.custo.efetivo,
             mapa_paraiba_custo_efetivo@data$GEOCODIG_M, 
-            municipio.selecionado.tipo.obra,
+            localidade.selecionada.tipo.obra,
             tipo.localidade.selecionada.tipo.obra,
             localidades.desc,
             mapa_paraiba_custo_efetivo@data$cor.borda,
@@ -298,18 +298,18 @@ server <- function(input, output, session) {
     output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, localidade.selecionada.georref)
     
     output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, get.top.10.tipo.obra(custo.efetivo.obras)[1], 
-                                                  tipo.localidade.selecionada.tipo.obra, municipio.selecionado.tipo.obra)
+                                                  tipo.localidade.selecionada.tipo.obra, localidade.selecionada.tipo.obra)
     
     output$ranking_georref <- renderPlot({
-        plot.ranking.georref(municipios.georref.porc, input$select_municipio_georref)
+        plot.ranking.georref(localidades.georref, input$select_localidade_georref)
     })
     
     output$ranking_tipo_obra <- renderPlot({
-        plot.ranking.tipo.obra(municipios.tipo.obra.custo.efetivo, input$select_municipio_tipo_obra)
+        plot.ranking.tipo.obra(localidades.custo.efetivo, input$select_localidade_tipo_obra)
     })
     
     filtra.regiao <- function(dado, tipo.localidade, mapa) {
-        localidade.selecionada <- ifelse(mapa == "georref", municipio.selecionado.georref, municipio.selecionado.tipo.obra)
+        localidade.selecionada <- ifelse(mapa == "georref", localidade.selecionada.georref, localidade.selecionada.tipo.obra)
         localidades.mapa <- dado
         if (tipo.localidade == "microrregiao") {
             localidades.mapa <- localidades.mapa %>% 
@@ -321,9 +321,9 @@ server <- function(input, output, session) {
         localidades.mapa
     }
     
-    muda.mapa.e.ranking.georref <- function(municipios.georref.porc) {
-        localidades.mapa <- filtra.regiao(municipios.georref.porc, tipo.localidade.selecionada.georref, "georref")
-        mapa_paraiba_georreferenciada <- get.mapa.paraiba(mapa_paraiba, localidades.mapa, tipo.localidade.selecionada.georref, municipio.selecionado.georref)
+    muda.mapa.e.ranking.georref <- function(localidades.georref) {
+        localidades.mapa <- filtra.regiao(localidades.georref, tipo.localidade.selecionada.georref, "georref")
+        mapa_paraiba_georreferenciada <- get.mapa.paraiba(mapa_paraiba, localidades.mapa, tipo.localidade.selecionada.georref, localidade.selecionada.georref)
         
         cores.georref <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
         
@@ -349,35 +349,33 @@ server <- function(input, output, session) {
                                          "Obras georreferenciadas (%)",
                                          tag.mapa.georref,
                                          mapa_paraiba_georreferenciada@data$GEOCODIG_M, 
-                                         municipio.selecionado.georref,
+                                         localidade.selecionada.georref,
                                          tipo.localidade.selecionada.georref,
                                          localidades.desc,
                                          mapa_paraiba_georreferenciada@data$cor.borda,
                                          mapa_paraiba_georreferenciada@data$largura.borda)
         
         output$ranking_georref <- renderPlot({
-            plot.ranking.georref(localidades.mapa, municipio.selecionado.georref)
+            plot.ranking.georref(localidades.mapa, localidade.selecionada.georref)
         })
     }
     
-    muda.input.municipios.georref <- function(municipios.georref.porc) {
+    muda.input.localidades.georref <- function(localidades.georref) {
         if (tipo.localidade.selecionada.georref == "municipio") {
-            municipios.input <- municipios.georref.porc %>% arrange(nome.x) %>% pull(nome.x)
-            if (!municipio.selecionado.georref %in% municipios.input) { 
-                municipio.selecionado.georref <<- municipios.input[1]
-            }
+            localidades.input <- localidades.georref %>% arrange(nome.x) %>% pull(nome.x)
+        } else if (tipo.localidade.selecionada.georref == "microrregiao") {
+            localidades.input <- localidades.georref %>% arrange(microregiao) %>% pull(microregiao)
         } else {
-            if (tipo.localidade.selecionada.georref == "microrregiao") {
-                municipios.input <- municipios.georref.porc %>% arrange(microregiao) %>% pull(microregiao)
-            } else {
-                municipios.input <- municipios.georref.porc %>% arrange(mesoregiao) %>% pull(mesoregiao)
-            }
-            municipio.selecionado.georref <<- municipios.input[1]
+            localidades.input <- localidades.georref %>% arrange(mesoregiao) %>% pull(mesoregiao)
         }
         
-        updateSelectInput(session, inputId = "select_municipio_georref", 
-                          choices = municipios.input,
-                          selected = municipio.selecionado.georref)
+        if (!localidade.selecionada.georref %in% localidades.input) { 
+            localidade.selecionada.georref <<- localidades.input[1]
+        }
+        
+        updateSelectInput(session, inputId = "select_localidade_georref", 
+                          choices = localidades.input,
+                          selected = localidade.selecionada.georref)
     }
     
     observeEvent({
@@ -390,69 +388,67 @@ server <- function(input, output, session) {
             if (ano.inicial.georref != ano1 || ano.final.georref != ano2) {
                 ano.inicial.georref <<- ano1
                 ano.final.georref <<- ano2
-                municipios.georref.porc <- get.porc.municipios.georref(obras.2013, localidades.desc, municipio.selecionado.georref, ano.inicial.georref, ano.final.georref)
+                localidades.georref <- get.porc.municipios.georref(obras.2013, localidades.desc, localidade.selecionada.georref, ano.inicial.georref, ano.final.georref)
 
-                muda.input.municipios.georref(municipios.georref.porc)
+                 muda.input.localidade.tipo.obra(localidades.georref)
                 
-                muda.mapa.e.ranking.georref(municipios.georref.porc)
+                muda.mapa.e.ranking.georref(localidades.georref)
             }
         }
     },
     priority = 2)
 
     observeEvent({
-        input$select_municipio_georref
+        input$select_localidade_georref
     }, {
         if(!is.null(input$dygraph_georref_date_window)){
-            municipio.selecionado.georref <<- input$select_municipio_georref
+            localidade.selecionada.georref <<- input$select_localidade_georref
             if(tipo.localidade.selecionada.georref != "municipio") {
-                output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, municipio.selecionado.georref)
+                output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, localidade.selecionada.georref)
             }
 
-            municipios.georref.porc <- get.porc.municipios.georref(obras.2013, localidades.desc, municipio.selecionado.georref, ano.inicial.georref, ano.final.georref)
+            localidades.georref <- get.porc.municipios.georref(obras.2013, localidades.desc, localidade.selecionada.georref, ano.inicial.georref, ano.final.georref)
 
-            muda.mapa.e.ranking.georref(municipios.georref.porc)
+            muda.mapa.e.ranking.georref(localidades.georref)
             
         }
     },
     priority = 1)
     
-    muda.input.municipio.tipo.obra <- function(municipios.tipo.obra.custo.efetivo) {
+    muda.input.localidade.tipo.obra <- function(localidades.custo.efetivo) {
         if (tipo.localidade.selecionada.tipo.obra == "municipio") {
-            municipios.input <- municipios.tipo.obra.custo.efetivo %>% arrange(nome) %>% pull(nome)
-            if (!municipio.selecionado.tipo.obra %in% municipios.input) {
-                municipio.selecionado.tipo.obra <<- municipios.input[1]
-            }
+            localidades.input <- localidades.custo.efetivo %>% arrange(nome) %>% pull(nome)
+        } else if (tipo.localidade.selecionada.tipo.obra == "microrregiao") {
+            localidades.input <- localidades.custo.efetivo %>% arrange(microregiao) %>% pull(microregiao)
         } else {
-            if (tipo.localidade.selecionada.tipo.obra == "microrregiao") {
-                municipios.input <- municipios.tipo.obra.custo.efetivo %>% arrange(microregiao) %>% pull(microregiao)
-            } else {
-                municipios.input <- municipios.tipo.obra.custo.efetivo %>% arrange(mesoregiao) %>% pull(mesoregiao)
-            }
-            municipio.selecionado.tipo.obra <<- municipios.input[1]
+            localidades.input <- localidades.custo.efetivo %>% arrange(mesoregiao) %>% pull(mesoregiao)
         }
-         
-        updateSelectInput(session, inputId = "select_municipio_tipo_obra", 
-                          choices = municipios.input,
-                          selected = municipio.selecionado.tipo.obra)
+        
+        if (!localidade.selecionada.tipo.obra %in% localidades.input) {
+            localidade.selecionada.tipo.obra <<- localidades.input[1]
+        }
+        
+        updateSelectInput(session, inputId = "select_localidade_tipo_obra", 
+                          choices = localidades.input,
+                          selected = localidade.selecionada.tipo.obra)
     }
     
-    get.municipios.tipo.obra.custo.efetivo <- function(localidades.desc) {
-        municipios.tipo.obra.custo.efetivo <- get.custo.efetivo.tipo.obra(custo.efetivo.obras, 
-                                                                          municipio.selecionado.tipo.obra, 
+    get.localidades.custo.efetivo <- function(localidades.desc) {
+        localidades.custo.efetivo <- get.custo.efetivo.tipo.obra(custo.efetivo.obras, 
+                                                                          localidade.selecionada.tipo.obra, 
                                                                           tipo.obra.selecionada,
                                                                           ano.inicial.tipo.obra, 
                                                                           ano.final.tipo.obra)
         
-        municipios.tipo.obra.custo.efetivo %>% 
-            add.borda(municipio.selecionado.tipo.obra) %>% 
+        localidades.custo.efetivo %>% 
+            add.borda(localidade.selecionada.tipo.obra) %>% 
             left_join(localidades.desc, by = "codigo_ibge") %>% 
             rename(nome = nome.x)
     }
     
-    muda.mapa.tipo.obra.e.ranking <- function(municipios.tipo.obra.custo.efetivo) {
-        localidades.mapa <- filtra.regiao(municipios.tipo.obra.custo.efetivo, tipo.localidade.selecionada.tipo.obra, "tipo.obra")
-        mapa_paraiba_custo_efetivo <- get.mapa.paraiba(mapa_paraiba, localidades.mapa, tipo.localidade.selecionada.tipo.obra, municipio.selecionado.tipo.obra)
+    muda.mapa.tipo.obra.e.ranking <- function(localidades.custo.efetivo) {
+        localidades.mapa <- filtra.regiao(localidades.custo.efetivo, tipo.localidade.selecionada.tipo.obra, "tipo.obra")
+        mapa_paraiba_custo_efetivo <- get.mapa.paraiba(mapa_paraiba, localidades.mapa, tipo.localidade.selecionada.tipo.obra, localidade.selecionada.tipo.obra)
         
         cores.custo.efetivo <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
         
@@ -478,14 +474,14 @@ server <- function(input, output, session) {
                                          "Custo efetivo das obras",
                                          tag.mapa.custo.efetivo,
                                          mapa_paraiba_custo_efetivo@data$GEOCODIG_M, 
-                                         municipio.selecionado.tipo.obra,
+                                         localidade.selecionada.tipo.obra,
                                          tipo.localidade.selecionada.tipo.obra,
                                          localidades.desc,
                                          mapa_paraiba_custo_efetivo@data$cor.borda,
                                          mapa_paraiba_custo_efetivo@data$largura.borda)
         
         output$ranking_tipo_obra <- renderPlot({
-            plot.ranking.tipo.obra(localidades.mapa, municipio.selecionado.tipo.obra)
+            plot.ranking.tipo.obra(localidades.mapa, localidade.selecionada.tipo.obra)
         })
     }
     
@@ -496,13 +492,13 @@ server <- function(input, output, session) {
         if(!is.null(input$dygraph_tipo_obra_date_window)){
             tipo.obra.selecionada <<- input$select_tipo_obra
             
-            municipios.tipo.obra.custo.efetivo <- get.municipios.tipo.obra.custo.efetivo(localidades.desc)
-            muda.input.municipio.tipo.obra(municipios.tipo.obra.custo.efetivo)
+            localidades.custo.efetivo <- get.localidades.custo.efetivo(localidades.desc)
+            muda.input.localidade.tipo.obra(localidades.custo.efetivo)
             
             output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra.selecionada, 
-                                                          tipo.localidade.selecionada.tipo.obra, municipio.selecionado.tipo.obra)
+                                                          tipo.localidade.selecionada.tipo.obra, localidade.selecionada.tipo.obra)
             
-            muda.mapa.tipo.obra.e.ranking(municipios.tipo.obra.custo.efetivo)
+            muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
         }
     })
     
@@ -520,33 +516,33 @@ server <- function(input, output, session) {
                 ano.inicial.tipo.obra <<- ano1
                 ano.final.tipo.obra <<- ano2
                 
-                municipios.tipo.obra.custo.efetivo <- get.municipios.tipo.obra.custo.efetivo(localidades.desc)
+                localidades.custo.efetivo <- get.localidades.custo.efetivo(localidades.desc)
                 
-                muda.input.municipio.tipo.obra(municipios.tipo.obra.custo.efetivo)
+                muda.input.localidade.tipo.obra(localidades.custo.efetivo)
                 
-                muda.mapa.tipo.obra.e.ranking(municipios.tipo.obra.custo.efetivo)
+                muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
             }
         }
     })
     
     observeEvent({
-        input$select_municipio_tipo_obra
+        input$select_localidade_tipo_obra
     }, {
         if(!is.null(input$dygraph_tipo_obra_date_window)){
-            municipio.selecionado.tipo.obra <<- input$select_municipio_tipo_obra
+            localidade.selecionada.tipo.obra <<- input$select_localidade_tipo_obra
             if (tipo.localidade.selecionada.tipo.obra != "municipio") {
-                print("input$select_municipio_tipo_obra")
+                print("input$select_localidade_tipo_obra")
                 output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra.selecionada, 
                                                               tipo.localidade.selecionada.tipo.obra, 
-                                                              municipio.selecionado.tipo.obra)
+                                                              localidade.selecionada.tipo.obra)
 
                 ano.inicial.tipo.obra <<- round(input$dygraph_tipo_obra_date_window[[1]])
                 ano.final.tipo.obra <<- round(input$dygraph_tipo_obra_date_window[[2]])
             }
             
-            municipios.tipo.obra.custo.efetivo <- get.municipios.tipo.obra.custo.efetivo(localidades.desc)
+            localidades.custo.efetivo <- get.localidades.custo.efetivo(localidades.desc)
             
-            muda.mapa.tipo.obra.e.ranking(municipios.tipo.obra.custo.efetivo)
+            muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
         }
     })
     
@@ -554,22 +550,22 @@ server <- function(input, output, session) {
         input$select_tipo_localidade_georref
     }, {
         tipo.localidade.selecionada.georref <<- input$select_tipo_localidade_georref
-        municipios.georref.porc <- get.porc.municipios.georref(obras.2013, localidades.desc, municipio.selecionado.georref, ano.inicial.georref, ano.final.georref)
+        localidades.georref <- get.porc.municipios.georref(obras.2013, localidades.desc, localidade.selecionada.georref, ano.inicial.georref, ano.final.georref)
         
-        muda.input.municipios.georref(municipios.georref.porc)
+         muda.input.localidade.tipo.obra(localidades.georref)
         
-        muda.mapa.e.ranking.georref(municipios.georref.porc)
+        muda.mapa.e.ranking.georref(localidades.georref)
     })
     
     observeEvent({
         input$select_tipo_localidade_tipo_obra
     }, {
         tipo.localidade.selecionada.tipo.obra <<- input$select_tipo_localidade_tipo_obra
-        municipios.tipo.obra.custo.efetivo <- get.municipios.tipo.obra.custo.efetivo(localidades.desc)
+        localidades.custo.efetivo <- get.localidades.custo.efetivo(localidades.desc)
         
-        muda.input.municipio.tipo.obra(municipios.tipo.obra.custo.efetivo)
+        muda.input.localidade.tipo.obra(localidades.custo.efetivo)
         
-        muda.mapa.tipo.obra.e.ranking(municipios.tipo.obra.custo.efetivo)
+        muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
     })
 }
 
