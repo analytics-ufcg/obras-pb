@@ -63,6 +63,7 @@ ano.inicial.tipo.obra <<- 0
 ano.final.tipo.obra <<- 3000
 tag.mapa.custo.efetivo <<- "municipios-poligono-custo-efetivo"
 
+tipo.representacao.georref <<- "relativo"
 tipo.localidade.selecionada.georref <<- "municipio"
 localidade.selecionada.georref <<- cidade.default(localidades.georref, "nome.x")
 ano.inicial.georref <<- 0
@@ -124,7 +125,7 @@ ui <- dashboardPage(
                                               "Mesorregião" = "mesorregiao"),
                                             inline = TRUE
                                ),
-                               radioButtons("select_tipo_medida_georref", "Valor representado:",
+                               radioButtons("select_tipo_representacao_georref", "Valor representado:",
                                             c("Relativo" = "relativo",
                                               "Absoluto" = "absoluto"),
                                             inline = TRUE
@@ -201,13 +202,21 @@ server <- function(input, output, session) {
     
     v <- reactiveValues(msg = "")
     
-    cores.georref <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
+    if (tipo.representacao.georref == "relativo") {
+        dados.poligonos.georref <- mapa_paraiba_georreferenciada@data$porc.georref
+        titulo.legenda <- "Obras georreferenciadas (%)"
+    } else {
+        dados.poligonos.georref <- mapa_paraiba_georreferenciada@data$qtde.georref
+        titulo.legenda <- "Obras georreferenciadas"
+    }
+    
+    cores.georref <- paleta.de.cores(dado = dados.poligonos.georref, reverse = TRUE)
     cores.custo.efetivo <- paleta.de.cores(dado = mapa_paraiba_custo_efetivo@data$custo.efetivo.log)
 
     output$mapa_georref <- renderLeaflet({
         cria.mapa(
             mapa_paraiba_georreferenciada, 
-            mapa_paraiba_georreferenciada@data$porc.georref, 
+            dados.poligonos.georref, 
             mapa_paraiba_georreferenciada@data$Nome_Munic, 
             get.popup.georref(mapa_paraiba_georreferenciada@data$Nome_Munic, 
                       mapa_paraiba_georreferenciada@data$total.obras, 
@@ -215,7 +224,7 @@ server <- function(input, output, session) {
                       mapa_paraiba_georreferenciada@data$porc.georref,
                       mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio),
             cores.georref, 
-            "Obras georreferenciadas (%)",
+            titulo.legenda,
             tag.mapa.georref,
             mapa_paraiba_georreferenciada@data$GEOCODIG_M, 
             localidade.selecionada.georref,
@@ -290,7 +299,15 @@ server <- function(input, output, session) {
         localidades.mapa <- filtra.regiao(localidades.georref, tipo.localidade.selecionada.georref, "georref")
         mapa_paraiba_georreferenciada <- get.mapa.paraiba(mapa_paraiba, localidades.mapa, tipo.localidade.selecionada.georref, localidade.selecionada.georref)
         
-        cores.georref <- paleta.de.cores(dado = mapa_paraiba_georreferenciada@data$porc.georref, reverse = TRUE)
+        if (tipo.representacao.georref == "relativo") {
+            dados.poligonos <- mapa_paraiba_georreferenciada@data$porc.georref
+            titulo.legenda.georref <- "Obras georreferenciadas (%)"
+        } else {
+            dados.poligonos <- mapa_paraiba_georreferenciada@data$qtde.georref
+            titulo.legenda.georref <- "Obras georreferenciadas"
+        }
+        
+        cores.georref <- paleta.de.cores(dado = dados.poligonos, reverse = TRUE)
         
         if (tipo.localidade.selecionada.georref == "microrregiao") {
             localidades <- mapa_paraiba_georreferenciada@data$microregiao
@@ -304,14 +321,14 @@ server <- function(input, output, session) {
             clearGroup( group = tag.mapa.georref ) %>%
             clearControls() %>%
             adiciona.poligonos.e.legenda(cores.georref,
-                                         mapa_paraiba_georreferenciada@data$porc.georref, 
+                                         dados.poligonos,
                                          mapa_paraiba_georreferenciada@data$Nome_Munic, 
                                          get.popup.georref(mapa_paraiba_georreferenciada@data$Nome_Munic, 
                                                            mapa_paraiba_georreferenciada@data$total.obras, 
                                                            mapa_paraiba_georreferenciada@data$qtde.georref, 
                                                            mapa_paraiba_georreferenciada@data$porc.georref,
                                                            mapa_paraiba_georreferenciada@data$possui.georref.mas.tem.coordenadas.fora.municipio),
-                                         "Obras georreferenciadas (%)",
+                                         titulo.legenda.georref,
                                          tag.mapa.georref,
                                          mapa_paraiba_georreferenciada@data$GEOCODIG_M, 
                                          localidade.selecionada.georref,
@@ -515,6 +532,14 @@ server <- function(input, output, session) {
         muda.input.localidade.tipo.obra(localidades.custo.efetivo)
         
         muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
+    })
+    
+    observeEvent({
+        input$select_tipo_representacao_georref
+    }, {
+        tipo.representacao.georref <<- input$select_tipo_representacao_georref
+        
+        muda.mapa.e.ranking.georref(localidades.georref)
     })
 }
 
