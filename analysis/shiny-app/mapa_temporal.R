@@ -325,7 +325,7 @@ server <- function(input, output, session) {
                                                   tipo.localidade.selecionada.tipo.obra, localidade.selecionada.tipo.obra)
     
     output$ranking_georref <- renderPlot({
-        plot.ranking.georref(localidades.georref, input$select_localidade_georref)
+        plot.ranking.georref(localidades.georref, input$select_localidade_georref, tipo.representacao.georref)
     })
     
     output$ranking_tipo_obra <- renderPlot({
@@ -388,7 +388,7 @@ server <- function(input, output, session) {
                                          mapa_paraiba_georreferenciada@data$largura.borda)
         
         output$ranking_georref <- renderPlot({
-            plot.ranking.georref(localidades.mapa, localidade.selecionada.georref)
+            plot.ranking.georref(localidades.mapa, localidade.selecionada.georref, tipo.representacao.georref)
         })
     }
     
