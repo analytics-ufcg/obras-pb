@@ -124,6 +124,11 @@ ui <- dashboardPage(
                                               "Mesorregião" = "mesorregiao"),
                                             inline = TRUE
                                ),
+                               radioButtons("select_tipo_medida_georref", "Valor representado:",
+                                            c("Relativo" = "relativo",
+                                              "Absoluto" = "absoluto"),
+                                            inline = TRUE
+                               ),
                                selectInput("select_localidade_georref", label = h3("Selecione a localidade"),
                                            choices = localidades.georref$nome.x,
                                            selected = cidade.default(localidades.georref, "nome.x"))
