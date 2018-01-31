@@ -77,22 +77,24 @@ mapa_paraiba_georreferenciada <- get.mapa.paraiba(mapa_paraiba, localidades.geor
 mapa_paraiba_custo_efetivo <- get.mapa.paraiba(mapa_paraiba, localidades.custo.efetivo, tipo.localidade.selecionada.tipo.obra, localidade.selecionada.tipo.obra)
 
 # Interface do usuário
+sidebar.width <- 220
 ui <- dashboardPage(
     title = "Obras georreferenciadas",
+    skin = "purple", 
     dashboardHeader( 
         title = span(
                     tagList(
-                        img(src = "tce-cropped.png", height = 45), 
-                        "Obras georreferenciadas"
+                        "Obras PB"
                     )
                 ),
-        titleWidth = 330
+        titleWidth = sidebar.width
     ),
     dashboardSidebar( 
         sidebarMenu(
             menuItem("Obras georreferenciadas", tabName = "obras-georref", icon = icon("map-marker")),
-            menuItem("Tipos de obras", icon = icon("th"), tabName = "tipos-obras", badgeLabel = "new", badgeColor = "green")
-        )
+            menuItem("Tipos de obras", icon = icon("building"), tabName = "tipos-obras")
+        ),
+        width = sidebar.width
     ),
     dashboardBody(
         tags$head(tags$style(HTML('.box-header {min-height: 35px;}'))),
