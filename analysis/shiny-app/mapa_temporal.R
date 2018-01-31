@@ -260,7 +260,8 @@ server <- function(input, output, session) {
         )
     })
     
-    dygraph.georref <- function(dado, tipo.localidade.selecionada, localidade.selecionada, tipo.representacao) {
+    dygraph.georref <- function(dado, tipo.localidade.selecionada, localidade.selecionada, 
+                                tipo.representacao, troca.represent = FALSE) {
         if (tipo.localidade.selecionada == "microrregiao") {
             dado.filtr <- dado %>% 
                 filter(microregiao == localidade.selecionada)
@@ -287,11 +288,20 @@ server <- function(input, output, session) {
                 select(ano, qtde.georref)
         }
         
-        renderDygraph({
-            dado.agrup %>% 
+        if (troca.represent) {
+            dygraph <- dado.agrup %>% 
+                dygraph() %>% 
+                dyRangeSelector(dateWindow = c(ano.inicial.georref, ano.final.georref)) %>%
+                dyLegend(show = "never")
+        } else {
+            dygraph <- dado.agrup %>% 
                 dygraph() %>% 
                 dyRangeSelector() %>%
                 dyLegend(show = "never")
+        }
+        
+        renderDygraph({
+            dygraph
         })
     }
     
@@ -350,7 +360,9 @@ server <- function(input, output, session) {
     
     muda.mapa.e.ranking.georref <- function(localidades.georref) {
         localidades.mapa <- filtra.regiao(localidades.georref, tipo.localidade.selecionada.georref, "georref")
-        mapa_paraiba_georreferenciada <- get.mapa.paraiba(mapa_paraiba, localidades.mapa, tipo.localidade.selecionada.georref, localidade.selecionada.georref)
+        mapa_paraiba_georreferenciada <- get.mapa.paraiba(mapa_paraiba, localidades.mapa, 
+                                                          tipo.localidade.selecionada.georref, 
+                                                          localidade.selecionada.georref)
         
         if (tipo.representacao.georref == "relativo") {
             dados.poligonos <- mapa_paraiba_georreferenciada@data$porc.georref
@@ -443,7 +455,6 @@ server <- function(input, output, session) {
                 output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, 
                                                           localidade.selecionada.georref, tipo.representacao.georref)
             }
-
             localidades.georref <- get.porc.municipios.georref(obras.2013, localidades.desc, localidade.selecionada.georref, ano.inicial.georref, ano.final.georref)
 
             muda.mapa.e.ranking.georref(localidades.georref)
@@ -607,11 +618,15 @@ server <- function(input, output, session) {
     }, {
         tipo.representacao.georref <<- input$select_tipo_representacao_georref
         
+        localidades.georref <- get.porc.municipios.georref(obras.2013, localidades.desc, 
+                                                           localidade.selecionada.georref,
+                                                           ano.inicial.georref, ano.final.georref)
         muda.mapa.e.ranking.georref(localidades.georref)
         
         output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, 
-                                                  localidade.selecionada.georref, tipo.representacao.georref)
-    })
+                                                  localidade.selecionada.georref, tipo.representacao.georref,
+                                                  TRUE)
+    }, ignoreInit = TRUE)
 }
 
 shinyApp(ui, server)
