@@ -377,7 +377,7 @@ cria.mapa <- function(dado, valor.municipio, tooltip, janela, cores, titulo, tag
                       localidade.selecionada, tipo.localidade, localidades.desc, cor.borda = "black", largura.borda = 1) {
   dado %>%
     leaflet() %>%
-    addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+    addProviderTiles(providers$Esri.WorldGrayCanvas, options = providerTileOptions(minZoom = 7, maxZoom = 14)) %>%
     adiciona.poligonos.e.legenda(cores, valor.municipio, tooltip, janela, titulo, tag_grupo, cod.localidades,
                                  localidade.selecionada, tipo.localidade, localidades.desc, cor.borda, largura.borda)
 }
