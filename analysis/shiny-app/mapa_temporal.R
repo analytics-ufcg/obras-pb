@@ -328,11 +328,13 @@ server <- function(input, output, session) {
                                                   tipo.localidade.selecionada.tipo.obra, localidade.selecionada.tipo.obra)
     
     output$ranking_georref <- renderPlot({
-        plot.ranking.georref(localidades.georref, input$select_localidade_georref, tipo.representacao.georref)
+        plot.ranking.georref(localidades.georref, input$select_localidade_georref, 
+                             tipo.representacao.georref, tipo.localidade.selecionada.georref)
     })
     
     output$ranking_tipo_obra <- renderPlot({
-        plot.ranking.tipo.obra(localidades.custo.efetivo, input$select_localidade_tipo_obra)
+        plot.ranking.tipo.obra(localidades.custo.efetivo, input$select_localidade_tipo_obra,
+                               tipo.localidade.selecionada.tipo.obra)
     })
     
     filtra.regiao <- function(dado, tipo.localidade, mapa) {
@@ -391,7 +393,8 @@ server <- function(input, output, session) {
                                          mapa_paraiba_georreferenciada@data$largura.borda)
         
         output$ranking_georref <- renderPlot({
-            plot.ranking.georref(localidades.mapa, localidade.selecionada.georref, tipo.representacao.georref)
+            plot.ranking.georref(localidades.mapa, localidade.selecionada.georref, 
+                                 tipo.representacao.georref, tipo.localidade.selecionada.georref)
         })
     }
     
@@ -517,7 +520,8 @@ server <- function(input, output, session) {
                                          mapa_paraiba_custo_efetivo@data$largura.borda)
         
         output$ranking_tipo_obra <- renderPlot({
-            plot.ranking.tipo.obra(localidades.mapa, localidade.selecionada.tipo.obra)
+            plot.ranking.tipo.obra(localidades.mapa, localidade.selecionada.tipo.obra, 
+                                   tipo.localidade.selecionada.tipo.obra)
         })
     }
     
