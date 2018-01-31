@@ -257,7 +257,7 @@ server <- function(input, output, session) {
         )
     })
     
-    dygraph.georref <- function(dado, tipo.localidade.selecionada, localidade.selecionada) {
+    dygraph.georref <- function(dado, tipo.localidade.selecionada, localidade.selecionada, tipo.representacao) {
         if (tipo.localidade.selecionada == "microrregiao") {
             dado.filtr <- dado %>% 
                 filter(microregiao == localidade.selecionada)
@@ -268,15 +268,24 @@ server <- function(input, output, session) {
             dado.filtr <- dado
         }
         
+        dado.agrup <- dado.filtr %>% 
+            group_by(ano) %>% 
+            summarise(
+                total.obras = n(),
+                qtde.georref = sum(!is.inputado),
+                porc.georref = (qtde.georref / total.obras) * 100
+            )
+        
+        if (tipo.representacao == "relativo") {
+            dado.agrup <- dado.agrup %>% 
+                select(ano, porc.georref)
+        } else {
+            dado.agrup <- dado.agrup %>% 
+                select(ano, qtde.georref)
+        }
+        
         renderDygraph({
-            dado.filtr %>% 
-                group_by(ano) %>% 
-                summarise(
-                    total.obras = n(),
-                    qtde.georref = sum(!is.inputado),
-                    porc.georref = (qtde.georref / total.obras) * 100
-                ) %>% 
-                select(ano, porc.georref) %>% 
+            dado.agrup %>% 
                 dygraph() %>% 
                 dyRangeSelector() %>%
                 dyLegend(show = "never")
@@ -309,13 +318,14 @@ server <- function(input, output, session) {
         })
     }
     
-    output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, localidade.selecionada.georref)
+    output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, 
+                                              localidade.selecionada.georref, tipo.representacao.georref)
     
     output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, get.top.10.tipo.obra(custo.efetivo.obras)[1], 
                                                   tipo.localidade.selecionada.tipo.obra, localidade.selecionada.tipo.obra)
     
     output$ranking_georref <- renderPlot({
-        plot.ranking.georref(localidades.georref, input$select_localidade_georref)
+        plot.ranking.georref(localidades.georref, input$select_localidade_georref, tipo.representacao.georref)
     })
     
     output$ranking_tipo_obra <- renderPlot({
@@ -378,7 +388,7 @@ server <- function(input, output, session) {
                                          mapa_paraiba_georreferenciada@data$largura.borda)
         
         output$ranking_georref <- renderPlot({
-            plot.ranking.georref(localidades.mapa, localidade.selecionada.georref)
+            plot.ranking.georref(localidades.mapa, localidade.selecionada.georref, tipo.representacao.georref)
         })
     }
     
@@ -427,7 +437,8 @@ server <- function(input, output, session) {
             localidade.selecionada.georref <<- input$select_localidade_georref
             
             if(tipo.localidade.selecionada.georref != "municipio") {
-                output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, localidade.selecionada.georref)
+                output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, 
+                                                          localidade.selecionada.georref, tipo.representacao.georref)
             }
 
             localidades.georref <- get.porc.municipios.georref(obras.2013, localidades.desc, localidade.selecionada.georref, ano.inicial.georref, ano.final.georref)
@@ -510,7 +521,6 @@ server <- function(input, output, session) {
     observeEvent({
         input$select_tipo_obra
     }, {
-        print("input$select_tipo_obra")
         if(!is.null(input$dygraph_tipo_obra_date_window)){
             tipo.obra.selecionada <<- input$select_tipo_obra
             
@@ -533,7 +543,6 @@ server <- function(input, output, session) {
             
             if (!exists("ano.inicial.tipo.obra") || !exists("ano.final.tipo.obra") ||
                 ano.inicial.tipo.obra != ano1 || ano.final.tipo.obra != ano2) {
-                print("input$dygraph_tipo_obra_date_window")
                 
                 ano.inicial.tipo.obra <<- ano1
                 ano.final.tipo.obra <<- ano2
@@ -553,7 +562,6 @@ server <- function(input, output, session) {
         if(!is.null(input$dygraph_tipo_obra_date_window)){
             localidade.selecionada.tipo.obra <<- input$select_localidade_tipo_obra
             if (tipo.localidade.selecionada.tipo.obra != "municipio") {
-                print("input$select_localidade_tipo_obra")
                 output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra.selecionada, 
                                                               tipo.localidade.selecionada.tipo.obra, 
                                                               localidade.selecionada.tipo.obra)
@@ -597,6 +605,9 @@ server <- function(input, output, session) {
         tipo.representacao.georref <<- input$select_tipo_representacao_georref
         
         muda.mapa.e.ranking.georref(localidades.georref)
+        
+        output$dygraph_georref <- dygraph.georref(obras.2013, tipo.localidade.selecionada.georref, 
+                                                  localidade.selecionada.georref, tipo.representacao.georref)
     })
 }
 
