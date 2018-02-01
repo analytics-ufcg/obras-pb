@@ -409,8 +409,9 @@ dygraph.tipo.obra <- function(dado, tipo.obra) {
 #' @param dado Dataframe com dados das obras.
 #' @param municipio Nome do município.
 #' @param tipo.dado.representado Tipo do dado representado, o qual pode ser relativo ou absoluto.
+#' @param tipo.localidade Tipo da localidade, a qual pode ser municipio, microregiao ou mesoregiao.
 #' @export
-plot.ranking.georref <- function(dado, municipio, tipo.dado.representado) {
+plot.ranking.georref <- function(dado, municipio, tipo.dado.representado, tipo.localidade) {
   municipio.selecionado <- dado %>% filter(nome.x == municipio)
 
   if (tipo.dado.representado == "relativo") {
@@ -440,24 +441,29 @@ plot.ranking.georref <- function(dado, municipio, tipo.dado.representado) {
     coord_flip() +
     theme(legend.position="bottom")
 
-  top.25 <- dado %>% arrange_(paste0("-", dado.var)) %>% head(25)
-
-  if ((top.25 %>% filter(municipio == nome.x) %>% ungroup() %>% count()) == 0) {
-    plot <- plot +
-      labs(title = "Top 24 municípios que mais \ngeorreferenciam + selecionado") +
-      facet_grid(class ~ ., scales = "free_y", space = "free_y")
+  if (tipo.localidade == "municipio") {
+      top.25 <- dado %>% arrange_(paste0("-", dado.var)) %>% head(25)
+    
+      if ((top.25 %>% filter(municipio == nome.x) %>% ungroup() %>% count()) == 0) {
+        plot <- plot +
+          labs(title = "Top 24 municípios que mais \ngeorreferenciam + selecionado") +
+          facet_grid(class ~ ., scales = "free_y", space = "free_y")
+      } else {
+        plot <- plot +
+          labs(title = "Top 25 municípios que mais \ngeorreferenciam")
+      }
+    
+      if (nrow(municipio.selecionado) > 0) {
+        plot <- plot +
+          geom_text(
+            data = filter(top.24.selecionado, municipio == nome.x),
+            aes(label = "selecionado"),
+            y = max(top.25 %>% pull(dado.var)) / 2
+          )
+      }
   } else {
-    plot <- plot +
-      labs(title = "Top 25 municípios que mais \ngeorreferenciam")
-  }
-
-  if (nrow(municipio.selecionado) > 0) {
-    plot <- plot +
-      geom_text(
-        data = filter(top.24.selecionado, municipio == nome.x),
-        aes(label = "selecionado"),
-        y = max(top.25 %>% pull(dado.var)) / 2
-      )
+      plot <- plot +
+          labs(title = "Top 25 municípios que mais \ngeorreferenciam na região")
   }
   plot +
     theme_bw()
@@ -468,7 +474,7 @@ plot.ranking.georref <- function(dado, municipio, tipo.dado.representado) {
 #' @param dado Dataframe com os dados das obras.
 #' @param municipio Nome do município.
 #' @export
-plot.ranking.tipo.obra <- function(dado, municipio) {
+plot.ranking.tipo.obra <- function(dado, municipio, tipo.localidade) {
   municipio.selecionado <- dado %>% filter(nome == municipio)
 
   top.24.selecionado <- dado %>%
@@ -490,26 +496,31 @@ plot.ranking.tipo.obra <- function(dado, municipio) {
     coord_flip() +
     theme(legend.position="bottom")
 
-  top.25 <- dado %>% arrange(custo.efetivo) %>% head(25)
-
-  if ((top.25 %>% filter(municipio == nome) %>% ungroup() %>% count()) == 0) {
-    plot <- plot +
-      labs(title = "Top 24 municípios com menor \ncusto efetivo + selecionado") +
-      facet_grid(class ~ ., scales = "free_y", space = "free_y")
+  if (tipo.localidade == "municipio") {
+      top.25 <- dado %>% arrange(custo.efetivo) %>% head(25)
+    
+      if ((top.25 %>% filter(municipio == nome) %>% ungroup() %>% count()) == 0) {
+        plot <- plot +
+          labs(title = "Top 24 municípios com menor \ncusto efetivo + selecionado") +
+          facet_grid(class ~ ., scales = "free_y", space = "free_y")
+      } else {
+        plot <- plot +
+          labs(title = "Top 25 municípios com menor \ncusto efetivo")
+      }
+    
+      if (nrow(municipio.selecionado) > 0) {
+        plot <- plot +
+          geom_text(
+            data = filter(top.24.selecionado, municipio == nome),
+            aes(label = "selecionado"),
+            y = max(top.25$custo.efetivo) / 2
+          )
+      }
   } else {
-    plot <- plot +
-      labs(title = "Top 25 municípios com menor \ncusto efetivo")
+      plot <- plot +
+          labs(title = "Top 25 municípios com menor \ncusto efetivo na região")
   }
-
-  if (nrow(municipio.selecionado) > 0) {
-    plot <- plot +
-      geom_text(
-        data = filter(top.24.selecionado, municipio == nome),
-        aes(label = "selecionado"),
-        y = max(top.25$custo.efetivo) / 2
-      )
-  }
-
+  
   plot +
     theme_bw()
 }
