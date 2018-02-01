@@ -62,6 +62,26 @@ server_custo_efetivo <- function(input, output, session) {
                                tipo.localidade.selecionada.tipo.obra)
     })
     
+    muda.listagem.obras <- function() {
+        output$obras_custo_efetivo <- DT::renderDataTable({
+            get.obras.custo.efetivo(obras.2013, ano.inicial.tipo.obra, ano.final.tipo.obra,
+                                    localidade.selecionada.tipo.obra, tipo.localidade.selecionada.tipo.obra, 
+                                    tipo.obra.selecionada)
+            },
+            options = list(
+                autoWidth = TRUE,
+                language = list(
+                    info = "Mostrando obras de _START_ à _END_ de um total de _TOTAL_",
+                    lengthMenu = "Mostrar _MENU_ itens",
+                    paginate = list(previous = "Anterior", `next` = "Próxima", 
+                                    first = "Primeira", last = "Última"),
+                    search = "Pesquisar:"
+                ))
+        )
+    }
+    
+    muda.listagem.obras()
+    
     muda.input.localidade.tipo.obra <- function(localidades.custo.efetivo) {
         if (tipo.localidade.selecionada.tipo.obra == "municipio") {
             localidades.input <- localidades.custo.efetivo %>% arrange(nome) %>% pull(nome)
@@ -146,6 +166,7 @@ server_custo_efetivo <- function(input, output, session) {
                                                           tipo.localidade.selecionada.tipo.obra, localidade.selecionada.tipo.obra)
             
             muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
+            muda.listagem.obras()
         }
     })
     
@@ -167,6 +188,8 @@ server_custo_efetivo <- function(input, output, session) {
                 muda.input.localidade.tipo.obra(localidades.custo.efetivo)
                 
                 muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
+                
+                muda.listagem.obras()
             }
         }
     })
@@ -188,6 +211,8 @@ server_custo_efetivo <- function(input, output, session) {
             localidades.custo.efetivo <- get.localidades.custo.efetivo(localidades.desc)
             
             muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
+            
+            muda.listagem.obras()
         }
     })
     
@@ -200,5 +225,7 @@ server_custo_efetivo <- function(input, output, session) {
         muda.input.localidade.tipo.obra(localidades.custo.efetivo)
         
         muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
+        
+        muda.listagem.obras()
     })
 }
