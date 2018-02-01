@@ -555,3 +555,20 @@ add.borda <- function(dado, municipio.selecionado, cor.destacada = "blue", cor.d
         )
 }
 
+#' @title filtra.regiao
+#' @description Filtra dados de acordo com a localidade selecionada
+#' @param dado Dataframe que contem dados dos municípios
+#' @param tipo.localidade Tipo da localidade selecionada, que pode ser microrregiao, mesorregiao ou municipio
+#' @param localidade.selecionada String da localidade selecionada
+#' @export
+filtra.regiao <- function(dado, tipo.localidade, localidade.selecionada) {
+    localidades.mapa <- dado
+    if (tipo.localidade == "microrregiao") {
+        localidades.mapa <- localidades.mapa %>% 
+            filter(microregiao == localidade.selecionada)
+    } else if (tipo.localidade == "mesorregiao") {
+        localidades.mapa <- localidades.mapa %>% 
+            filter(mesoregiao == localidade.selecionada)
+    }
+    localidades.mapa
+}
