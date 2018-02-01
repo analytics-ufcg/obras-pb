@@ -77,15 +77,13 @@ mapa_paraiba_georreferenciada <- get.mapa.paraiba(mapa_paraiba, localidades.geor
 mapa_paraiba_custo_efetivo <- get.mapa.paraiba(mapa_paraiba, localidades.custo.efetivo, tipo.localidade.selecionada.tipo.obra, localidade.selecionada.tipo.obra)
 
 # Interface do usuário
-sidebar.width <- 220
+sidebar.width <- 240
 ui <- dashboardPage(
-    title = "Obras georreferenciadas",
+    title = "Sagres obras",
     skin = "purple", 
     dashboardHeader( 
         title = span(
-                    tagList(
-                        "Obras PB"
-                    )
+                    img(src = "sagres-obras.png")
                 ),
         titleWidth = sidebar.width
     ),
@@ -99,6 +97,7 @@ ui <- dashboardPage(
     dashboardBody(
         tags$head(tags$style(HTML('.box-header {min-height: 35px;}'))),
         tags$head(tags$link(rel="shortcut icon", href="tce-cropped.png")),
+        tags$head(tags$link(rel="shortcut icon", href="sagres-obras.png")),
         tags$head(
             HTML("<script>
                      var socket_timeout_interval
@@ -119,6 +118,14 @@ ui <- dashboardPage(
                 fluidRow(
                     height = "100vh",
                     column(width = 12,
+                           box(width = NULL,
+                               solidHeader = TRUE,
+                               collapsible = FALSE,
+                               h2("Painel I - Obras georreferenciadas"),
+                               tags$p("Este painel fornece dados sumarizados e permite ter uma visão geral de quais gestões municipais mais georreferenciam suas obras. É possível ainda filtrar as obras por microrregião/mesorregião
+                                      e pelo ano das obras, permitindo assim que sejam realizadas análises históricas sobre os municípios. O painel conta ainda com um ranking que filtra 
+                                      as obras através dos filtros selecionados e mostra os 25 municípios que possuem mais obras georreferenciadas. Por fim, é possível também visualizar os dados de forma relativa ou absoluta.")
+                           ),
                            box(width = NULL,
                                solidHeader = TRUE,
                                collapsible = TRUE,
@@ -159,6 +166,16 @@ ui <- dashboardPage(
                 tabName = "tipos-obras",
                 fluidRow(
                     column(width = 12,
+                           box(width = NULL,
+                               solidHeader = TRUE,
+                               collapsible = FALSE,
+                               h2("Painel II - Custo efetivo das obras"),
+                               tags$p("Este painel apresenta dados sobre o custo das obras por unidade de medida construída dos mais diversos tipos de obras realizadas no estado, 
+                                    permitindo uma fácil análise e detecção de anomalias nos custos das obras. É possível filtrar as obras por microrregião/mesorregião
+                                      e pelo ano das mesmas, permitindo assim que sejam realizadas análises históricas sobre os municípios. O painel conta ainda com um ranking que filtra 
+                                      as obras através dos filtros selecionados e mostra os 25 municípios que possuem o melhor custo efetivo.
+                                      Por fim, é possível também selecionar o tipo de obra que se deseja analisar.")
+                           ),
                            box(width = NULL,
                                solidHeader = TRUE,
                                collapsible = TRUE,
