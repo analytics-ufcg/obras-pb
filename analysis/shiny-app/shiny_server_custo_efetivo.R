@@ -59,7 +59,7 @@ server_custo_efetivo <- function(input, output, session) {
     
     output$ranking_tipo_obra <- renderPlot({
         plot.ranking.tipo.obra(localidades.custo.efetivo, input$select_localidade_tipo_obra,
-                               tipo.localidade.selecionada.tipo.obra)
+                               tipo.localidade.selecionada.tipo.obra, cores.custo.efetivo)
     })
     
     muda.input.localidade.tipo.obra <- function(localidades.custo.efetivo) {
@@ -129,7 +129,7 @@ server_custo_efetivo <- function(input, output, session) {
         
         output$ranking_tipo_obra <- renderPlot({
             plot.ranking.tipo.obra(localidades.mapa, localidade.selecionada.tipo.obra, 
-                                   tipo.localidade.selecionada.tipo.obra)
+                                   tipo.localidade.selecionada.tipo.obra, cores.custo.efetivo)
         })
     }
     
