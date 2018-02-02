@@ -431,17 +431,18 @@ plot.ranking.georref <- function(dado, municipio, tipo.dado.representado, tipo.l
     mutate(class = ifelse(nome.x == municipio, "selecionado", "top 24")) %>% 
     mutate_(cor = paste("pal(", dado.var, ")"))
   
-  cores <- top.24.selecionado %>% arrange_(dado.var) %>% pull(dado.var) %>% pal()
+  #cores <- top.24.selecionado %>% arrange_(dado.var) %>% pull(dado.var) %>% pal()
+  cores <- top.24.selecionado %>% ungroup() %>% arrange_(dado.var) %>% select("cor") %>% distinct() %>% pull(cor)
 
   plot <- top.24.selecionado %>%
     ggplot(aes_string(x = paste("reorder(nome.x, ", dado.var, ")"),
                       y = dado.var,
-                      fill = dado.var)) +
+                      fill = "cor")) +
     geom_bar(stat="identity") +
     guides(fill=FALSE, colour = FALSE) +
     labs(x = "Município",
          y = legenda.eixo.y) +
-    scale_fill_gradientn(colors = cores) +
+    scale_fill_manual(values = cores) +
     coord_flip() +
     theme(legend.position="bottom")
 
@@ -492,17 +493,19 @@ plot.ranking.tipo.obra <- function(dado, municipio, tipo.localidade, pal) {
     mutate(class = ifelse(nome == municipio, "selecionado", "top 24"),
            cor = pal(custo.efetivo.log))
   
-  cores <- top.24.selecionado %>% arrange(custo.efetivo.log) %>% pull(cor)
+  #cores <- top.24.selecionado %>% arrange(custo.efetivo.log) %>% pull(cor)
+  cores <- top.24.selecionado %>% ungroup() %>% arrange(-custo.efetivo.log) %>% 
+      select(cor) %>% distinct() %>% pull(cor)
 
   plot <- top.24.selecionado %>%
   ggplot(aes(x = reorder(nome, -custo.efetivo.log),
              y = custo.efetivo,
-             fill = custo.efetivo.log)) +
+             fill = cor)) +
   geom_bar(stat="identity") +
   guides(fill=FALSE, colour = FALSE) +
   labs(x = "Município",
        y = "Custo efetivo por m2") +
-  scale_fill_gradientn(colors = cores) +
+  scale_fill_manual(values = cores) +
   coord_flip() +
   theme(legend.position="bottom")
 
