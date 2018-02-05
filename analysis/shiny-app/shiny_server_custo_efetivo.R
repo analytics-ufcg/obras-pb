@@ -50,7 +50,7 @@ server_custo_efetivo <- function(input, output, session) {
                 ) %>%
                 select(ano, custo.efetivo) %>%
                 dygraph() %>%
-                dyRangeSelector() %>%
+                dyRangeSelector(dateWindow = c(menor.ano, maior.ano)) %>%
                 dyLegend(show = "never")
         })
     }
