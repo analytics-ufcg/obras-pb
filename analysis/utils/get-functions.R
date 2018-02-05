@@ -572,3 +572,31 @@ filtra.regiao <- function(dado, tipo.localidade, localidade.selecionada) {
     }
     localidades.mapa
 }
+
+#' @title get.obras.custo.efetivo
+#' @description Retorna as obras dado a janela de tempo, local e tipo da obra
+#' @param dado Dataframe de obras
+#' @param ano.inicial Ano inicial para filtro das obras
+#' @param ano.final Ano final para filtro das obras
+#' @param local Localidade da obra
+#' @param tipo.localidade Tipo da localidade, que pode ser microrregiao, mesorregiao ou municipio
+#' @param tipo.obra Tipo da obra
+#' @export
+get.obras.custo.efetivo <- function(dado, ano.inicial, ano.final, local, tipo.localidade, tipo.obra) {
+    var.tipo.localidade <- ifelse(tipo.localidade == "microrregiao", 
+                                  "microregiao", 
+                                  ifelse(tipo.localidade == "mesorregiao",
+                                         "mesoregiao",
+                                         "nome.x"))
+    dado %>% 
+        filter_(paste0(var.tipo.localidade, " == ", "'", local, "'")) %>% 
+        filter(ano >= ano.inicial, 
+               ano <= ano.final,
+               nome.y == tipo.obra) %>% 
+        select(nome.x, data_inicio_obra, descricao_sucinta_obra, valor_obra, dimensao, unidadeMedida) %>% 
+        rename(
+            local = nome.x,
+            unidade_medida = unidadeMedida
+        ) %>% 
+        mutate(custo_efetivo = valor_obra / dimensao)
+}
