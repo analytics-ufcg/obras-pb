@@ -399,7 +399,7 @@ dygraph.tipo.obra <- function(dado, tipo.obra) {
       ) %>%
       select(ano, custo.efetivo) %>%
       dygraph() %>%
-      dyRangeSelector() %>%
+      dyRangeSelector(dateWindow = c(menor.ano, maior.ano)) %>%
       dyLegend(show = "never")
   })
 }
