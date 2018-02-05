@@ -201,6 +201,7 @@ server_georref <- function(input, output, session) {
         input$select_tipo_representacao_georref
     }, {
         tipo.representacao.georref <<- input$select_tipo_representacao_georref
+        localidades.georref <- get.porc.municipios.georref(obras.2013, localidades.desc, localidade.selecionada.georref, ano.inicial.georref, ano.final.georref)
         
         muda.mapa.e.ranking.georref(localidades.georref)
         
