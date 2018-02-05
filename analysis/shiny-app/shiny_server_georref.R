@@ -159,8 +159,6 @@ server_georref <- function(input, output, session) {
                 ano.final.georref <<- ano2
                 localidades.georref <- get.porc.municipios.georref(obras.2013, localidades.desc, localidade.selecionada.georref, ano.inicial.georref, ano.final.georref)
                 
-                muda.input.localidades.georref(localidades.georref)
-                
                 muda.mapa.e.ranking.georref(localidades.georref)
             }
         }
