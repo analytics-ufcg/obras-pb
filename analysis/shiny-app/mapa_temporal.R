@@ -72,7 +72,7 @@ tag.mapa.custo.efetivo <<- "municipios-poligono-custo-efetivo"
 
 tipo.representacao.georref <<- "relativo"
 tipo.localidade.selecionada.georref <<- "municipio"
-localidade.selecionada.georref <<- cidade.default(localidades.georref, "nome.x")
+localidade.selecionada.georref <<- "Todos"
 ano.inicial.georref <<- 0
 ano.final.georref <<- 3000
 tag.mapa.georref <<- "municipios-poligono-georref"

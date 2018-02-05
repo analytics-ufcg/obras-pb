@@ -63,7 +63,7 @@ ui <- dashboardPage(
                                             inline = TRUE
                                ),
                                selectInput("select_localidade_georref", label = h3("Selecione a localidade"),
-                                           choices = localidades.georref$nome.x,
+                                           choices = c("Todos", localidades.georref$nome.x),
                                            selected = cidade.default(localidades.georref, "nome.x"))
                                
                            )
