@@ -71,7 +71,7 @@ server_georref <- function(input, output, session) {
         renderDygraph({
             dado.agrup %>% 
                 dygraph() %>% 
-                dyRangeSelector() %>%
+                dyRangeSelector(dateWindow = c(menor.ano - 1, maior.ano + 1)) %>%
                 dyLegend(show = "never")
         })
     }
