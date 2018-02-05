@@ -14,7 +14,8 @@ server_custo_efetivo <- function(input, output, session) {
             paste("Município: ", mapa_paraiba_custo_efetivo@data$Nome_Munic, 
                   "</br>Custo efetivo: R$", format(mapa_paraiba_custo_efetivo@data$custo.efetivo, 
                                                    digits = 2, big.mark=".", decimal.mark = ",", 
-                                                   scientific = FALSE)
+                                                   scientific = FALSE), 
+                  "por", get.unidade.medida(tipos.das.obras, tipo.obra.selecionada)
             ),
             cores.custo.efetivo, 
             "Custo efetivo das obras",
@@ -59,7 +60,7 @@ server_custo_efetivo <- function(input, output, session) {
     
     output$ranking_tipo_obra <- renderPlot({
         plot.ranking.tipo.obra(localidades.custo.efetivo, input$select_localidade_tipo_obra,
-                               tipo.localidade.selecionada.tipo.obra, cores.custo.efetivo)
+                               tipo.localidade.selecionada.tipo.obra, tipos.das.obras, tipo.obra.selecionada, cores.custo.efetivo)
     })
     
     muda.listagem.obras <- function() {
@@ -136,7 +137,8 @@ server_custo_efetivo <- function(input, output, session) {
                                          paste("Município: ", mapa_paraiba_custo_efetivo@data$Nome_Munic,
                                                "</br>Custo efetivo: R$", format(mapa_paraiba_custo_efetivo@data$custo.efetivo,
                                                                                 digits = 2, big.mark=".", decimal.mark = ",",
-                                                                                scientific = FALSE)
+                                                                                scientific = FALSE), 
+                                               "por", get.unidade.medida(tipos.das.obras, tipo.obra.selecionada)
                                          ),
                                          "Custo efetivo das obras",
                                          tag.mapa.custo.efetivo,
@@ -149,7 +151,7 @@ server_custo_efetivo <- function(input, output, session) {
         
         output$ranking_tipo_obra <- renderPlot({
             plot.ranking.tipo.obra(localidades.mapa, localidade.selecionada.tipo.obra, 
-                                   tipo.localidade.selecionada.tipo.obra, cores.custo.efetivo)
+                                   tipo.localidade.selecionada.tipo.obra, tipos.das.obras, tipo.obra.selecionada, cores.custo.efetivo)
         })
     }
     

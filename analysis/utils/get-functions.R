@@ -474,6 +474,19 @@ plot.ranking.georref <- function(dado, municipio, tipo.dado.representado, tipo.l
     theme_bw()
 }
 
+#' @title get.unidade.medida
+#' @description Retorna a unidade de medida do tipo de obra selecionada
+#' @param tipos.das.obras Dataframe com tipos das obras e unidades de medida
+#' @param tipo.obra.selecionada Tipo da obra selecionada
+#' @export
+get.unidade.medida <- function(tipos.das.obras, tipo.obra.selecionada) {
+    tipos.das.obras %>% 
+        filter(nome == tipo.obra.selecionada) %>% 
+        pull(unidadeMedida) %>% 
+        as.character() %>% 
+        tolower()
+}
+
 #' @title plot.ranking.tipo.obra
 #' @description Plota um gráfico do ranking dos tipos obras.
 #' @param dado Dataframe com os dados das obras.
@@ -482,7 +495,9 @@ plot.ranking.georref <- function(dado, municipio, tipo.dado.representado, tipo.l
 #'  microrregiao ou mesorregiao
 #' @param pal Paleta de cores para preencher as barras do ranking
 #' @export
-plot.ranking.tipo.obra <- function(dado, municipio, tipo.localidade, pal) {
+plot.ranking.tipo.obra <- function(dado, municipio, tipo.localidade, tipos.das.obras, tipo.obra.selecionada, pal) {
+  unidade.medida <- get.unidade.medida(tipos.das.obras, tipo.obra.selecionada)
+  
   municipio.selecionado <- dado %>% filter(nome == municipio)
 
   top.24.selecionado <- dado %>%
@@ -498,16 +513,17 @@ plot.ranking.tipo.obra <- function(dado, municipio, tipo.localidade, pal) {
       select(cor) %>% distinct() %>% pull(cor)
 
   plot <- top.24.selecionado %>%
+
   ggplot(aes(x = reorder(nome, -custo.efetivo.log),
              y = custo.efetivo,
              fill = cor)) +
-  geom_bar(stat="identity") +
-  guides(fill=FALSE, colour = FALSE) +
-  labs(x = "Município",
-       y = "Custo efetivo por m2") +
-  scale_fill_manual(values = cores) +
-  coord_flip() +
-  theme(legend.position="bottom")
+    geom_bar(stat="identity") +
+    guides(fill=FALSE, colour = FALSE) +
+    labs(x = "Município",
+       y = paste("Custo efetivo por", unidade.medida)) +
+    scale_fill_manual(values = cores) +
+    coord_flip() +
+    theme(legend.position="bottom")
 
   if (tipo.localidade == "municipio") {
       top.25 <- dado %>% arrange(custo.efetivo) %>% head(25)

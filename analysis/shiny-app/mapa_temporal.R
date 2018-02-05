@@ -11,7 +11,7 @@ library(GeoPBUtils)
 library(DT)
 
 # Importa tabelas csv
-tipos.das.obras <- read.csv("../dados/tipos_obra.csv")
+tipos.das.obras <<- read.csv("../dados/tipos_obra.csv")
 municipios.pb <- read.csv("../dados/municipios_pb.csv")
 mapa_paraiba <<- readOGR("../dados/mapa-paraiba-ibge/Municipios.shp")
 
