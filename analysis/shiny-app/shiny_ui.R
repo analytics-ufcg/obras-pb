@@ -122,15 +122,21 @@ ui <- dashboardPage(
                            collapsible = TRUE,
                            dygraphOutput("dygraph_tipo_obra", height = "25vh")
                        )
-                           ),
+                       ),
                 column(width = 12,
                        box(width = NULL,
                            collapsible = TRUE,
                            plotOutput("ranking_tipo_obra", height = "51vh")
+                           )
+                       ),
+                column(width = 12,
+                       box(width = NULL,
+                           collapsible = TRUE,
+                           DT::dataTableOutput("obras_custo_efetivo")
                        )
                 )
                 )
             )
         )
-)
+    )
 )

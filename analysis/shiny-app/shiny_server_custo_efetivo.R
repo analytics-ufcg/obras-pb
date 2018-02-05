@@ -60,8 +60,28 @@ server_custo_efetivo <- function(input, output, session) {
     
     output$ranking_tipo_obra <- renderPlot({
         plot.ranking.tipo.obra(localidades.custo.efetivo, input$select_localidade_tipo_obra,
-                               tipo.localidade.selecionada.tipo.obra, tipos.das.obras, tipo.obra.selecionada)
+                               tipo.localidade.selecionada.tipo.obra, tipos.das.obras, tipo.obra.selecionada, cores.custo.efetivo)
     })
+    
+    muda.listagem.obras <- function() {
+        output$obras_custo_efetivo <- DT::renderDataTable({
+            get.obras.custo.efetivo(obras.2013, ano.inicial.tipo.obra, ano.final.tipo.obra,
+                                    localidade.selecionada.tipo.obra, tipo.localidade.selecionada.tipo.obra, 
+                                    tipo.obra.selecionada)
+            },
+            options = list(
+                autoWidth = TRUE,
+                language = list(
+                    info = "Mostrando obras de _START_ à _END_ de um total de _TOTAL_",
+                    lengthMenu = "Mostrar _MENU_ itens",
+                    paginate = list(previous = "Anterior", `next` = "Próxima", 
+                                    first = "Primeira", last = "Última"),
+                    search = "Pesquisar:"
+                ))
+        )
+    }
+    
+    muda.listagem.obras()
     
     muda.input.localidade.tipo.obra <- function(localidades.custo.efetivo) {
         if (tipo.localidade.selecionada.tipo.obra == "municipio") {
@@ -131,7 +151,7 @@ server_custo_efetivo <- function(input, output, session) {
         
         output$ranking_tipo_obra <- renderPlot({
             plot.ranking.tipo.obra(localidades.mapa, localidade.selecionada.tipo.obra, 
-                                   tipo.localidade.selecionada.tipo.obra, tipos.das.obras, tipo.obra.selecionada)
+                                   tipo.localidade.selecionada.tipo.obra, tipos.das.obras, tipo.obra.selecionada, cores.custo.efetivo)
         })
     }
     
@@ -148,6 +168,7 @@ server_custo_efetivo <- function(input, output, session) {
                                                           tipo.localidade.selecionada.tipo.obra, localidade.selecionada.tipo.obra)
             
             muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
+            muda.listagem.obras()
         }
     })
     
@@ -169,6 +190,8 @@ server_custo_efetivo <- function(input, output, session) {
                 muda.input.localidade.tipo.obra(localidades.custo.efetivo)
                 
                 muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
+                
+                muda.listagem.obras()
             }
         }
     })
@@ -190,6 +213,8 @@ server_custo_efetivo <- function(input, output, session) {
             localidades.custo.efetivo <- get.localidades.custo.efetivo(localidades.desc)
             
             muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
+            
+            muda.listagem.obras()
         }
     })
     
@@ -202,5 +227,7 @@ server_custo_efetivo <- function(input, output, session) {
         muda.input.localidade.tipo.obra(localidades.custo.efetivo)
         
         muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
+        
+        muda.listagem.obras()
     })
 }

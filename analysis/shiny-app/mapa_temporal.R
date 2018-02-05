@@ -8,6 +8,7 @@ library(rgdal)
 source("../utils/get-functions.R")
 #devtools::install_github("analytics-ufcg/geopbutils")
 library(GeoPBUtils)
+library(DT)
 
 # Importa tabelas csv
 tipos.das.obras <<- read.csv("../dados/tipos_obra.csv")

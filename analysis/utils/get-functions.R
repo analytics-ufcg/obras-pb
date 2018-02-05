@@ -410,8 +410,9 @@ dygraph.tipo.obra <- function(dado, tipo.obra) {
 #' @param municipio Nome do município.
 #' @param tipo.dado.representado Tipo do dado representado, o qual pode ser relativo ou absoluto.
 #' @param tipo.localidade Tipo da localidade, a qual pode ser municipio, microregiao ou mesoregiao.
+#' @param pal Paleta de cores para preencher as barras do ranking
 #' @export
-plot.ranking.georref <- function(dado, municipio, tipo.dado.representado, tipo.localidade) {
+plot.ranking.georref <- function(dado, municipio, tipo.dado.representado, tipo.localidade, pal) {
   municipio.selecionado <- dado %>% filter(nome.x == municipio)
 
   if (tipo.dado.representado == "relativo") {
@@ -421,23 +422,27 @@ plot.ranking.georref <- function(dado, municipio, tipo.dado.representado, tipo.l
     dado.var <- "qtde.georref"
     legenda.eixo.y <- "Obras georreferenciadas"
   }
-
+  
   top.24.selecionado <- dado %>%
     arrange_(paste0("-", dado.var)) %>%
     head(24) %>%
     rbind(municipio.selecionado) %>%
     distinct() %>%
-    mutate(class = ifelse(nome.x == municipio, "selecionado", "top 24"))
+    mutate(class = ifelse(nome.x == municipio, "selecionado", "top 24")) %>% 
+    mutate_(cor = paste("pal(", dado.var, ")"))
+  
+  #cores <- top.24.selecionado %>% arrange_(dado.var) %>% pull(dado.var) %>% pal()
+  cores <- top.24.selecionado %>% ungroup() %>% arrange_(dado.var) %>% select("cor") %>% distinct() %>% pull(cor)
 
   plot <- top.24.selecionado %>%
     ggplot(aes_string(x = paste("reorder(nome.x, ", dado.var, ")"),
                       y = dado.var,
-                      fill = dado.var)) +
+                      fill = "cor")) +
     geom_bar(stat="identity") +
     guides(fill=FALSE, colour = FALSE) +
     labs(x = "Município",
          y = legenda.eixo.y) +
-    scale_fill_distiller(palette = "YlOrRd") +
+    scale_fill_manual(values = cores) +
     coord_flip() +
     theme(legend.position="bottom")
 
@@ -486,8 +491,11 @@ get.unidade.medida <- function(tipos.das.obras, tipo.obra.selecionada) {
 #' @description Plota um gráfico do ranking dos tipos obras.
 #' @param dado Dataframe com os dados das obras.
 #' @param municipio Nome do município.
+#' @param tipo.localidade Tipo da localidade selecionada, que pode ser municipio,
+#'  microrregiao ou mesorregiao
+#' @param pal Paleta de cores para preencher as barras do ranking
 #' @export
-plot.ranking.tipo.obra <- function(dado, municipio, tipo.localidade, tipos.das.obras, tipo.obra.selecionada) {
+plot.ranking.tipo.obra <- function(dado, municipio, tipo.localidade, tipos.das.obras, tipo.obra.selecionada, pal) {
   unidade.medida <- get.unidade.medida(tipos.das.obras, tipo.obra.selecionada)
   
   municipio.selecionado <- dado %>% filter(nome == municipio)
@@ -497,17 +505,23 @@ plot.ranking.tipo.obra <- function(dado, municipio, tipo.localidade, tipos.das.o
     head(24) %>%
     rbind(municipio.selecionado) %>%
     distinct() %>%
-    mutate(class = ifelse(nome == municipio, "selecionado", "top 24"))
+    mutate(class = ifelse(nome == municipio, "selecionado", "top 24"),
+           cor = pal(custo.efetivo.log))
+  
+  #cores <- top.24.selecionado %>% arrange(custo.efetivo.log) %>% pull(cor)
+  cores <- top.24.selecionado %>% ungroup() %>% arrange(-custo.efetivo.log) %>% 
+      select(cor) %>% distinct() %>% pull(cor)
 
   plot <- top.24.selecionado %>%
-    ggplot(aes(x = reorder(nome, -custo.efetivo),
-               y = custo.efetivo,
-               fill = custo.efetivo.log)) +
+
+  ggplot(aes(x = reorder(nome, -custo.efetivo.log),
+             y = custo.efetivo,
+             fill = cor)) +
     geom_bar(stat="identity") +
     guides(fill=FALSE, colour = FALSE) +
     labs(x = "Município",
-         y = paste("Custo efetivo por", unidade.medida)) +
-    scale_fill_distiller(palette = "YlOrRd", direction = 1) +
+       y = paste("Custo efetivo por", unidade.medida)) +
+    scale_fill_manual(values = cores) +
     coord_flip() +
     theme(legend.position="bottom")
 
@@ -586,4 +600,32 @@ filtra.regiao <- function(dado, tipo.localidade, localidade.selecionada) {
             filter(mesoregiao == localidade.selecionada)
     }
     localidades.mapa
+}
+
+#' @title get.obras.custo.efetivo
+#' @description Retorna as obras dado a janela de tempo, local e tipo da obra
+#' @param dado Dataframe de obras
+#' @param ano.inicial Ano inicial para filtro das obras
+#' @param ano.final Ano final para filtro das obras
+#' @param local Localidade da obra
+#' @param tipo.localidade Tipo da localidade, que pode ser microrregiao, mesorregiao ou municipio
+#' @param tipo.obra Tipo da obra
+#' @export
+get.obras.custo.efetivo <- function(dado, ano.inicial, ano.final, local, tipo.localidade, tipo.obra) {
+    var.tipo.localidade <- ifelse(tipo.localidade == "microrregiao", 
+                                  "microregiao", 
+                                  ifelse(tipo.localidade == "mesorregiao",
+                                         "mesoregiao",
+                                         "nome.x"))
+    dado %>% 
+        filter_(paste0(var.tipo.localidade, " == ", "'", local, "'")) %>% 
+        filter(ano >= ano.inicial, 
+               ano <= ano.final,
+               nome.y == tipo.obra) %>% 
+        select(nome.x, data_inicio_obra, descricao_sucinta_obra, valor_obra, dimensao, unidadeMedida) %>% 
+        rename(
+            local = nome.x,
+            unidade_medida = unidadeMedida
+        ) %>% 
+        mutate(custo_efetivo = valor_obra / dimensao)
 }

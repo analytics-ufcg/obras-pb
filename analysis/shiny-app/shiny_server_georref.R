@@ -76,7 +76,8 @@ server_georref <- function(input, output, session) {
     
     output$ranking_georref <- renderPlot({
         plot.ranking.georref(localidades.georref, input$select_localidade_georref, 
-                             tipo.representacao.georref, tipo.localidade.selecionada.georref)
+                             tipo.representacao.georref, tipo.localidade.selecionada.georref,
+                             cores.georref)
     })
     
     muda.mapa.e.ranking.georref <- function(localidades.georref) {
@@ -90,7 +91,7 @@ server_georref <- function(input, output, session) {
             dados.poligonos <- mapa_paraiba_georreferenciada@data$qtde.georref
             titulo.legenda.georref <- "Obras georreferenciadas"
         }
-        
+
         cores.georref <- paleta.de.cores(dado = dados.poligonos, reverse = TRUE)
         
         if (tipo.localidade.selecionada.georref == "microrregiao") {
@@ -123,7 +124,8 @@ server_georref <- function(input, output, session) {
         
         output$ranking_georref <- renderPlot({
             plot.ranking.georref(localidades.mapa, localidade.selecionada.georref, 
-                                 tipo.representacao.georref, tipo.localidade.selecionada.georref)
+                                 tipo.representacao.georref, tipo.localidade.selecionada.georref,
+                                 cores.georref)
         })
     }
     
