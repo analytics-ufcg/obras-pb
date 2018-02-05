@@ -65,7 +65,7 @@ localidades.custo.efetivo <<- get.custo.efetivo.tipo.obra(custo.efetivo.obras,
                                                           tipo.obra.selecionada)
 
 tipo.localidade.selecionada.tipo.obra <<- "municipio"
-localidade.selecionada.tipo.obra <<- cidade.default(localidades.custo.efetivo, "nome")
+localidade.selecionada.tipo.obra <<- "Todos"
 ano.inicial.tipo.obra <<- 0
 ano.final.tipo.obra <<- 3000
 tag.mapa.custo.efetivo <<- "municipios-poligono-custo-efetivo"
