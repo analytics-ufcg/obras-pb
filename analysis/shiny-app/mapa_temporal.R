@@ -50,6 +50,9 @@ obras.2013 <<- get.georreferencia.inputada(obra, localidade, tipos.das.obras, mu
                                           obra.georref.centroide.sumarizado, 2013) %>% 
     filter(codigo_ibge != 0)
 
+menor.ano <<- obras.2013 %>% pull(ano) %>% min()
+maior.ano <<- obras.2013 %>% pull(ano) %>% max()
+
 localidades.desc <<- localidade %>% 
     filter(uf == "Paraíba") %>% 
     select(codigo_ibge, codigo_microregiao, codigo_mesoregiao, nome, microregiao, mesoregiao)
