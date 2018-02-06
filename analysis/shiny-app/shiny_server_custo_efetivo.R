@@ -167,7 +167,7 @@ server_custo_efetivo <- function(input, output, session) {
         if(!is.null(input$dygraph_tipo_obra_date_window)){
             tipo.obra.selecionada <<- input$select_tipo_obra
             
-            localidades.custo.efetivo <- get.localidades.custo.efetivo(localidades.desc)
+            localidades.custo.efetivo <<- get.localidades.custo.efetivo(localidades.desc)
             muda.input.localidade.tipo.obra(localidades.custo.efetivo)
             
             output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra.selecionada, 
@@ -191,9 +191,7 @@ server_custo_efetivo <- function(input, output, session) {
                 ano.inicial.tipo.obra <<- ano1
                 ano.final.tipo.obra <<- ano2
                 
-                localidades.custo.efetivo <- get.localidades.custo.efetivo(localidades.desc)
-                
-                muda.input.localidade.tipo.obra(localidades.custo.efetivo)
+                localidades.custo.efetivo <<- get.localidades.custo.efetivo(localidades.desc)
                 
                 muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
                 
@@ -214,7 +212,7 @@ server_custo_efetivo <- function(input, output, session) {
             ano.inicial.tipo.obra <<- round(input$dygraph_tipo_obra_date_window[[1]])
             ano.final.tipo.obra <<- round(input$dygraph_tipo_obra_date_window[[2]])
         
-            localidades.custo.efetivo <- get.localidades.custo.efetivo(localidades.desc)
+            localidades.custo.efetivo <<- get.localidades.custo.efetivo(localidades.desc)
             
             muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
             
@@ -226,8 +224,8 @@ server_custo_efetivo <- function(input, output, session) {
         input$select_tipo_localidade_tipo_obra
     }, {
         tipo.localidade.selecionada.tipo.obra <<- input$select_tipo_localidade_tipo_obra
-        localidades.custo.efetivo <- get.localidades.custo.efetivo(localidades.desc)
-        
+        localidades.custo.efetivo <<- get.localidades.custo.efetivo(localidades.desc)
+
         muda.input.localidade.tipo.obra(localidades.custo.efetivo)
         
         muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)
