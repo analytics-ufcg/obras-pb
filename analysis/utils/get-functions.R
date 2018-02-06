@@ -520,7 +520,7 @@ plot.ranking.tipo.obra <- function(dado, municipio, tipo.localidade, tipos.das.o
     geom_bar(stat="identity") +
     guides(fill=FALSE, colour = FALSE) +
     labs(x = "Município",
-       y = paste("Custo efetivo por", unidade.medida)) +
+       y = paste("Mediana do custo efetivo por", unidade.medida)) +
     scale_fill_manual(values = cores) +
     coord_flip() +
     theme(legend.position="bottom")
