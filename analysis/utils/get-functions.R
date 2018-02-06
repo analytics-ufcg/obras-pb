@@ -612,13 +612,18 @@ filtra.regiao <- function(dado, tipo.localidade, localidade.selecionada) {
 #' @param tipo.obra Tipo da obra
 #' @export
 get.obras.custo.efetivo <- function(dado, ano.inicial, ano.final, local, tipo.localidade, tipo.obra) {
-    var.tipo.localidade <- ifelse(tipo.localidade == "microrregiao", 
-                                  "microregiao", 
-                                  ifelse(tipo.localidade == "mesorregiao",
-                                         "mesoregiao",
-                                         "nome.x"))
+    if (local != "Todos") {
+        var.tipo.localidade <- ifelse(tipo.localidade == "microrregiao", 
+                                      "microregiao", 
+                                      ifelse(tipo.localidade == "mesorregiao",
+                                             "mesoregiao",
+                                             "nome.x"))
+        
+        dado <- dado %>% 
+            filter_(paste0(var.tipo.localidade, " == ", "'", local, "'"))
+    }
+    
     dado %>% 
-        filter_(paste0(var.tipo.localidade, " == ", "'", local, "'")) %>% 
         filter(ano >= ano.inicial, 
                ano <= ano.final,
                nome.y == tipo.obra) %>% 
