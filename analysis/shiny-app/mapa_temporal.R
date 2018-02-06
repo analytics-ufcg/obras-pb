@@ -50,6 +50,9 @@ obras.2013 <<- get.georreferencia.inputada(obra, localidade, tipos.das.obras, mu
                                           obra.georref.centroide.sumarizado, 2013) %>% 
     filter(codigo_ibge != 0)
 
+menor.ano <<- obras.2013 %>% pull(ano) %>% min()
+maior.ano <<- obras.2013 %>% pull(ano) %>% max()
+
 localidades.desc <<- localidade %>% 
     filter(uf == "Paraíba") %>% 
     select(codigo_ibge, codigo_microregiao, codigo_mesoregiao, nome, microregiao, mesoregiao)
@@ -65,14 +68,14 @@ localidades.custo.efetivo <<- get.custo.efetivo.tipo.obra(custo.efetivo.obras,
                                                           tipo.obra.selecionada)
 
 tipo.localidade.selecionada.tipo.obra <<- "municipio"
-localidade.selecionada.tipo.obra <<- cidade.default(localidades.custo.efetivo, "nome")
+localidade.selecionada.tipo.obra <<- "Todos"
 ano.inicial.tipo.obra <<- 0
 ano.final.tipo.obra <<- 3000
 tag.mapa.custo.efetivo <<- "municipios-poligono-custo-efetivo"
 
 tipo.representacao.georref <<- "relativo"
 tipo.localidade.selecionada.georref <<- "municipio"
-localidade.selecionada.georref <<- cidade.default(localidades.georref, "nome.x")
+localidade.selecionada.georref <<- "Todos"
 ano.inicial.georref <<- 0
 ano.final.georref <<- 3000
 tag.mapa.georref <<- "municipios-poligono-georref"

@@ -30,14 +30,19 @@ server_custo_efetivo <- function(input, output, session) {
     })
     
     dygraph.tipo.obra <- function(dado, tipo.obra, tipo.localidade.selecionada, localidade.selecionada) {
-        if (tipo.localidade.selecionada == "microrregiao") {
+        
+        if(localidade.selecionada == "Todos"){
+            dado.filtr <- dado
+        }
+        else if (tipo.localidade.selecionada == "microrregiao") {
             dado.filtr <- dado %>% 
                 filter(microregiao == localidade.selecionada)
         } else if (tipo.localidade.selecionada == "mesorregiao") {
             dado.filtr <- dado %>% 
                 filter(mesoregiao == localidade.selecionada)
         } else {
-            dado.filtr <- dado
+            dado.filtr <- dado %>%
+                filter(nome == localidade.selecionada)
         }
         
         renderDygraph({
@@ -50,7 +55,7 @@ server_custo_efetivo <- function(input, output, session) {
                 ) %>%
                 select(ano, custo.efetivo) %>%
                 dygraph() %>%
-                dyRangeSelector() %>%
+                dyRangeSelector(dateWindow = c(menor.ano - 1, maior.ano + 1)) %>%
                 dyLegend(show = "never")
         })
     }
@@ -86,6 +91,7 @@ server_custo_efetivo <- function(input, output, session) {
     muda.input.localidade.tipo.obra <- function(localidades.custo.efetivo) {
         if (tipo.localidade.selecionada.tipo.obra == "municipio") {
             localidades.input <- localidades.custo.efetivo %>% arrange(nome) %>% pull(nome)
+            localidades.input <- c("Todos", localidades.input)
         } else if (tipo.localidade.selecionada.tipo.obra == "microrregiao") {
             localidades.input <- localidades.custo.efetivo %>% arrange(microregiao) %>% pull(microregiao)
         } else {
@@ -199,15 +205,13 @@ server_custo_efetivo <- function(input, output, session) {
     }, {
         if(!is.null(input$dygraph_tipo_obra_date_window)){
             localidade.selecionada.tipo.obra <<- input$select_localidade_tipo_obra
-            if (tipo.localidade.selecionada.tipo.obra != "municipio") {
-                output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra.selecionada, 
-                                                              tipo.localidade.selecionada.tipo.obra, 
-                                                              localidade.selecionada.tipo.obra)
-                
-                ano.inicial.tipo.obra <<- round(input$dygraph_tipo_obra_date_window[[1]])
-                ano.final.tipo.obra <<- round(input$dygraph_tipo_obra_date_window[[2]])
-            }
+            output$dygraph_tipo_obra <- dygraph.tipo.obra(custo.efetivo.obras, tipo.obra.selecionada, 
+                                                          tipo.localidade.selecionada.tipo.obra, 
+                                                          localidade.selecionada.tipo.obra)
             
+            ano.inicial.tipo.obra <<- round(input$dygraph_tipo_obra_date_window[[1]])
+            ano.final.tipo.obra <<- round(input$dygraph_tipo_obra_date_window[[2]])
+        
             localidades.custo.efetivo <<- get.localidades.custo.efetivo(localidades.desc)
             
             muda.mapa.tipo.obra.e.ranking(localidades.custo.efetivo)

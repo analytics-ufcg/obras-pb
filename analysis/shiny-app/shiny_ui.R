@@ -17,7 +17,7 @@ ui <- dashboardPage(
         width = sidebar.width
     ),
     dashboardBody(
-        tags$head(tags$style(HTML('.box-header {min-height: 35px;}'))),
+        tags$head(tags$style(HTML('.box-header {min-height: 35px;} .selectize-dropdown {z-index: 2000;}'))),
         tags$head(tags$link(rel="shortcut icon", href="tce-cropped.png")),
         tags$head(tags$link(rel="shortcut icon", href="sagres-obras.png")),
         tags$head(
@@ -63,7 +63,7 @@ ui <- dashboardPage(
                                             inline = TRUE
                                ),
                                selectInput("select_localidade_georref", label = h3("Selecione a localidade"),
-                                           choices = localidades.georref$nome.x,
+                                           choices = c("Todos", localidades.georref$nome.x),
                                            selected = cidade.default(localidades.georref, "nome.x"))
                                
                            )
