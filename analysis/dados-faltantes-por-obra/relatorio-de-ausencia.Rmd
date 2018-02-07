@@ -1,0 +1,98 @@
+---
+title: "Relatório de Ausências"
+output: html_document
+---
+
+```{r, include=FALSE, warning=FALSE, echo=FALSE}
+library(RPostgreSQL)
+library(tidyverse)
+library(rgdal)
+#devtools::install_github("analytics-ufcg/geopbutils")
+library(GeoPBUtils)
+library(DT)
+
+
+# Importa tabelas csv
+tipos.das.obras <<- read.csv("../dados/tipos_obra.csv")
+municipios.pb <- read.csv("../dados/municipios_pb.csv")
+mapa_paraiba <<- readOGR("../dados/mapa-paraiba-ibge/Municipios.shp")
+
+# Pega dados
+drv <- DBI::dbDriver("PostgreSQL")
+
+CONFIG_FILE_PATH = "../config/config.yml"
+
+con1 <- DBI::dbConnect(drv,
+                       host = config::get("host", file = CONFIG_FILE_PATH),
+                       port = config::get("port", file = CONFIG_FILE_PATH),
+                       user = config::get("user", file = CONFIG_FILE_PATH),
+                       password = config::get("password", file = CONFIG_FILE_PATH),
+                       dbname = config::get("dbname1", file = CONFIG_FILE_PATH)
+)
+
+con2 <- DBI::dbConnect(drv,
+                       host = config::get("host", file = CONFIG_FILE_PATH),
+                       port = config::get("port", file = CONFIG_FILE_PATH),
+                       user = config::get("user", file = CONFIG_FILE_PATH),
+                       password = config::get("password", file = CONFIG_FILE_PATH),
+                       dbname = config::get("dbname2", file = CONFIG_FILE_PATH)
+)
+
+GeoPBUtils::get.data(con1, con2, mapa_paraiba)
+
+dbDisconnect(con1)
+dbDisconnect(con2)
+
+municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, 
+                         lat = coordinates(mapa_paraiba)[,2], 
+                         lon = coordinates(mapa_paraiba)[,1])
+
+obras.2013 <- get.georreferencia.inputada(obra, localidade, tipos.das.obras, municipios,
+                                          obra.georref.centroide.sumarizado, 2013) %>% 
+    filter(codigo_ibge != 0)
+
+```
+
+### Seleciona colunas
+Inicialmente selecionamos as colunas a serem utilizadas como método de avaliação das obras por município. Selecionaremos:
+* Descrição
+* Tipo da obra
+* Valor
+* Dimensão
+* Foto ----
+* Medição ----
+* Georrreferenciamento
+* Planilha Contratada
+* ART ----
+* Contrato
+* Data de ínicio e previsão do fim da obra.
+    
+```{r}
+tb.dados.municipios <- obras.2013 %>% 
+    select(nome.x,
+           descricao_sucinta_obra, 
+           numero_contrato, 
+           nome.y, 
+           valor_obra, 
+           planilha_contratada, 
+           dimensao,
+           data_inicio_obra,
+           data_prevista_conclusao,
+           data_conclusao_obra,
+           data_recebimento_obra,
+           is.inputado,
+           dentro_municipio
+           ) %>% 
+    rename(municipio = nome.x, 
+           sem_georreferencia = is.inputado,
+           tipo_obra = nome.y
+           )
+
+
+
+
+```
+
+
+
+
