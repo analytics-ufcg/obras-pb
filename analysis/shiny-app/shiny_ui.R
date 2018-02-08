@@ -12,7 +12,7 @@ ui <- dashboardPage(
     dashboardSidebar( 
         sidebarMenu(
             menuItem("Obras georreferenciadas", tabName = "obras-georref", icon = icon("map-marker")),
-            menuItem("Tipos de obras", icon = icon("building"), tabName = "tipos-obras")
+            menuItem("Custos efetivos", icon = icon("building"), tabName = "tipos-obras")
         ),
         width = sidebar.width
     ),
@@ -44,9 +44,15 @@ ui <- dashboardPage(
                                solidHeader = TRUE,
                                collapsible = FALSE,
                                h2("Painel I - Obras georreferenciadas"),
-                               tags$p("Este painel fornece dados sumarizados e permite ter uma visão geral de quais gestões municipais mais georreferenciam suas obras. É possível ainda filtrar as obras por microrregião/mesorregião
-                                      e pelo ano das obras, permitindo assim que sejam realizadas análises históricas sobre os municípios. O painel conta ainda com um ranking que filtra 
-                                      as obras através dos filtros selecionados e mostra os 25 municípios que possuem mais obras georreferenciadas. Por fim, é possível também visualizar os dados de forma relativa ou absoluta.")
+                               tags$p("Este painel fornece dados sumarizados e permite ter uma visão geral de quais gestões municipais mais 
+                                       georreferenciam suas obras, onde é possível clicar nos municípios para obter informações mais detalhadas
+                                       sobre o mesmo. É possível ainda filtrar as obras por microrregião/mesorregião e  pelo ano das obras, 
+                                       permitindo assim que sejam realizadas análises históricas sobre os municípios. O painel conta ainda 
+                                       com um ranking que filtra as obras através dos filtros selecionados e mostra os 25 municípios que 
+                                       possuem mais obras georreferenciadas. Por fim, é possível também visualizar os dados de forma relativa 
+                                       ou absoluta."),
+                               tags$i("Nota: O georreferenciamento é uma forma de tornar as coordenadas conhecidas num dado sistema de referência, 
+                                       onde descreve um ou mais pares de latitude e longitude do local, sendo assim possível localizar em um mapa.")
                                ),
                            box(width = NULL,
                                solidHeader = TRUE,
@@ -92,11 +98,14 @@ ui <- dashboardPage(
                            solidHeader = TRUE,
                            collapsible = FALSE,
                            h2("Painel II - Custo efetivo das obras"),
-                           tags$p("Este painel apresenta dados sobre o custo das obras por unidade de medida construída dos mais diversos tipos de obras realizadas no estado, 
-                                  permitindo uma fácil análise e detecção de anomalias nos custos das obras. É possível filtrar as obras por microrregião/mesorregião
-                                  e pelo ano das mesmas, permitindo assim que sejam realizadas análises históricas sobre os municípios. O painel conta ainda com um ranking que filtra 
-                                  as obras através dos filtros selecionados e mostra os 25 municípios que possuem o melhor custo efetivo.
-                                  Por fim, é possível também selecionar o tipo de obra que se deseja analisar.")
+                           tags$p("Este painel apresenta dados sobre o custo das obras por unidade de medida construída dos mais 
+                                   diversos tipos de obras realizadas no estado, permitindo uma fácil análise e detecção de anomalias
+                                   nos custos das obras, sendo possível clicar nos municípios para obter informações mais detalhadas
+                                   sobre o mesmo. É possível filtrar as obras por microrregião/mesorregião e pelo ano das mesmas, 
+                                   permitindo assim que sejam realizadas análises históricas sobre os municípios. O painel conta
+                                   ainda com um ranking que filtra as obras através dos filtros selecionados e mostra os 25 municípios
+                                   que possuem o melhor custo efetivo. Por fim, é possível também selecionar o tipo de obra que 
+                                   se deseja analisar.")
                            ),
                        box(width = NULL,
                            solidHeader = TRUE,
