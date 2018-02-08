@@ -38,7 +38,7 @@ con2 <- DBI::dbConnect(drv,
                        dbname = config::get("dbname2", file = CONFIG_FILE_PATH)
 )
 
-GeoPBUtils::get.data(con1, con2, mapa_paraiba)
+GeoPBUtils::get.data.faltantes(con1, con2, mapa_paraiba)
 
 dbDisconnect(con1)
 dbDisconnect(con2)
@@ -50,7 +50,6 @@ municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M,
 obras.2013 <- get.georreferencia.inputada(obra, localidade, tipos.das.obras, municipios,
                                           obra.georref.centroide.sumarizado, 2013) %>% 
     filter(codigo_ibge != 0)
-
 ```
 
 ### Seleciona colunas
@@ -59,14 +58,16 @@ Inicialmente selecionamos as colunas a serem utilizadas como método de avaliaç
 * Tipo da obra
 * Valor
 * Dimensão
-* Foto ----
-* Medição ----
+* Foto 
+* Medição 
 * Georrreferenciamento
 * Planilha Contratada
-* ART ----
+* ART
 * Contrato
 * Data de ínicio e previsão do fim da obra.
     
+Como existem dados com data de início desde 1900, serão filtrados dados a partir de 2013 visto que possuem uma maior relevância para o contexto.
+
 ```{r}
 tb.dados.municipios <- obras.2013 %>% 
     select(nome.x,
