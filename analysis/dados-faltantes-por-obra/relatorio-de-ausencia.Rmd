@@ -8,6 +8,7 @@ library(RPostgreSQL)
 library(tidyverse)
 library(rgdal)
 #devtools::install_github("analytics-ufcg/geopbutils")
+source("../utils/get-functions.R")
 library(GeoPBUtils)
 library(DT)
 
@@ -58,20 +59,29 @@ Inicialmente selecionamos as colunas a serem utilizadas como método de avaliaç
 * Tipo da obra
 * Valor
 * Dimensão
-* Foto 
-* Medição 
-* Georrreferenciamento
+* Foto (Junção do número de fotos de acompanhamentos e de medições)
+* Medição (Divididas entre total de medições e medições com informações válidas)
+* Georreferenciamento (Dividos em sem georreferência ou se tem georreferência e está fora do município)
 * Planilha Contratada
-* ART
-* Contrato
+* ART (Número da ART fornecida pelo banco de dados)
+* Número do Contrato 
 * Data de ínicio e previsão do fim da obra.
     
 Como existem dados com data de início desde 1900, serão filtrados dados a partir de 2013 visto que possuem uma maior relevância para o contexto.
 
 ```{r}
+
+obra.medicao.agrupada <- obra.medicao %>% 
+    mutate(medicoes_ok = nchar(gsub(" ", "", planilha_medicoes))  > 2 ) %>% 
+    group_by(fk_obra) %>% 
+    summarise(total_de_medicoes = n(), 
+              medicoes_ok = sum(medicoes_ok)) 
+
+
 tb.dados.municipios <- obras.2013 %>% 
     select(nome.x,
            descricao_sucinta_obra, 
+           id,
            numero_contrato, 
            nome.y, 
            valor_obra, 
@@ -87,10 +97,14 @@ tb.dados.municipios <- obras.2013 %>%
     rename(municipio = nome.x, 
            sem_georreferencia = is.inputado,
            tipo_obra = nome.y
-           )
-
-
-
+           ) %>% 
+    left_join(obra.medicao.agrupada, by = c("id" = "fk_obra")) %>% 
+    mutate(medicoes_ok = ifelse(is.na(medicoes_ok), 0, medicoes_ok),
+           total_de_medicoes = ifelse(is.na(total_de_medicoes), 0, total_de_medicoes)) %>% 
+    left_join(obra.art, by = c("id" = "fk_obra")) %>% 
+    left_join(obra.fotos, by = c("id" = "fk_obra")) %>% 
+    mutate(num_fotos = ifelse(is.na(num_fotos), 0, num_fotos)) %>% 
+    select(-id)
 
 ```
 
