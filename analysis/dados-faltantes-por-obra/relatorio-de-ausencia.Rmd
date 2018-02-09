@@ -1,6 +1,9 @@
 ---
 title: "Relatório de Ausências"
-output: html_document
+output: 
+    html_document:
+        css: style.css
+    
 ---
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
@@ -12,6 +15,7 @@ source("../utils/get-functions.R")
 library(GeoPBUtils)
 library(DT)
 library(formattable)
+library(htmltools)
 
 # Importa tabelas csv
 tipos.das.obras <<- read.csv("../dados/tipos_obra.csv")
@@ -55,6 +59,7 @@ obras.2013 <- get.georreferencia.inputada(obra, localidade, tipos.das.obras, mun
 
 ### Seleciona colunas
 Inicialmente selecionamos as colunas a serem utilizadas como método de avaliação das obras por município. Selecionaremos:
+
 * Município
 * Descrição
 * Tipo da obra
@@ -181,76 +186,107 @@ Criaremos agora a visualização das informações faltantes das obras por munic
 
 ```{r, echo=FALSE, warning=FALSE}
 options("scipen"=100, "digits"=4)
-obras.metricas.relevantes %>% 
-    formattable(list(
-      tipo_obra = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(tipo_obra_valida , "green", "red"),
-                        display = "block")),
-      tipo_obra_valida = FALSE,
-      valor_obra = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(valor_obra_valida , "green", "red"),
-                        display = "block")),
-      valor_obra_valida = FALSE,
-      dimensao = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(dimensao_valida , "green", "red"),
-                        display = "block")),
-      dimensao_valida = FALSE,
-      dentro_municipio = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(dentro_municipio , "green", "red"),
-                        display = "block")),
-      planilha_contratada = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(planilha_contratada_valida , "green", "red"),
-                        display = "block")),
-      planilha_contratada_valida = FALSE,
-      numero_contrato = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(numero_contrato_valido , "green", "red"),
-                        display = "block")),
-      numero_contrato_valido = FALSE,
-      data_inicio_obra = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(!is.na(data_inicio_obra) , "green", "red"),
-                        display = "block")),
-      data_prevista_conclusao = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(data_prevista_conclusao_valida , "green", "red"),
-                        display = "block")),
-      data_prevista_conclusao_valida = FALSE,
-      data_conclusao_obra = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(data_conclusao_obra_valida , "green", "red"),
-                        display = "block")),
-      data_conclusao_obra_valida = FALSE,
-      data_recebimento_obra = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(data_recebimento_obra_valida , "green", "red"),
-                        display = "block")),
-      data_recebimento_obra_valida = FALSE,
-      total_de_medicoes = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(total_de_medicoes_valida , "green", "red"),
-                        display = "block")),
-      total_de_medicoes_valida = FALSE,
-      medicoes_ok = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(medicoes_ok_valida , "green", "red"),
-                        display = "block")),
-      medicoes_ok_valida = FALSE,
-      num_fotos = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(num_fotos_valida , "green", "red"),
-                        display = "block")),
-      num_fotos_valida = FALSE,
-      tem_georreferenciamento = formatter(
-        "span",
-        style = ~ style("background-color" = ifelse(tem_georreferenciamento , "green", "red"),
-                        display = "block"))
-      )
-      ) %>%
-    as.datatable()
+
+municipios <- obras.metricas.relevantes %>%
+    distinct(municipio) %>%
+    arrange(municipio) %>%
+    pull(municipio)
+
+# municipios <- c("João Pessoa", "Campina Grande")
+
+show_plot <- function(mun, plot_object) {
+    div(style="margin:auto;text-align:center", 
+        div(h3(mun)), 
+        div(class="table-obras", plot_object), 
+        div(br())
+        )
+}
+
+do.call(div, lapply(municipios, function(mun) { 
+    show_plot(mun, print(
+        obras.metricas.relevantes %>% 
+            filter(municipio == mun) %>% 
+            select(-municipio) %>% 
+            formattable(list(
+              tipo_obra = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(tipo_obra_valida , "green", "red"),
+                                display = "block")),
+              tipo_obra_valida = FALSE,
+              valor_obra = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(valor_obra_valida , "green", "red"),
+                                display = "block")),
+              valor_obra_valida = FALSE,
+              dimensao = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(dimensao_valida , "green", "red"),
+                                display = "block")),
+              dimensao_valida = FALSE,
+              dentro_municipio = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(dentro_municipio , "green", "red"),
+                                display = "block")),
+              planilha_contratada = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(planilha_contratada_valida , "green", "red"),
+                                display = "block")),
+              planilha_contratada_valida = FALSE,
+              numero_contrato = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(numero_contrato_valido , "green", "red"),
+                                display = "block")),
+              numero_contrato_valido = FALSE,
+              data_inicio_obra = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(!is.na(data_inicio_obra) , "green", "red"),
+                                display = "block")),
+              data_prevista_conclusao = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(data_prevista_conclusao_valida , "green", "red"),
+                                display = "block")),
+              data_prevista_conclusao_valida = FALSE,
+              data_conclusao_obra = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(data_conclusao_obra_valida , "green", "red"),
+                                display = "block")),
+              data_conclusao_obra_valida = FALSE,
+              data_recebimento_obra = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(data_recebimento_obra_valida , "green", "red"),
+                                display = "block")),
+              data_recebimento_obra_valida = FALSE,
+              total_de_medicoes = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(total_de_medicoes_valida , "green", "red"),
+                                display = "block")),
+              total_de_medicoes_valida = FALSE,
+              medicoes_ok = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(medicoes_ok_valida , "green", "red"),
+                                display = "block")),
+              medicoes_ok_valida = FALSE,
+              num_fotos = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(num_fotos_valida , "green", "red"),
+                                display = "block")),
+              num_fotos_valida = FALSE,
+              tem_georreferenciamento = formatter(
+                "span",
+                style = ~ style("background-color" = ifelse(tem_georreferenciamento , "green", "red"),
+                                display = "block"))
+          )) %>%
+          as.datatable(
+              options = list(
+                autoWidth = TRUE,
+                language = list(
+                    info = "Mostrando obras de _START_ à _END_ de um total de _TOTAL_",
+                    lengthMenu = "Mostrar _MENU_ itens",
+                    paginate = list(previous = "Anterior", `next` = "Próxima", 
+                                    first = "Primeira", last = "Última"),
+                    search = "Pesquisar:"
+                ))
+          )
+    ))
+}))
 ```
