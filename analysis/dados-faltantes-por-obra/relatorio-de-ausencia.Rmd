@@ -125,9 +125,9 @@ Vamos definir o que são valores faltantes para cada coluna:
 * data_conclusao_obra - valores faltantes
 * data_recebimento_obra - valores faltantes de fato
 * total_de_medicoes - obras com 0 medições
-* medicoes_ok - um arquivo que não contenha ".xls", "xlsx" ou ".pdf"
+* medicoes_ok - pelo menos 80% dos arquivos de medição devem ter ".xls", "xlsx" ou ".pdf"
 * numero_art - deixaremos a critério dos auditores verificar, visto que é muito variável
-* num_fotos - obras com 0 fotos
+* num_fotos - obras com menos de uma foto por medição
 
 ```{r, include=FALSE, warning=FALSE}
 obras.metricas.relevantes <- tb.dados.municipios %>% 
@@ -141,8 +141,8 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         data_conclusao_obra_valida = !is.na(data_conclusao_obra),
         data_recebimento_obra_valida = !is.na(data_recebimento_obra),
         total_de_medicoes_valida = total_de_medicoes > 0,
-        medicoes_ok_valida = grepl(".xls", medicoes_ok) | grepl(".pdf", medicoes_ok),
-        num_fotos_valida = num_fotos > 0
+        medicoes_ok_valida = ifelse(total_de_medicoes_valida, medicoes_ok/total_de_medicoes >= 0.8, FALSE),
+        num_fotos_valida = num_fotos >= total_de_medicoes 
     )
 ```
 
