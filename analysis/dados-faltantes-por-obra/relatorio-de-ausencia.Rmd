@@ -194,19 +194,32 @@ municipios <- obras.metricas.relevantes %>%
 
 # municipios <- c("João Pessoa", "Campina Grande")
 
-show_plot <- function(mun, plot_object) {
+show_plot <- function(mun, porc.dados.validos, plot_object) {
     div(style="margin:auto;text-align:center", 
-        div(h3(mun)), 
+        div(h3(paste0(mun, ": ", format(porc.dados.validos, decimal.mark=",", digits=2, nsmall=2), "% dos dados válidos"))), 
         div(class="table-obras", plot_object), 
         div(br())
         )
 }
 
 do.call(div, lapply(municipios, function(mun) { 
-    show_plot(mun, print(
-        obras.metricas.relevantes %>% 
+    obras.filt.mun <- obras.metricas.relevantes %>% 
             filter(municipio == mun) %>% 
             select(-municipio) %>% 
+            rowwise() %>% 
+            mutate(
+                dados_validos = sum(tipo_obra_valida, valor_obra_valida, dimensao_valida, dentro_municipio, 
+                                      planilha_contratada_valida, numero_contrato_valido, !is.na(data_inicio_obra),
+                                      data_prevista_conclusao_valida, data_conclusao_obra_valida, 
+                                      data_recebimento_obra_valida, total_de_medicoes_valida, medicoes_ok_valida,
+                                      num_fotos_valida, tem_georreferenciamento)
+                   )
+    
+    porc.dados.validos <- sum(pull(obras.filt.mun, dados_validos)) / (14 * nrow(obras.filt.mun)) * 100
+    
+    show_plot(mun, porc.dados.validos, print(
+        obras.filt.mun %>% 
+            select(-dados_validos) %>% 
             formattable(list(
               tipo_obra = formatter(
                 "span",
