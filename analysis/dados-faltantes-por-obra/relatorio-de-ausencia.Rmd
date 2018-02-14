@@ -205,15 +205,19 @@ show_plot <- function(mun, porc.dados.validos, plot_object) {
 do.call(div, lapply(municipios, function(mun) { 
     obras.filt.mun <- obras.metricas.relevantes %>% 
             filter(municipio == mun) %>% 
-            select(-municipio) %>% 
+            left_join(select(tipos.das.obras, nome, unidadeMedida), by = c("tipo_obra" = "nome")) %>% 
+            mutate(unidadeMedida = ifelse(unidadeMedida == "-", "", as.character(unidadeMedida))) %>% 
             rowwise() %>% 
             mutate(
                 dados_validos = sum(tipo_obra_valida, valor_obra_valida, dimensao_valida, dentro_municipio, 
                                       planilha_contratada_valida, numero_contrato_valido, !is.na(data_inicio_obra),
                                       data_prevista_conclusao_valida, data_conclusao_obra_valida, 
                                       data_recebimento_obra_valida, total_de_medicoes_valida, medicoes_ok_valida,
-                                      num_fotos_valida, tem_georreferenciamento)
-                   )
+                                      num_fotos_valida, tem_georreferenciamento),
+                valor_obra = paste("R$", format(valor_obra, big.mark=".", decimal.mark=",", digits=2, nsmall=2)),
+                dimensao = paste(format(dimensao, big.mark=".", decimal.mark=",", digits=2, nsmall=2), unidadeMedida)
+            ) %>% 
+            select(-municipio, -unidadeMedida)
     
     porc.dados.validos <- sum(pull(obras.filt.mun, dados_validos)) / (14 * nrow(obras.filt.mun)) * 100
     
