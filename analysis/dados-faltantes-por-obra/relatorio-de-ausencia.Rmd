@@ -132,7 +132,7 @@ Vamos definir o que são valores faltantes para cada coluna:
 * data_recebimento_obra - valores faltantes de fato
 * total_de_medicoes - obras com 0 medições
 * medicoes_ok - pelo menos 80% dos arquivos de medição devem ter ".xls", "xlsx" ou ".pdf"
-* numero_art - deixaremos a critério dos auditores verificar, visto que é muito variável
+* numero_art - consideramos os valores que contém "PB201...", visto que utilizamos obras que iniciaram a partir de 2013
 * num_fotos - obras com menos de uma foto por medição
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
@@ -148,6 +148,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         data_recebimento_obra_valida = !is.na(data_recebimento_obra),
         total_de_medicoes_valida = total_de_medicoes > 0,
         medicoes_ok_valida = ifelse(total_de_medicoes_valida, medicoes_ok/total_de_medicoes >= 0.8, FALSE),
+        numero_art_valido = str_detect(numero_art, "(P|p)(B|b)201([:digit:]+)"),
         num_fotos_valida = ifelse(total_de_medicoes_valida, num_fotos >= total_de_medicoes, FALSE) 
     ) %>% 
     select(
@@ -178,6 +179,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         data_recebimento_obra_valida,
         total_de_medicoes_valida,
         medicoes_ok_valida,
+        numero_art_valido,
         num_fotos_valida
     )
 ```
@@ -221,6 +223,10 @@ do.call(div, lapply(municipios, function(mun) {
         obras.filt.mun %>% 
             select(-dados_validos) %>% 
             formattable(list(
+              numero_art = formatter(
+                "span",
+                class = ~ paste("celula", ifelse(numero_art_valido, "green", "red"))),
+              numero_art_valido = FALSE,
               tipo_obra = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(tipo_obra_valida, "green", "red"))),
