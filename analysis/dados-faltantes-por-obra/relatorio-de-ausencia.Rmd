@@ -143,6 +143,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         dimensao_valida = dimensao > 0,
         planilha_contratada_valida = grepl(".xls", planilha_contratada) | grepl(".pdf", planilha_contratada),
         numero_contrato_valido = numero_contrato != "0000" & numero_contrato != "-",
+        data_inicio_obra_valida = !is.na(data_inicio_obra),
         data_prevista_conclusao_valida = !is.na(data_prevista_conclusao),
         data_conclusao_obra_valida = !is.na(data_conclusao_obra),
         data_recebimento_obra_valida = !is.na(data_recebimento_obra),
@@ -173,6 +174,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         dimensao_valida,
         planilha_contratada_valida,
         numero_contrato_valido,
+        data_inicio_obra_valida,
         data_prevista_conclusao_valida,
         data_conclusao_obra_valida,
         data_recebimento_obra_valida,
@@ -210,20 +212,24 @@ do.call(div, lapply(municipios, function(mun) {
             rowwise() %>% 
             mutate(
                 dados_validos = sum(tipo_obra_valida, valor_obra_valida, dimensao_valida, dentro_municipio, 
-                                      planilha_contratada_valida, numero_contrato_valido, !is.na(data_inicio_obra),
+                                      planilha_contratada_valida, numero_contrato_valido, data_inicio_obra_valida,
                                       data_prevista_conclusao_valida, data_conclusao_obra_valida, 
                                       data_recebimento_obra_valida, total_de_medicoes_valida, medicoes_ok_valida,
                                       num_fotos_valida, tem_georreferenciamento),
                 valor_obra = paste("R$", format(valor_obra, big.mark=".", decimal.mark=",", digits=2, nsmall=2)),
                 dimensao = paste(format(dimensao, big.mark=".", decimal.mark=",", digits=2, nsmall=2), unidadeMedida)
             ) %>% 
-            select(-municipio, -unidadeMedida)
+            select(-municipio, -unidadeMedida) %>% 
+            arrange(-dados_validos, -tipo_obra_valida, -valor_obra_valida, -dimensao_valida, -dentro_municipio, 
+                  -planilha_contratada_valida, -numero_contrato_valido, -data_inicio_obra_valida,
+                  -data_prevista_conclusao_valida, -data_conclusao_obra_valida, 
+                  -data_recebimento_obra_valida, -total_de_medicoes_valida, -medicoes_ok_valida,
+                  -num_fotos_valida, -tem_georreferenciamento)
     
     porc.dados.validos <- sum(pull(obras.filt.mun, dados_validos)) / (14 * nrow(obras.filt.mun)) * 100
     
     show_plot(mun, porc.dados.validos, print(
         obras.filt.mun %>% 
-            select(-dados_validos) %>% 
             formattable(list(
               tipo_obra = formatter(
                 "span",
@@ -250,7 +256,8 @@ do.call(div, lapply(municipios, function(mun) {
               numero_contrato_valido = FALSE,
               data_inicio_obra = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(!is.na(data_inicio_obra), "green", "red"))),
+                class = ~ paste("celula", ifelse(data_inicio_obra_valida, "green", "red"))),
+              data_inicio_obra_valida = FALSE,
               data_prevista_conclusao = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(data_prevista_conclusao_valida, "green", "red"))),
