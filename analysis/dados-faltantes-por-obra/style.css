@@ -2,3 +2,31 @@
     height: 100% !important;
     color: black;
 }
+
+.table-obras td {
+    height: 100% !important;
+    width: 100% !important;
+    vertical-align: middle;
+    padding-top: 0px !important;
+    padding-right: 1px !important;
+    padding-bottom: 0px !important;
+    padding-left: 1px !important;
+}
+
+.celula {
+    display: flex;
+    height: inherit;
+    width: inherit;
+    align-items: center;
+    justify-content: center;
+    padding-right: 2px !important;
+    padding-left: 2px !important;
+}
+
+.green {
+    background-color: green;
+}
+
+.red {
+    background-color: red;
+}
