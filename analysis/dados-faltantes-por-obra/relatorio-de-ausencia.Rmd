@@ -217,18 +217,18 @@ do.call(div, lapply(municipios, function(mun) {
                                       planilha_contratada_valida, numero_contrato_valido, data_inicio_obra_valida,
                                       data_prevista_conclusao_valida, data_conclusao_obra_valida, 
                                       data_recebimento_obra_valida, total_de_medicoes_valida, medicoes_ok_valida,
-                                      num_fotos_valida, tem_georreferenciamento),
+                                      num_fotos_valida, tem_georreferenciamento, numero_art_valido),
                 valor_obra = paste("R$", format(valor_obra, big.mark=".", decimal.mark=",", digits=2, nsmall=2)),
                 dimensao = paste(format(dimensao, big.mark=".", decimal.mark=",", digits=2, nsmall=2), unidadeMedida)
             ) %>% 
             select(-municipio, -unidadeMedida) %>% 
-            arrange(-dados_validos, -tipo_obra_valida, -valor_obra_valida, -dimensao_valida, -dentro_municipio, 
-                  -planilha_contratada_valida, -numero_contrato_valido, -data_inicio_obra_valida,
+            arrange(-dados_validos, -numero_art_valido, -valor_obra_valida, -dimensao_valida, -tipo_obra_valida, 
+                  -tem_georreferenciamento, -dentro_municipio, -planilha_contratada_valida, -numero_contrato_valido, 
+                  -total_de_medicoes_valida, -medicoes_ok_valida, -num_fotos_valida, -data_inicio_obra_valida,
                   -data_prevista_conclusao_valida, -data_conclusao_obra_valida, 
-                  -data_recebimento_obra_valida, -total_de_medicoes_valida, -medicoes_ok_valida,
-                  -num_fotos_valida, -tem_georreferenciamento)
+                  -data_recebimento_obra_valida)
     
-    porc.dados.validos <- sum(pull(obras.filt.mun, dados_validos)) / (14 * nrow(obras.filt.mun)) * 100
+    porc.dados.validos <- sum(pull(obras.filt.mun, dados_validos)) / (15 * nrow(obras.filt.mun)) * 100
     
     show_plot(mun, porc.dados.validos, print(
         obras.filt.mun %>% 
