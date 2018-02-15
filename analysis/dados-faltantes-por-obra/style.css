@@ -30,3 +30,7 @@
 .red {
     background-color: red;
 }
+
+.main-container {
+    margin: 0px !important;
+}

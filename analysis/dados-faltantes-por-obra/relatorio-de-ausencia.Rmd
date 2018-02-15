@@ -16,6 +16,7 @@ library(GeoPBUtils)
 library(DT)
 library(formattable)
 library(htmltools)
+library(bsselectR)
 
 # Importa tabelas csv
 tipos.das.obras <<- read.csv("../dados/tipos_obra.csv")
@@ -192,7 +193,17 @@ municipios <- obras.metricas.relevantes %>%
     arrange(municipio) %>%
     pull(municipio)
 
+div(bsselect(municipios.pb$Nome.do.Município, type = "text"))
+
 # municipios <- c("João Pessoa", "Campina Grande")
+
+tags$script('
+$(document).ready(function(){
+                  $("#6SBZugIAlv").change(function(){
+                  $("#l3o5crkIK6").text($(this).val());
+                  $("div div div h3:not(:contains($(this).val()))").css("display", "none")
+                  });
+')
 
 show_plot <- function(mun, porc.dados.validos, plot_object) {
     div(style="margin:auto;text-align:center", 
@@ -201,6 +212,8 @@ show_plot <- function(mun, porc.dados.validos, plot_object) {
         div(br())
         )
 }
+
+
 
 do.call(div, lapply(municipios, function(mun) { 
     obras.filt.mun <- obras.metricas.relevantes %>% 
@@ -227,57 +240,71 @@ do.call(div, lapply(municipios, function(mun) {
             formattable(list(
               tipo_obra = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(tipo_obra_valida, "green", "red"))),
+                style = ~ style("background-color" = ifelse(tipo_obra_valida , "green", "red"),
+                                display = "block")),
               tipo_obra_valida = FALSE,
               valor_obra = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(valor_obra_valida, "green", "red"))),
+                style = ~ style("background-color" = ifelse(valor_obra_valida , "green", "red"),
+                                display = "block")),
               valor_obra_valida = FALSE,
               dimensao = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(dimensao_valida, "green", "red"))),
+                style = ~ style("background-color" = ifelse(dimensao_valida , "green", "red"),
+                                display = "block")),
               dimensao_valida = FALSE,
               dentro_municipio = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(dentro_municipio, "green", "red"))),
+                style = ~ style("background-color" = ifelse(dentro_municipio , "green", "red"),
+                                display = "block")),
               planilha_contratada = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(planilha_contratada_valida, "green", "red"))),
+                style = ~ style("background-color" = ifelse(planilha_contratada_valida , "green", "red"),
+                                display = "block")),
               planilha_contratada_valida = FALSE,
               numero_contrato = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(numero_contrato_valido, "green", "red"))),
+                style = ~ style("background-color" = ifelse(numero_contrato_valido , "green", "red"),
+                                display = "block")),
               numero_contrato_valido = FALSE,
               data_inicio_obra = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(!is.na(data_inicio_obra), "green", "red"))),
+                style = ~ style("background-color" = ifelse(!is.na(data_inicio_obra) , "green", "red"),
+                                display = "block")),
               data_prevista_conclusao = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(data_prevista_conclusao_valida, "green", "red"))),
+                style = ~ style("background-color" = ifelse(data_prevista_conclusao_valida , "green", "red"),
+                                display = "block")),
               data_prevista_conclusao_valida = FALSE,
               data_conclusao_obra = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(data_conclusao_obra_valida, "green", "red"))),
+                style = ~ style("background-color" = ifelse(data_conclusao_obra_valida , "green", "red"),
+                                display = "block")),
               data_conclusao_obra_valida = FALSE,
               data_recebimento_obra = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(data_recebimento_obra_valida, "green", "red"))),
+                style = ~ style("background-color" = ifelse(data_recebimento_obra_valida , "green", "red"),
+                                display = "block")),
               data_recebimento_obra_valida = FALSE,
               total_de_medicoes = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(total_de_medicoes_valida, "green", "red"))),
+                style = ~ style("background-color" = ifelse(total_de_medicoes_valida , "green", "red"),
+                                display = "block")),
               total_de_medicoes_valida = FALSE,
               medicoes_ok = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(medicoes_ok_valida, "green", "red"))),
+                style = ~ style("background-color" = ifelse(medicoes_ok_valida , "green", "red"),
+                                display = "block")),
               medicoes_ok_valida = FALSE,
               num_fotos = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(num_fotos_valida, "green", "red"))),
+                style = ~ style("background-color" = ifelse(num_fotos_valida , "green", "red"),
+                                display = "block")),
               num_fotos_valida = FALSE,
               tem_georreferenciamento = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(tem_georreferenciamento, "green", "red")))
+                style = ~ style("background-color" = ifelse(tem_georreferenciamento , "green", "red"),
+                                display = "block"))
           )) %>%
           as.datatable(
               options = list(
