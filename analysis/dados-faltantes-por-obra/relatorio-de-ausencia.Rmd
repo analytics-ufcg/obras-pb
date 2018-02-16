@@ -79,7 +79,7 @@ Como existem dados com data de início desde 1900, serão filtrados dados a part
 dados.georref <- acompanhamento %>%
     mutate(tem_valor_georref = valor_georeferenciamento != "0") %>%
     group_by(fk_obra) %>%
-    summarise(tem_georreferenciamento = sum(tem_valor_georref) > 0)
+    summarise(tem_georreferenciamento_valido = sum(tem_valor_georref) > 0)
 
 obra.medicao.agrupada <- obra.medicao %>% 
     mutate(medicoes_ok = grepl(".xls", planilha_medicoes) | grepl(".pdf", planilha_medicoes)) %>% 
@@ -103,7 +103,8 @@ tb.dados.municipios <- obras.2013 %>%
            data_recebimento_obra
            ) %>% 
     rename(municipio = nome.x, 
-           tipo_obra = nome.y
+           tipo_obra = nome.y,
+           dentro_municipio_valido = dentro_municipio
            ) %>% 
     left_join(obra.medicao.agrupada, by = c("id" = "fk_obra")) %>% 
     mutate(medicoes_ok = ifelse(is.na(medicoes_ok), 0, medicoes_ok),
@@ -112,8 +113,10 @@ tb.dados.municipios <- obras.2013 %>%
     left_join(obra.fotos, by = c("id" = "fk_obra")) %>% 
     mutate(num_fotos = ifelse(is.na(num_fotos), 0, num_fotos)) %>% 
     left_join(dados.georref, by = c("id" = "fk_obra")) %>% 
-    mutate(tem_georreferenciamento = ifelse(is.na(tem_georreferenciamento), FALSE, tem_georreferenciamento),
-           dentro_municipio = ifelse(is.na(dentro_municipio), FALSE, dentro_municipio)) %>% 
+    mutate(tem_georreferenciamento_valido = ifelse(is.na(tem_georreferenciamento_valido), FALSE, tem_georreferenciamento_valido),
+           tem_georreferenciamento = ifelse(tem_georreferenciamento_valido, "SIM", "NÃO"),
+           dentro_municipio_valido = ifelse(is.na(dentro_municipio_valido), FALSE, dentro_municipio_valido),
+           dentro_municipio = ifelse(dentro_municipio_valido, "SIM", "NÃO")) %>% 
     select(-id)
 ```
 
@@ -170,6 +173,8 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         data_conclusao_obra,
         data_recebimento_obra,
         tipo_obra_valida,
+        tem_georreferenciamento_valido,
+        dentro_municipio_valido,
         valor_obra_valida,
         dimensao_valida,
         planilha_contratada_valida,
@@ -211,20 +216,20 @@ do.call(div, lapply(municipios, function(mun) {
             mutate(unidadeMedida = ifelse(unidadeMedida == "-", "", as.character(unidadeMedida))) %>% 
             rowwise() %>% 
             mutate(
-                dados_validos = sum(tipo_obra_valida, valor_obra_valida, dimensao_valida, dentro_municipio, 
+                dados_validos = sum(tipo_obra_valida, valor_obra_valida, dimensao_valida, dentro_municipio_valido, 
                                       planilha_contratada_valida, numero_contrato_valido, data_inicio_obra_valida,
                                       data_prevista_conclusao_valida, data_conclusao_obra_valida, 
                                       data_recebimento_obra_valida, total_de_medicoes_valida, medicoes_ok_valida,
-                                      num_fotos_valida, tem_georreferenciamento),
+                                      num_fotos_valida, tem_georreferenciamento_valido),
                 valor_obra = paste("R$", format(valor_obra, big.mark=".", decimal.mark=",", digits=2, nsmall=2)),
                 dimensao = paste(format(dimensao, big.mark=".", decimal.mark=",", digits=2, nsmall=2), unidadeMedida)
             ) %>% 
             select(-municipio, -unidadeMedida) %>% 
-            arrange(-dados_validos, -tipo_obra_valida, -valor_obra_valida, -dimensao_valida, -dentro_municipio, 
+            arrange(-dados_validos, -tipo_obra_valida, -valor_obra_valida, -dimensao_valida, -dentro_municipio_valido, 
                   -planilha_contratada_valida, -numero_contrato_valido, -data_inicio_obra_valida,
                   -data_prevista_conclusao_valida, -data_conclusao_obra_valida, 
                   -data_recebimento_obra_valida, -total_de_medicoes_valida, -medicoes_ok_valida,
-                  -num_fotos_valida, -tem_georreferenciamento)
+                  -num_fotos_valida, -tem_georreferenciamento_valido)
     
     porc.dados.validos <- sum(pull(obras.filt.mun, dados_validos)) / (14 * nrow(obras.filt.mun)) * 100
     
@@ -245,7 +250,8 @@ do.call(div, lapply(municipios, function(mun) {
               dimensao_valida = FALSE,
               dentro_municipio = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(dentro_municipio, "green", "red"))),
+                class = ~ paste("celula", ifelse(dentro_municipio_valido, "green", "red"))),
+              dentro_municipio_valido = FALSE,
               planilha_contratada = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(planilha_contratada_valida, "green", "red"))),
@@ -284,7 +290,8 @@ do.call(div, lapply(municipios, function(mun) {
               num_fotos_valida = FALSE,
               tem_georreferenciamento = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(tem_georreferenciamento, "green", "red")))
+                class = ~ paste("celula", ifelse(tem_georreferenciamento_valido, "green", "red"))),
+              tem_georreferenciamento_valido = FALSE
           )) %>%
           as.datatable(
               options = list(
