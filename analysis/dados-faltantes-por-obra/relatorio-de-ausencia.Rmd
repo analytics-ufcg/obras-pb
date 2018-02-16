@@ -191,7 +191,46 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
     )
 ```
 
-Vejamos um panorama geral dos municípios:
+Vejamos um panorama das colunas mais preenchidas:
+
+```{r, echo=FALSE, warning=FALSE}
+df <- obras.metricas.relevantes %>% 
+    mutate(grupo = 1) %>% 
+    group_by(grupo) %>% 
+    summarise(tipo_obra = sum(tipo_obra_valida) / n(),
+              valor_obra = sum(valor_obra_valida) / n(), 
+              dimensao = sum(dimensao_valida) / n(), 
+              dentro_municipio = sum(dentro_municipio_valido) / n(), 
+              planilha_contratada = sum(planilha_contratada_valida) / n(), 
+              numero_contrato = sum(numero_contrato_valido) / n(),
+              data_inicio_obra = sum(data_inicio_obra_valida) / n(),
+              data_prevista_conclusao = sum(data_prevista_conclusao_valida) / n(), 
+              data_conclusao_obra = sum(data_conclusao_obra_valida) / n(), 
+              data_recebimento_obra = sum(data_recebimento_obra_valida) / n(), 
+              total_de_medicoes = sum(total_de_medicoes_valida) / n(), 
+              medicoes_ok = sum(medicoes_ok_valida) / n(),
+              num_fotos = sum(num_fotos_valida) / n(), 
+              tem_georreferenciamento = sum(tem_georreferenciamento_valido) / n(), 
+              numero_art = sum(numero_art_valido) / n()) %>% 
+    select(-grupo) %>% 
+    t() %>% 
+    as.data.frame()
+
+df$colunas <- rownames(df)
+
+df <- df %>%
+    rename(porcentagem.criterios.validos = V1) %>% 
+    arrange(colunas)
+
+df %>% 
+    ggplot(aes(x = reorder(colunas, porcentagem.criterios.validos), y = porcentagem.criterios.validos * 100)) +
+    geom_bar(stat = "identity") +
+    coord_flip() +
+    labs(x = "Porcentagem de dados válidos", y = "Critérios", title = "Porcentagem dos critérios válidos")
+```
+
+
+Vejamos agora um panorama geral dos municípios:
 
 ```{r, echo=FALSE, warning=FALSE}
 obras.metricas.relevantes <- obras.metricas.relevantes %>% 
