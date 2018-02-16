@@ -199,14 +199,19 @@ div(bsselect(municipios.pb$Nome.do.Município, type = "text"))
 
 tags$script('
 $(document).ready(function(){
-                  $("#6SBZugIAlv").change(function(){
-                  $("#l3o5crkIK6").text($(this).val());
-                  $("div div div h3:not(:contains($(this).val()))").css("display", "none")
-                  });
+		$(".selectpicker").change(function(){
+        var selected = $(this).val()
+		var selector1 = ".table-municipio:not(:contains(" + selected + "))"
+		var selector2 = ".table-municipio:contains(" + selected + ")"
+		$(selector1).css("display", "none")
+		$(selector2).css("display", "")
+    })
+})
 ')
 
 show_plot <- function(mun, porc.dados.validos, plot_object) {
     div(style="margin:auto;text-align:center", 
+        class="table-municipio",
         div(h3(paste0(mun, ": ", format(porc.dados.validos, decimal.mark=",", digits=2, nsmall=2), "% dos dados válidos"))), 
         div(class="table-obras", plot_object), 
         div(br())

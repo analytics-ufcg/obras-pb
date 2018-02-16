@@ -34,3 +34,7 @@
 .main-container {
     margin: 0px !important;
 }
+
+.table-municipio {
+    z-index: 1000;
+}
