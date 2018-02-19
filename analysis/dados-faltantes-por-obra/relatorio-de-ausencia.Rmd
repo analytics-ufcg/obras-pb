@@ -59,7 +59,7 @@ obras.2013 <- get.georreferencia.inputada(obra, localidade, tipos.das.obras, mun
 ```
 
 ### Seleciona colunas
-Inicialmente selecionamos as colunas a serem utilizadas como método de avaliação das obras por município. Selecionaremos:
+Inicialmente selecionaremos as colunas a serem utilizadas como método de avaliação das obras por município, as quais estão descritas abaixo:
 
 * Município
 * Descrição
@@ -121,10 +121,10 @@ tb.dados.municipios <- obras.2013 %>%
     select(-id)
 ```
 
-Vamos definir o que são valores faltantes para cada coluna:
+Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos estes critérios no restante da análise:
 
 * descricao_sucinta_obra - deixaremos a critério dos auditores verificar, visto que é muito variável 
-* tipo_obra - os que tiverem valores iguais a "OUTRAS"
+* tipo_obra - os que tiverem valores iguais a "OUTRAS" ou inexistente
 * valor_obra - os que tiverem valores menores que R$ 1.000,00 e maiores que 100.000.000,00
 * dimensao - os que tiverem dimensão igual a 0
 * tem_georreferenciamento - os que não tem georreferenciamento, ou seja, o valor do georreferenciamento é igual a "0"
@@ -133,7 +133,7 @@ Vamos definir o que são valores faltantes para cada coluna:
 * numero_contrato - numeros de contratos que são iguais a "0000"
 * data_prevista_conclusao - valores faltantes
 * data_conclusao_obra - valores faltantes
-* data_recebimento_obra - valores faltantes de fato
+* data_recebimento_obra - valores faltantes
 * total_de_medicoes - obras com 0 medições
 * medicoes_ok - pelo menos 80% dos arquivos de medição devem ter ".xls", "xlsx" ou ".pdf"
 * numero_art - consideramos os valores que contém "PB201...", visto que utilizamos obras que iniciaram a partir de 2013
@@ -142,7 +142,7 @@ Vamos definir o que são valores faltantes para cada coluna:
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
 obras.metricas.relevantes <- tb.dados.municipios %>% 
     mutate(
-        tipo_obra_valida = tipo_obra != "OUTRAS",
+        tipo_obra_valida = !is.na(tipo_obra) & tipo_obra != "OUTRAS",
         valor_obra_valida = valor_obra > 1000 & valor_obra < 100000000,
         dimensao_valida = dimensao > 0,
         planilha_contratada_valida = grepl(".xls", planilha_contratada) | grepl(".pdf", planilha_contratada),
@@ -192,6 +192,83 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
     )
 ```
 
+Vejamos um panorama das colunas mais preenchidas:
+
+```{r, echo=FALSE, warning=FALSE}
+df <- obras.metricas.relevantes %>% 
+    mutate(grupo = 1) %>% 
+    group_by(grupo) %>% 
+    summarise(tipo_obra = sum(tipo_obra_valida) / n(),
+              valor_obra = sum(valor_obra_valida) / n(), 
+              dimensao = sum(dimensao_valida) / n(), 
+              dentro_municipio = sum(dentro_municipio_valido) / n(), 
+              planilha_contratada = sum(planilha_contratada_valida) / n(), 
+              numero_contrato = sum(numero_contrato_valido) / n(),
+              data_inicio_obra = sum(data_inicio_obra_valida) / n(),
+              data_prevista_conclusao = sum(data_prevista_conclusao_valida) / n(), 
+              data_conclusao_obra = sum(data_conclusao_obra_valida) / n(), 
+              data_recebimento_obra = sum(data_recebimento_obra_valida) / n(), 
+              total_de_medicoes = sum(total_de_medicoes_valida) / n(), 
+              medicoes_ok = sum(medicoes_ok_valida) / n(),
+              num_fotos = sum(num_fotos_valida) / n(), 
+              tem_georreferenciamento = sum(tem_georreferenciamento_valido) / n(), 
+              numero_art = sum(numero_art_valido) / n()) %>% 
+    select(-grupo) %>% 
+    t() %>% 
+    as.data.frame()
+
+df$colunas <- rownames(df)
+
+df <- df %>%
+    rename(porcentagem.criterios.validos = V1) %>% 
+    arrange(colunas)
+
+df %>% 
+    ggplot(aes(x = reorder(colunas, porcentagem.criterios.validos), y = porcentagem.criterios.validos * 100)) +
+    geom_bar(stat = "identity") +
+    coord_flip() +
+    labs(x = "Porcentagem de dados válidos", y = "Critérios", title = "Porcentagem dos critérios válidos")
+```
+
+
+Vejamos agora um panorama geral dos municípios:
+
+```{r, echo=FALSE, warning=FALSE}
+obras.metricas.relevantes <- obras.metricas.relevantes %>% 
+    rowwise() %>% 
+    mutate(
+        dados_validos = sum(tipo_obra_valida, valor_obra_valida, dimensao_valida, dentro_municipio_valido, 
+                            planilha_contratada_valida, numero_contrato_valido, data_inicio_obra_valida,
+                            data_prevista_conclusao_valida, data_conclusao_obra_valida, 
+                            data_recebimento_obra_valida, total_de_medicoes_valida, medicoes_ok_valida,
+                            num_fotos_valida, tem_georreferenciamento_valido, numero_art_valido)
+        )
+
+panorama.municipios <- obras.metricas.relevantes %>% 
+    group_by(municipio) %>% 
+    summarise(porc.dados.validos = sum(dados_validos) / (15 * n())) %>% 
+    arrange(-porc.dados.validos)
+
+panorama.municipios %>% 
+    ggplot(aes(x = "municipios", y = porc.dados.validos * 100)) + 
+    geom_boxplot() + 
+    labs(x = "Municípios", y = "Porcentagem de critérios válidos", title = "Porcentagem de critérios válidos por município")
+```
+
+A mediana de critérios válidos por município é cerca de 35% e os mesmos tem pequena variação, visto que 50% dos municípios preenchem entre cerca de 32% e 38% dos critérios. Apesar da baixa variação, existem municípios que se destacaram positivamente, tendo mais de 50% dos critérios preenchidos.
+
+Vejamos os municípios mais detalhadamente:
+
+```{r, echo=FALSE, warning=FALSE, fig.height=25}
+panorama.municipios %>% 
+    ggplot(aes(x = reorder(municipio, porc.dados.validos), y = porc.dados.validos, label = paste0(format(porc.dados.validos * 100, decimal.mark=",", digits=2, nsmall=2), "%"))) +
+    geom_bar(stat = "identity") +
+    geom_text() +
+    coord_flip()
+```
+
+Vemos que os municípios que mais se destacaram foram São Sebastião do Umbuzeiro e Boa Vista, os quais tem pouco mais de 50% dos critérios preenchidos corretamente.
+
 Criaremos agora a visualização das informações faltantes das obras por municípios:
 
 ```{r, echo=FALSE, warning=FALSE}
@@ -208,6 +285,7 @@ div(bsselect(municipios.pb$Nome.do.Município, type = "text"))
 
 tags$script('
 $(document).ready(function(){
+        $(".bsselect").css("display", "none")
 		$(".selectpicker").change(function(){
         var selected = $(this).val()
 		var selector1 = ".table-municipio:not(:contains(" + selected + "))"
@@ -219,41 +297,34 @@ $(document).ready(function(){
 ')
 
 show_plot <- function(mun, porc.dados.validos, plot_object) {
-    div(style="margin:auto;text-align:center", 
+    div(style="margin:auto;text-align:center",
         class="table-municipio",
-        div(h3(paste0(mun, ": ", format(porc.dados.validos, decimal.mark=",", digits=2, nsmall=2), "% dos dados válidos"))), 
-        div(class="table-obras", plot_object), 
+        div(h3(paste0(mun, ": ", format(porc.dados.validos, decimal.mark=",", digits=2, nsmall=2), "% dos critérios válidos"))),
+        div(class="table-obras", plot_object),
         div(br())
         )
 }
 
-
-
-do.call(div, lapply(municipios, function(mun) { 
-    obras.filt.mun <- obras.metricas.relevantes %>% 
-            filter(municipio == mun) %>% 
-            left_join(select(tipos.das.obras, nome, unidadeMedida), by = c("tipo_obra" = "nome")) %>% 
-            mutate(unidadeMedida = ifelse(unidadeMedida == "-", "", as.character(unidadeMedida))) %>% 
-            rowwise() %>% 
+do.call(div, lapply(municipios, function(mun) {
+    obras.filt.mun <- obras.metricas.relevantes %>%
+            filter(municipio == mun) %>%
+            left_join(select(tipos.das.obras, nome, unidadeMedida), by = c("tipo_obra" = "nome")) %>%
+            mutate(unidadeMedida = ifelse(unidadeMedida == "-", "", as.character(unidadeMedida))) %>%
+            rowwise() %>%
             mutate(
-                dados_validos = sum(tipo_obra_valida, valor_obra_valida, dimensao_valida, dentro_municipio_valido, 
-                                      planilha_contratada_valida, numero_contrato_valido, data_inicio_obra_valida,
-                                      data_prevista_conclusao_valida, data_conclusao_obra_valida, 
-                                      data_recebimento_obra_valida, total_de_medicoes_valida, medicoes_ok_valida,
-                                      num_fotos_valida, tem_georreferenciamento_valido, numero_art_valido),
                 valor_obra = paste("R$", format(valor_obra, big.mark=".", decimal.mark=",", digits=2, nsmall=2)),
                 dimensao = paste(format(dimensao, big.mark=".", decimal.mark=",", digits=2, nsmall=2), unidadeMedida)
-            ) %>% 
-            select(-municipio, -unidadeMedida) %>% 
-            arrange(-dados_validos, -numero_art_valido, -valor_obra_valida, -dimensao_valida, -tipo_obra_valida, 
-                  -tem_georreferenciamento_valido, -dentro_municipio_valido, -planilha_contratada_valida, -numero_contrato_valido, 
+            ) %>%
+            select(-municipio, -unidadeMedida) %>%
+            arrange(-dados_validos, -numero_art_valido, -valor_obra_valida, -dimensao_valida, -tipo_obra_valida,
+                  -tem_georreferenciamento_valido, -dentro_municipio_valido, -planilha_contratada_valida, -numero_contrato_valido,
                   -total_de_medicoes_valida, -medicoes_ok_valida, -num_fotos_valida, -data_inicio_obra_valida,
                   -data_prevista_conclusao_valida, -data_conclusao_obra_valida, -data_recebimento_obra_valida)
-    
+
     porc.dados.validos <- sum(pull(obras.filt.mun, dados_validos)) / (15 * nrow(obras.filt.mun)) * 100
-    
+
     show_plot(mun, porc.dados.validos, print(
-        obras.filt.mun %>% 
+        obras.filt.mun %>%
             formattable(list(
               numero_art = formatter(
                 "span",
@@ -322,7 +393,7 @@ do.call(div, lapply(municipios, function(mun) {
                 language = list(
                     info = "Mostrando obras de _START_ à _END_ de um total de _TOTAL_",
                     lengthMenu = "Mostrar _MENU_ itens",
-                    paginate = list(previous = "Anterior", `next` = "Próxima", 
+                    paginate = list(previous = "Anterior", `next` = "Próxima",
                                     first = "Primeira", last = "Última"),
                     search = "Pesquisar:"
                 ))
