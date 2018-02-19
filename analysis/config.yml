@@ -1,0 +1,15 @@
+default: 
+  host: "150.165.85.44"
+  port: 5432
+  user: "tce"
+  password: "tc34n4lytics"
+  dbname1: "vigia"
+  dbname2: "cabobranco"
+
+db:
+  host: "150.165.85.44"
+  port: 5432
+  user: "tce"
+  password: "tc34n4lytics"
+  dbname1: "vigia"
+  dbname2: "cabobranco"
