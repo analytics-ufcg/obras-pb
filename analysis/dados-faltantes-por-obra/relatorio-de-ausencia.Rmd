@@ -123,13 +123,13 @@ tb.dados.municipios <- obras.2013 %>%
 Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos estes critérios no restante da análise:
 
 * descricao_sucinta_obra - deixaremos a critério dos auditores verificar, visto que é muito variável 
-* tipo_obra - os que tiverem valores iguais a "OUTRAS" ou inexistente
-* valor_obra - os que tiverem valores menores que R$ 1.000,00 e maiores que 100.000.000,00
-* dimensao - os que tiverem dimensão igual a 0
-* tem_georreferenciamento - os que não tem georreferenciamento, ou seja, o valor do georreferenciamento é igual a "0"
-* dentro_municipio - os georreferenciamentos do tipo 1 e 3 que estão dentro do município
-* planilha_contratada - um arquivo que não contenha ".xls", "xlsx" ou ".pdf"
-* numero_contrato - numeros de contratos que são iguais a "0000"
+* tipo_obra - os que tiverem valores iguais a "OUTRAS" ou faltante
+* valor_obra - os que tiverem valores menores que R$ 10.000,00 e maiores ou iguais à 100.000.000,00
+* dimensao - os que tiverem dimensão igual a 0 ou faltante
+* tem_georreferenciamento - as que não tem georreferenciamento, ou seja, o valor do georreferenciamento é igual a “0”, caso a obra tenha mais de 90 dias e o valor seja acima de R$30.000,00 
+* dentro_municipio - os georreferenciamentos do tipo 1 e 3 que estão dentro do município (podendo ser até 5 km da fronteira), caso a obra tenha mais de 90 dias e o valor seja acima de R$30.000,00
+* planilha_contratada - um arquivo que não contenha “.xls”, “xlsx” ou “.csv”, caso o valor seja acima de R$30.000,00 
+* numero_contrato - números de contratos que são iguais a “0000”, "-" ou faltante
 * data_prevista_conclusao - valores faltantes
 * data_conclusao_obra - valores faltantes
 * data_recebimento_obra - valores faltantes
@@ -139,13 +139,18 @@ Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos e
 * num_fotos - obras com menos de uma foto por medição
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
+ultima.data <- "2017-12-15"
+
 obras.metricas.relevantes <- tb.dados.municipios %>% 
     mutate(
+        tempo.de.obra = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_inicio_obra),units="days"),
         tipo_obra_valida = !is.na(tipo_obra) & tipo_obra != "OUTRAS",
-        valor_obra_valida = valor_obra > 1000 & valor_obra < 100000000,
-        dimensao_valida = dimensao > 0,
-        planilha_contratada_valida = grepl(".xls", planilha_contratada) | grepl(".pdf", planilha_contratada),
-        numero_contrato_valido = numero_contrato != "0000" & numero_contrato != "-",
+        valor_obra_valida = valor_obra >= 10000 & valor_obra < 100000000,
+        dimensao_valida = dimensao > 0 & !is.na(dimensao),
+        tem_georreferenciamento_valido = tem_georreferenciamento_valido | tempo.de.obra <= 90 | valor_obra <= 30000,
+        dentro_municipio_valido = dentro_municipio_valido | tempo.de.obra <= 90 | valor_obra <= 30000,
+        planilha_contratada_valida = str_detect(planilha_contratada, "([:print:]+)(.xls|.csv)") | valor_obra <= 30000,
+        numero_contrato_valido = numero_contrato != "0000" & numero_contrato != "-" & !is.na(numero_contrato),
         data_inicio_obra_valida = !is.na(data_inicio_obra),
         data_prevista_conclusao_valida = !is.na(data_prevista_conclusao),
         data_conclusao_obra_valida = !is.na(data_conclusao_obra),
@@ -156,6 +161,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         num_fotos_valida = ifelse(total_de_medicoes_valida, num_fotos >= total_de_medicoes, FALSE) 
     ) %>% 
     select(
+        -tempo.de.obra,
         municipio,
         descricao_sucinta_obra,
         numero_art,
