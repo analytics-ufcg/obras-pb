@@ -100,7 +100,9 @@ tb.dados.municipios <- obras.2013 %>%
            data_inicio_obra,
            data_prevista_conclusao,
            data_conclusao_obra,
-           data_recebimento_obra
+           data_recebimento_obra,
+           fk_jurisdicionado,
+           numero_obra
            ) %>% 
     rename(municipio = nome.x, 
            tipo_obra = nome.y,
@@ -110,14 +112,17 @@ tb.dados.municipios <- obras.2013 %>%
     mutate(medicoes_ok = ifelse(is.na(medicoes_ok), 0, medicoes_ok),
            total_de_medicoes = ifelse(is.na(total_de_medicoes), 0, total_de_medicoes)) %>% 
     left_join(obra.art, by = c("id" = "fk_obra")) %>% 
-    left_join(obra.fotos, by = c("id" = "fk_obra")) %>% 
-    mutate(num_fotos = ifelse(is.na(num_fotos), 0, num_fotos)) %>% 
+    left_join(obra.fotos, by = "id") %>% 
+    mutate(num_fotos_acompanhamento = ifelse(is.na(num_fotos_acompanhamento), 0, num_fotos_acompanhamento),
+           num_fotos_medicao = ifelse(is.na(num_fotos_medicao), 0, num_fotos_medicao)) %>% 
     left_join(dados.georref, by = c("id" = "fk_obra")) %>% 
     mutate(tem_georreferenciamento_valido = ifelse(is.na(tem_georreferenciamento_valido), FALSE, tem_georreferenciamento_valido),
            tem_georreferenciamento = ifelse(tem_georreferenciamento_valido, "SIM", "NÃO"),
            dentro_municipio_valido = ifelse(is.na(dentro_municipio_valido), FALSE, dentro_municipio_valido),
            dentro_municipio = ifelse(dentro_municipio_valido, "SIM", "NÃO")) %>% 
-    select(-id)
+    left_join(obra.proj.basico, by = c("id" = "fk_obra")) %>% 
+    left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id")) %>% 
+    select(-id, -fk_jurisdicionado)
 ```
 
 Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos estes critérios no restante da análise:
@@ -133,10 +138,13 @@ Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos e
 * data_prevista_conclusao - valores faltantes
 * data_conclusao_obra - valores faltantes
 * data_recebimento_obra - valores faltantes
-* total_de_medicoes - obras com 0 medições
-* medicoes_ok - pelo menos 80% dos arquivos de medição devem ter ".xls", "xlsx" ou ".pdf"
+* total_de_medicoes -  obras com 0 medições, caso a obra tenha mais de 90 dias e o valor seja acima de R$150.000,00
+* medicoes_ok - menos de 80% dos arquivos de medição com “.xls”, “xlsx” ou “csv”, caso o valor seja acima de R$150.000,00
 * numero_art - consideramos os valores que contém "PB201...", visto que utilizamos obras que iniciaram a partir de 2013
-* num_fotos - obras com menos de uma foto por medição
+* num_fotos_medicao - menos de uma foto por medição, caso o valor seja acima de R$150.000,00
+* num_fotos_acompanhamento - 0 fotos de acompanhamento, caso o valor seja acima de R$30.000,00
+* projeto_basico - valores faltantes, caso o valor seja acima de R$30.000,00
+* numero_obra - valores que não seguirem o padrão: 8 dígitos, sendo os quatro primeiros um identificador interno da obra pelo jurisdicionado e os quatro últimos o ano da obra, válido apenas para a esfera municipal
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
 ultima.data <- "2017-12-15"
@@ -155,10 +163,13 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         data_prevista_conclusao_valida = !is.na(data_prevista_conclusao),
         data_conclusao_obra_valida = !is.na(data_conclusao_obra),
         data_recebimento_obra_valida = !is.na(data_recebimento_obra),
-        total_de_medicoes_valida = total_de_medicoes > 0,
-        medicoes_ok_valida = ifelse(total_de_medicoes_valida, medicoes_ok/total_de_medicoes >= 0.8, FALSE),
+        total_de_medicoes_valida = total_de_medicoes > 0 | tempo.de.obra <= 90 | valor_obra <= 150000,
+        medicoes_ok_valida = ifelse(total_de_medicoes > 0, medicoes_ok/total_de_medicoes >= 0.8, FALSE) | tempo.de.obra <= 90 | valor_obra <= 150000,
         numero_art_valido = str_detect(numero_art, "(P|p)(B|b)201([:digit:]+)"),
-        num_fotos_valida = ifelse(total_de_medicoes_valida, num_fotos >= total_de_medicoes, FALSE) 
+        num_fotos_medicao_valida = num_fotos_medicao >= total_de_medicoes | valor_obra <= 150000,
+        num_fotos_acompanhamento_valida = num_fotos_acompanhamento > 0 | valor_obra <= 30000,
+        projeto_basico_valido = is.na(projeto_basico) | valor_obra <= 30000#,
+        #numero_obra_valido = str_detect(numero_obra, "(P|p)(B|b)201([:digit:]+)")
     ) %>% 
     select(
         -tempo.de.obra,
