@@ -140,7 +140,7 @@ Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos e
 * data_recebimento_obra - valores faltantes
 * total_de_medicoes -  obras com 0 medições, caso a obra tenha mais de 90 dias e o valor seja acima de R$150.000,00
 * medicoes_ok - menos de 80% dos arquivos de medição com “.xls”, “xlsx” ou “csv”, caso o valor seja acima de R$150.000,00
-* numero_art - consideramos os valores que contém "PB201...", visto que utilizamos obras que iniciaram a partir de 2013
+* numero_art - ARTS que não seguirem o padrão: UF (PB) + 11 Dígitos Numéricos, caso o valor seja acima de R$30.000,00 e registradas a partir de 01/01/2015
 * num_fotos_medicao - menos de uma foto por medição, caso o valor seja acima de R$150.000,00
 * num_fotos_acompanhamento - 0 fotos de acompanhamento, caso o valor seja acima de R$30.000,00
 * projeto_basico - valores faltantes, caso o valor seja acima de R$30.000,00
@@ -165,11 +165,11 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         data_recebimento_obra_valida = !is.na(data_recebimento_obra),
         total_de_medicoes_valida = total_de_medicoes > 0 | tempo.de.obra <= 90 | valor_obra <= 150000,
         medicoes_ok_valida = ifelse(total_de_medicoes > 0, medicoes_ok/total_de_medicoes >= 0.8, FALSE) | tempo.de.obra <= 90 | valor_obra <= 150000,
-        numero_art_valido = str_detect(numero_art, "(P|p)(B|b)201([:digit:]+)"),
+        numero_art_valido = str_detect(numero_art, paste0("(P|p)(B|b)(",lubridate::year(data_inicio_obra), "|1900)([:digit:]{7})")) | valor_obra <= 30000 | lubridate::year(data_inicio_obra) < 2015,
         num_fotos_medicao_valida = num_fotos_medicao >= total_de_medicoes | valor_obra <= 150000,
         num_fotos_acompanhamento_valida = num_fotos_acompanhamento > 0 | valor_obra <= 30000,
-        projeto_basico_valido = is.na(projeto_basico) | valor_obra <= 30000#,
-        #numero_obra_valido = str_detect(numero_obra, "(P|p)(B|b)201([:digit:]+)")
+        projeto_basico_valido = is.na(projeto_basico) | valor_obra <= 30000,
+        numero_obra_valido = str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")) | esfera != 1
     ) %>% 
     select(
         -tempo.de.obra,
