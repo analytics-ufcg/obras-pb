@@ -225,7 +225,7 @@ porc.metricas.validas <- porc.metricas.validas %>%
 porc.metricas.validas %>% 
     ggplot(aes(x = reorder(colunas, porcentagem.criterios.validos), y = porcentagem.criterios.validos)) +
     geom_bar(stat = "identity") +
-    labs(x = "Critérios", y = "Porcentagem de dados válidos", title = "Porcentagem dos critérios válidos") +
+    labs(x = "Critérios", y = "Porcentagem de critérios válidos", title = "Porcentagem dos critérios válidos") +
     coord_flip() +
     scale_y_continuous(label = percent) 
     
