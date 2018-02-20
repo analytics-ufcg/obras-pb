@@ -194,7 +194,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
 Vejamos um panorama das colunas mais preenchidas:
 
 ```{r, echo=FALSE, warning=FALSE}
-df <- obras.metricas.relevantes %>% 
+porc.metricas.validas <- obras.metricas.relevantes %>%  
     mutate(grupo = 1) %>% 
     group_by(grupo) %>% 
     summarise(tipo_obra = sum(tipo_obra_valida) / n(),
@@ -216,17 +216,19 @@ df <- obras.metricas.relevantes %>%
     t() %>% 
     as.data.frame()
 
-df$colunas <- rownames(df)
+porc.metricas.validas$colunas <- rownames(porc.metricas.validas)
 
-df <- df %>%
+porc.metricas.validas <- porc.metricas.validas %>%
     rename(porcentagem.criterios.validos = V1) %>% 
     arrange(colunas)
 
-df %>% 
-    ggplot(aes(x = reorder(colunas, porcentagem.criterios.validos), y = porcentagem.criterios.validos * 100)) +
+porc.metricas.validas %>% 
+    ggplot(aes(x = reorder(colunas, porcentagem.criterios.validos), y = porcentagem.criterios.validos)) +
     geom_bar(stat = "identity") +
+    labs(x = "Critérios", y = "Porcentagem de critérios válidos", title = "Porcentagem dos critérios válidos") +
     coord_flip() +
-    labs(x = "Porcentagem de dados válidos", y = "Critérios", title = "Porcentagem dos critérios válidos")
+    scale_y_continuous(label = percent) 
+    
 ```
 
 
@@ -249,7 +251,8 @@ panorama.municipios <- obras.metricas.relevantes %>%
     arrange(-porc.dados.validos)
 
 panorama.municipios %>% 
-    ggplot(aes(x = "municipios", y = porc.dados.validos * 100)) + 
+    ggplot(aes(x = "municipios", y = porc.dados.validos)) + 
+    scale_y_continuous(labels = percent) +
     geom_boxplot() + 
     labs(x = "Municípios", y = "Porcentagem de critérios válidos", title = "Porcentagem de critérios válidos por município")
 ```
@@ -258,12 +261,14 @@ A mediana de critérios válidos por município é cerca de 35% e os mesmos tem 
 
 Vejamos os municípios mais detalhadamente:
 
-```{r, echo=FALSE, warning=FALSE, fig.height=25}
+```{r, echo=FALSE, warning=FALSE, fig.height=30}
 panorama.municipios %>% 
     ggplot(aes(x = reorder(municipio, porc.dados.validos), y = porc.dados.validos, label = paste0(format(porc.dados.validos * 100, decimal.mark=",", digits=2, nsmall=2), "%"))) +
     geom_bar(stat = "identity") +
-    geom_text() +
-    coord_flip()
+    geom_text(position = position_stack(vjust = 0.5), colour = "white") +
+    labs(x = "Municípios", y = "Porcentagem de critérios válidos", title = "Porcentagem de critérios válidos por município") +
+    coord_flip() +
+    scale_y_continuous(label = percent)
 ```
 
 Vemos que os municípios que mais se destacaram foram São Sebastião do Umbuzeiro e Boa Vista, os quais tem pouco mais de 50% dos critérios preenchidos corretamente.
