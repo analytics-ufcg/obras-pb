@@ -284,22 +284,22 @@ div(bsselect(municipios.pb$Nome.do.Município, type = "text"))
 # municipios <- c("João Pessoa", "Campina Grande")
 
 tags$script('
-$(document).ready(function(){
-        $(".bsselect").css("display", "none")
-		$(".selectpicker").change(function(){
-        var selected = $(this).val()
-		var selector1 = ".table-municipio:not(:contains(" + selected + "))"
-		var selector2 = ".table-municipio:contains(" + selected + ")"
-		$(selector1).css("display", "none")
-		$(selector2).css("display", "")
+    $(document).ready(function(){
+            $(".bsselect").css("display", "none")
+    		$(".selectpicker").change(function(){
+                var selected = $(this).val()
+        		var selector1 = ".table-municipio:not(:contains(" + selected + ":))"
+        		var selector2 = ".table-municipio:contains(" + selected + ":)"
+        		$(selector1).parent().css("display", "none")
+        		$(selector2).parent().css("display", "")
+            })
     })
-})
 ')
 
 show_plot <- function(mun, porc.dados.validos, plot_object) {
     div(style="margin:auto;text-align:center",
-        class="table-municipio",
-        div(h3(paste0(mun, ": ", format(porc.dados.validos, decimal.mark=",", digits=2, nsmall=2), "% dos critérios válidos"))),
+        div(class="table-municipio",
+            h3(paste0(mun, ": ", format(porc.dados.validos, decimal.mark=",", digits=2, nsmall=2), "% dos critérios válidos"))),
         div(class="table-obras", plot_object),
         div(br())
         )
