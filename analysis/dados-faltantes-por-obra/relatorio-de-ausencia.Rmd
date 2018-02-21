@@ -279,20 +279,28 @@ municipios <- obras.metricas.relevantes %>%
     arrange(municipio) %>%
     pull(municipio)
 
-div(bsselect(municipios.pb$Nome.do.Município, type = "text"))
+div(bsselect(municipios, type = "text"))
 
 # municipios <- c("João Pessoa", "Campina Grande")
 
 tags$script('
     $(document).ready(function(){
             $(".bsselect").css("display", "none")
-    		$(".selectpicker").change(function(){
-                var selected = $(this).val()
-        		var selector1 = ".table-municipio:not(:contains(" + selected + ":))"
-        		var selector2 = ".table-municipio:contains(" + selected + ":)"
-        		$(selector1).parent().css("display", "none")
-        		$(selector2).parent().css("display", "")
-            })
+            
+            var changeTable = function(){
+                var selected = $(".selectpicker").val()
+                var regex = new RegExp("^" + selected + ":");
+        		$(".table-municipio h3").filter(function () {
+                        return !regex.test($(this).text()); 
+                    }).parent().parent().css("display", "none")
+        		$(".table-municipio h3").filter(function () {
+                        return regex.test($(this).text()); 
+                    }).parent().parent().css("display", "")
+                $(".bsselect").parent().find("p").text("")
+            }
+            
+    		$(".selectpicker").change(changeTable)
+            /*changeTable()*/
     })
 ')
 
