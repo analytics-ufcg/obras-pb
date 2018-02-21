@@ -333,7 +333,7 @@ municipios <- obras.metricas.relevantes %>%
     arrange(municipio) %>%
     pull(municipio)
 
-municipios <- c("João Pessoa", "Campina Grande")
+#municipios <- c("João Pessoa", "Campina Grande")
 
 show_plot <- function(mun, porc.dados.validos, plot_object) {
     div(style="margin:auto;text-align:center",
