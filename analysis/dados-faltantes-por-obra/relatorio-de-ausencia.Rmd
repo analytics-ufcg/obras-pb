@@ -16,6 +16,7 @@ library(GeoPBUtils)
 library(DT)
 library(formattable)
 library(htmltools)
+library(bsselectR)
 
 # Importa tabelas csv
 tipos.das.obras <<- read.csv("../dados/tipos_obra.csv")
@@ -333,11 +334,35 @@ municipios <- obras.metricas.relevantes %>%
     arrange(municipio) %>%
     pull(municipio)
 
-#municipios <- c("João Pessoa", "Campina Grande")
+div(bsselect(municipios, type = "text"))
+
+# municipios <- c("João Pessoa", "Campina Grande")
+
+tags$script('
+    $(document).ready(function(){
+            $(".bsselect").css("display", "none")
+            
+            var changeTable = function(){
+                var selected = $(".selectpicker").val()
+                var regex = new RegExp("^" + selected + ":");
+        		$(".table-municipio h3").filter(function () {
+                        return !regex.test($(this).text()); 
+                    }).parent().parent().css("display", "none")
+        		$(".table-municipio h3").filter(function () {
+                        return regex.test($(this).text()); 
+                    }).parent().parent().css("display", "")
+                $(".bsselect").parent().find("p").text("")
+            }
+            
+    		$(".selectpicker").change(changeTable)
+            /*changeTable()*/
+    })
+')
 
 show_plot <- function(mun, porc.dados.validos, plot_object) {
     div(style="margin:auto;text-align:center",
-        div(h3(paste0(mun, ": ", format(porc.dados.validos, decimal.mark=",", digits=2, nsmall=2), "% dos critérios válidos"))),
+        div(class="table-municipio",
+            h3(paste0(mun, ": ", format(porc.dados.validos, decimal.mark=",", digits=2, nsmall=2), "% dos critérios válidos"))),
         div(class="table-obras", plot_object),
         div(br())
         )
