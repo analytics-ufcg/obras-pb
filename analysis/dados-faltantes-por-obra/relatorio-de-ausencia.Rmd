@@ -87,6 +87,19 @@ obra.medicao.agrupada <- obra.medicao %>%
     summarise(total_de_medicoes = n(), 
               medicoes_ok = sum(medicoes_ok)) 
 
+acomp.data.final <- acompanhamento %>% 
+    filter(tipo == 3) %>% 
+    group_by(fk_obra) %>% 
+    summarise(data.acomp.final = max(data_cadastro, na.rm = TRUE))
+
+acomp.inicial.final <- acompanhamento %>% 
+    group_by(fk_obra) %>% 
+    summarise(
+        tem.acomp.inicial = sum(tipo == 1) > 0,
+        tem.acomp.final = sum(tipo == 3) > 0
+    ) %>% 
+    left_join(acomp.data.final, by = "fk_obra")
+
 tb.dados.municipios <- obras.2013 %>% 
     select(id,
            nome.x,
@@ -122,7 +135,10 @@ tb.dados.municipios <- obras.2013 %>%
            dentro_municipio = ifelse(dentro_municipio_valido, "SIM", "NÃO")) %>% 
     left_join(obra.proj.basico, by = c("id" = "fk_obra")) %>% 
     left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id")) %>% 
-    select(-id, -fk_jurisdicionado)
+    left_join(acomp.inicial.final, by = c("id" = "fk_obra")) %>% 
+    mutate(tem_acompanhamentos_validos = tem.acomp.inicial & tem.acomp.final,
+           tem_acompanhamentos = ifelse(tem_acompanhamentos_validos, "SIM", "NÃO")) %>% 
+    select(-id, -fk_jurisdicionado, -tem.acomp.inicial, -tem.acomp.final)
 ```
 
 Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos estes critérios no restante da análise:
@@ -145,6 +161,7 @@ Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos e
 * num_fotos_acompanhamento - 0 fotos de acompanhamento, caso o valor seja acima de R$30.000,00
 * projeto_basico - valores faltantes, caso o valor seja acima de R$30.000,00
 * numero_obra - valores que não seguirem o padrão: 8 dígitos, sendo os quatro primeiros um identificador interno da obra pelo jurisdicionado e os quatro últimos o ano da obra, válido apenas para a esfera municipal
+* tem_acompanhamentos - os que não tiverem acompanhamento inicial e final, caso a obra tenha mais de 90 dias e o valor seja acima de R$30.000,00
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
 ultima.data <- "2017-12-15"
@@ -152,6 +169,8 @@ ultima.data <- "2017-12-15"
 obras.metricas.relevantes <- tb.dados.municipios %>% 
     mutate(
         tempo.de.obra = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_inicio_obra),units="days"),
+        tempo.acomp.final = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.acomp.final),units="days"),
+        acomp.final.menor.90.dias = is.na(tempo.acomp.final) | tempo.acomp.final < 90,
         tipo_obra_valida = !is.na(tipo_obra) & tipo_obra != "OUTRAS",
         valor_obra_valida = valor_obra >= 10000 & valor_obra < 100000000,
         dimensao_valida = dimensao > 0 & !is.na(dimensao),
@@ -169,10 +188,12 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         num_fotos_medicao_valida = num_fotos_medicao >= total_de_medicoes | valor_obra <= 150000,
         num_fotos_acompanhamento_valida = num_fotos_acompanhamento > 0 | valor_obra <= 30000,
         projeto_basico_valido = is.na(projeto_basico) | valor_obra <= 30000,
-        numero_obra_valido = str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")) | esfera != 1
+        numero_obra_valido = str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")) | esfera != 1,
+        tem_acompanhamentos_validos = tem_acompanhamentos_validos | tempo.de.obra <= 90 | valor_obra <= 30000
     ) %>% 
     select(
         -tempo.de.obra,
+        -data.acomp.final,
         municipio,
         descricao_sucinta_obra,
         numero_art,
