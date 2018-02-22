@@ -172,9 +172,9 @@ tb.dados.municipios <- tb.dados.municipios %>%
         tempo.medicao.final = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.medicao.final),units="days"),
         acomp.final.menor.90.dias = !is.na(tempo.acomp.final) & tempo.acomp.final <= 90,
         medicao.final.menor.90.dias = !is.na(tempo.medicao.final) & tempo.medicao.final <= 90,
-        situacao_estimada = ifelse(situacao %in% c(7, 8) | !is.na(data_conclusao_obra) | !is.na(data_recebimento_obra),
+        situacao_estimada = ifelse(!is.na(situacao) & situacao %in% c(7, 8) | !is.na(data_conclusao_obra) | !is.na(data_recebimento_obra),
                           "CONCLUÍDA",
-                          ifelse(situacao == 1 & (medicao.final.menor.90.dias | acomp.final.menor.90.dias | tempo.de.obra <= 180), 
+                          ifelse(!is.na(situacao) & situacao == 1 & (medicao.final.menor.90.dias | acomp.final.menor.90.dias | tempo.de.obra <= 180), 
                                  "EM ANDAMENTO", 
                                  "PARALISADA")
                           )
@@ -198,8 +198,8 @@ Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos e
 * num_fotos_medicao - menos de uma foto por medição, caso o valor seja acima de R$150.000,00
 * num_fotos_acompanhamento - 0 fotos de acompanhamento, caso o valor seja acima de R$30.000,00
 * data_prevista_conclusao - valores faltantes
-* data_conclusao_obra - valores faltantes
-* data_recebimento_obra - valores faltantes
+* data_conclusao_obra - valores faltantes, caso a situacao estimada da obra não seja "EM ANDAMENTO"
+* data_recebimento_obra - valores faltantes, caso a situacao estimada da obra não seja "EM ANDAMENTO" ou os que tiverem recebimento anterior à conclusão
 * projeto_basico - valores faltantes, caso o valor seja acima de R$30.000,00
 * tem_acompanhamentos - os que não tiverem acompanhamento inicial e final, caso a obra tenha mais de 90 dias e o valor seja acima de R$30.000,00
 * numero_obra - valores que não seguirem o padrão: 8 dígitos, sendo os quatro primeiros um identificador interno da obra pelo jurisdicionado e os quatro últimos o ano da obra, válido apenas para a esfera municipal
@@ -219,8 +219,9 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         numero_contrato_valido = numero_contrato != "0000" & numero_contrato != "-" & !is.na(numero_contrato),
         data_inicio_obra_valida = !is.na(data_inicio_obra),
         data_prevista_conclusao_valida = !is.na(data_prevista_conclusao),
-        data_conclusao_obra_valida = !is.na(data_conclusao_obra),
-        data_recebimento_obra_valida = !is.na(data_recebimento_obra),
+        data_conclusao_obra_valida = !is.na(data_conclusao_obra) | situacao_estimada == "EM ANDAMENTO",
+        data_recebimento_obra_valida = (!is.na(data_recebimento_obra) & (!is.na(data_conclusao_obra) & data_recebimento_obra >= data_conclusao_obra)) |
+            situacao_estimada == "EM ANDAMENTO",
         total_de_medicoes_valida = total_de_medicoes > 0 | tempo.de.obra <= 90 | (valor_obra > 10000 & valor_obra <= 150000),
         total_de_medicoes_opcional = ifelse(valor_obra > 10000 & valor_obra <= 150000, TRUE, FALSE),
         medicoes_ok_valida = ifelse(total_de_medicoes > 0, medicoes_ok/total_de_medicoes >= 0.8, FALSE) | tempo.de.obra <= 90 | 
@@ -377,7 +378,7 @@ panorama.municipios %>%
     labs(x = "Municípios", y = "Porcentagem de critérios válidos", title = "Porcentagem de critérios válidos por município")
 ```
 
-A mediana de critérios válidos por município é cerca de 45% e os mesmos tem pequena variação, visto que 50% dos municípios preenchem entre cerca de 42% e 48% dos critérios. Apesar da baixa variação, existem municípios que se destacaram positivamente, tendo cerca de 61% dos critérios preenchidos.
+A mediana de critérios válidos por município é cerca de 45% e os mesmos tem pequena variação, visto que 50% dos municípios preenchem entre cerca de 42% e 49% dos critérios. Apesar da baixa variação, existem municípios que se destacaram positivamente, tendo cerca de 61% dos critérios preenchidos.
 
 Vejamos os municípios mais detalhadamente:
 
