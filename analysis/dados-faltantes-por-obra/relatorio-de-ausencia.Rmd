@@ -372,6 +372,8 @@ div(bsselect(municipios, type = "text"))
 
 tags$script('
     $(document).ready(function(){
+            var isFormatted = false
+
             $(".bsselect").css("display", "none")
             
             var changeTable = function(){
@@ -384,6 +386,13 @@ tags$script('
                         return regex.test($(this).text()); 
                     }).parent().parent().css("display", "")
                 $(".bsselect").parent().find("p").text("")
+                if(!isFormatted){
+                    $("td span").each(function(index){
+                    	var parent = $(this).parent()
+                    	$(this).height(parent.height())
+                    })
+                    isFormatted = true
+                }
             }
             
     		$(".selectpicker").change(changeTable)
