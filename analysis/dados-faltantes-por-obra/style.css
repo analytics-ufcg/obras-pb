@@ -31,6 +31,10 @@
     background-color: #fc8d62;
 }
 
+.gray {
+    background-color: #BEBEBE;
+}
+
 .main-container {
     margin: 0px !important;
 }
