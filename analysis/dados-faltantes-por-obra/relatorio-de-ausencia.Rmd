@@ -86,7 +86,9 @@ obra.medicao.agrupada <- obra.medicao %>%
     mutate(medicoes_ok = grepl(".xls", planilha_medicoes) | grepl(".pdf", planilha_medicoes)) %>% 
     group_by(fk_obra) %>% 
     summarise(total_de_medicoes = n(), 
-              medicoes_ok = sum(medicoes_ok)) 
+              medicoes_ok = sum(medicoes_ok),
+              data.medicao.final = max(data_final, na.rm = TRUE)) %>% 
+    left_join(select(obra.medicao, -planilha_medicoes), by = c("fk_obra", "data.medicao.final" = "data_final"))
 
 acomp.data.final <- acompanhamento %>% 
     filter(tipo == 3) %>% 
@@ -142,6 +144,44 @@ tb.dados.municipios <- obras.2013 %>%
     select(-id, -fk_jurisdicionado, -tem.acomp.inicial, -tem.acomp.final)
 ```
 
+Para estimar a situação das obras, que constam em execução normal, utilizaremos os seguintes critérios:
+
+* Concluída (deve satisfazer pelo menos um dos critérios):
+    + Se existir data de conclusão 
+    + Se existir data de recebimento 
+    + Se a última medição consta em situação "Finalizada por Conclusão de Construção" 
+    + Se a última medição consta em situação "Finalizada Administrativa ou Judicialmente"
+    
+* Em andamento (deve satisfazer pelo menos um dos critérios):
+    + Se a data da última medição não exceder 90 dias
+    + Se a data do último acompanhamento não exceder 90 dias
+    + Se a duração da obra não exceder 180 dias
+    
+* Paralisada:
+    + Se não se encaixar nos critérios anteriores
+
+_As obras que constam em situação "Atrasada (Cronograma Atrasado)", "Paralisada (Sem Execução)", "Inacabada (Não Concluída Após Término do Contrato)" e "Abandonada" serão incluídas no grupo de obras paralisadas._
+
+```{r, echo=FALSE, warning=FALSE}
+ultima.data <- "2017-12-15"
+
+tb.dados.municipios <- tb.dados.municipios %>% 
+    mutate(
+        tempo.de.obra = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_inicio_obra),units="days"),
+        tempo.acomp.final = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.acomp.final),units="days"),
+        tempo.medicao.final = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.medicao.final),units="days"),
+        acomp.final.menor.90.dias = !is.na(tempo.acomp.final) & tempo.acomp.final <= 90,
+        medicao.final.menor.90.dias = !is.na(tempo.medicao.final) & tempo.medicao.final <= 90,
+        situacao_estimada = ifelse(situacao %in% c(7, 8) | !is.na(data_conclusao_obra) | !is.na(data_recebimento_obra),
+                          "CONCLUÍDA",
+                          ifelse(situacao == 1 & (medicao.final.menor.90.dias | acomp.final.menor.90.dias | tempo.de.obra <= 180), 
+                                 "EM ANDAMENTO", 
+                                 "PARALISADA")
+                          )
+    ) %>% 
+    select(-tempo.acomp.final, -tempo.medicao.final, -acomp.final.menor.90.dias, -medicao.final.menor.90.dias)
+```
+
 Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos estes critérios no restante da análise:
 
 * descricao_sucinta_obra - deixaremos a critério dos auditores verificar, visto que é muito variável 
@@ -165,13 +205,8 @@ Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos e
 * numero_obra - valores que não seguirem o padrão: 8 dígitos, sendo os quatro primeiros um identificador interno da obra pelo jurisdicionado e os quatro últimos o ano da obra, válido apenas para a esfera municipal
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
-ultima.data <- "2017-12-15"
-
 obras.metricas.relevantes <- tb.dados.municipios %>% 
     mutate(
-        tempo.de.obra = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_inicio_obra),units="days"),
-        tempo.acomp.final = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.acomp.final),units="days"),
-        acomp.final.menor.90.dias = is.na(tempo.acomp.final) | tempo.acomp.final < 90,
         tipo_obra_valida = !is.na(tipo_obra) & tipo_obra != "OUTRAS",
         valor_obra_valida = valor_obra >= 10000 & valor_obra < 100000000,
         dimensao_valida = dimensao > 0 & !is.na(dimensao),
@@ -226,6 +261,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         projeto_basico,
         tem_acompanhamentos,
         numero_obra,
+        situacao_estimada,
         numero_art_valido,
         valor_obra_valida,
         dimensao_valida,
@@ -512,7 +548,10 @@ do.call(div, lapply(municipios, function(mun) {
               numero_obra = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(numero_obra_valido, "green", "red"))),
-              numero_obra_valido = FALSE
+              numero_obra_valido = FALSE,
+              situacao_estimada = formatter(
+                "span",
+                class = ~ paste("celula", ifelse(situacao_estimada != "PARALISADA", "green", "red")))
           )) %>%
           as.datatable(
               options = list(
