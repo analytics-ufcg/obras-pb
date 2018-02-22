@@ -178,6 +178,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         tem_georreferenciamento_valido = tem_georreferenciamento_valido | tempo.de.obra <= 90 | valor_obra <= 30000,
         tem_georreferenciamento_opcional = ifelse(valor_obra > 10000 & valor_obra <= 30000, TRUE, FALSE),
         dentro_municipio_valido = dentro_municipio_valido | tempo.de.obra <= 90 | valor_obra <= 30000,
+        dentro_municipio_opcional = ifelse(valor_obra > 10000 & valor_obra <= 30000, TRUE, FALSE),
         planilha_contratada_valida = str_detect(planilha_contratada, "([:print:]+)(.xls|.csv)") | valor_obra <= 30000,
         planilha_contratada_opcional = ifelse(valor_obra > 10000 & valor_obra <= 30000, TRUE, FALSE),
         numero_contrato_valido = numero_contrato != "0000" & numero_contrato != "-" & !is.na(numero_contrato),
@@ -189,7 +190,8 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         total_de_medicoes_opcional = ifelse(valor_obra > 10000 & valor_obra <= 150000, TRUE, FALSE),
         medicoes_ok_valida = ifelse(total_de_medicoes > 0, medicoes_ok/total_de_medicoes >= 0.8, FALSE) | tempo.de.obra <= 90 | valor_obra <= 150000,
         medicoes_ok_opcional = ifelse(valor_obra > 10000 & valor_obra <= 150000, TRUE, FALSE),
-        numero_art_valido = str_detect(numero_art, paste0("(P|p)(B|b)(",lubridate::year(data_inicio_obra), "|1900)([:digit:]{7})")) | valor_obra <= 30000 | lubridate::year(data_inicio_obra) < 2015,
+        numero_art_valido = str_detect(numero_art, paste0("(P|p)(B|b)(",lubridate::year(data_inicio_obra), "|1900)([:digit:]{7})")) | 
+            valor_obra <= 30000 | lubridate::year(data_inicio_obra) < 2015,
         numero_art_opcional = ifelse(valor_obra > 10000 & valor_obra <= 30000, TRUE, FALSE),
         num_fotos_medicao_valida = num_fotos_medicao >= total_de_medicoes | valor_obra <= 150000,
         num_fotos_medicao_opcional = ifelse(valor_obra > 10000 & valor_obra <= 150000, TRUE, FALSE),
@@ -200,26 +202,20 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         numero_obra_valido = str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")) | esfera != 1,
         tem_acompanhamentos_validos = tem_acompanhamentos_validos | tempo.de.obra <= 90 | valor_obra <= 30000,
         tem_acompanhamentos_opcional = ifelse(valor_obra > 10000 & valor_obra <= 30000, TRUE, FALSE)
-        
     ) %>% 
     select(
         municipio,
         descricao_sucinta_obra,
         numero_art,
-        numero_art_opcional,
         valor_obra,
         dimensao,
         tipo_obra,
         tem_georreferenciamento,
-        tem_georreferenciamento_opcional,
         dentro_municipio,
         planilha_contratada,
-        planilha_contratada_opcional,
         numero_contrato,
         total_de_medicoes,
-        total_de_medicoes_opcional,
         medicoes_ok,
-        medicoes_ok_opcional,
         num_fotos_medicao,
         num_fotos_acompanhamento,
         data_inicio_obra,
@@ -240,19 +236,24 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         total_de_medicoes_valida,
         medicoes_ok_valida,
         num_fotos_medicao_valida,
-        num_fotos_medicao_opcional,
         num_fotos_acompanhamento_valida,
-        num_fotos_acompanhamento_opcional,
         data_inicio_obra_valida,
         data_prevista_conclusao_valida,
         data_conclusao_obra_valida,
         data_recebimento_obra_valida,
         projeto_basico_valido,
-        projeto_basico_opcional,
         tem_acompanhamentos_validos,
-        tem_acompanhamentos_opcional,
-        numero_obra_valido
-        
+        numero_obra_valido,
+        numero_art_opcional,
+        tem_georreferenciamento_opcional,
+        dentro_municipio_opcional,
+        planilha_contratada_opcional,
+        total_de_medicoes_opcional,
+        medicoes_ok_opcional,
+        num_fotos_medicao_opcional,
+        num_fotos_acompanhamento_opcional,
+        projeto_basico_opcional,
+        tem_acompanhamentos_opcional
     )
 ```
 
@@ -268,11 +269,11 @@ porc.metricas.validas <- obras.metricas.relevantes %>%
               dimensao = sum(dimensao_valida) / n(), 
               tipo_obra = sum(tipo_obra_valida) / n(),
               tem_georreferenciamento = sum(tem_georreferenciamento_valido == TRUE & tem_georreferenciamento_opcional == FALSE) / sum(tem_georreferenciamento_opcional == FALSE), 
-              dentro_municipio = sum(dentro_municipio_valido) / n(), 
+              dentro_municipio = sum(dentro_municipio_valido & !dentro_municipio_opcional) / sum(!dentro_municipio_opcional), 
               planilha_contratada = sum(planilha_contratada_valida == TRUE & planilha_contratada_opcional == FALSE) / sum(planilha_contratada_opcional == FALSE), 
               numero_contrato = sum(numero_contrato_valido) / n(),
               total_de_medicoes = sum(total_de_medicoes_valida == TRUE & total_de_medicoes_opcional == FALSE) / sum(total_de_medicoes_opcional == FALSE), 
-              medicoes_ok = sum(medicoes_ok_valida == TRUE & medicoes_ok_opcional == FALSE) / n(),
+              medicoes_ok = sum(medicoes_ok_valida == TRUE & medicoes_ok_opcional == FALSE) / sum(!medicoes_ok_opcional),
               num_fotos_medicao = sum(num_fotos_medicao_valida == TRUE & num_fotos_medicao_opcional == FALSE) / sum(num_fotos_medicao_opcional == FALSE), 
               num_fotos_acompanhamento = sum(num_fotos_acompanhamento_valida == TRUE & num_fotos_acompanhamento_opcional == FALSE) / sum(num_fotos_acompanhamento_opcional == FALSE), 
               data_inicio_obra = sum(data_inicio_obra_valida) / n(),
@@ -309,32 +310,43 @@ Vejamos agora um panorama geral dos municípios:
 obras.metricas.relevantes <- obras.metricas.relevantes %>% 
     rowwise() %>% 
     mutate(
-        dados_validos = sum(tipo_obra_valida, valor_obra_valida, dimensao_valida, dentro_municipio_valido, 
-                            planilha_contratada_valida, numero_contrato_valido, data_inicio_obra_valida,
-                            data_prevista_conclusao_valida, data_conclusao_obra_valida, 
-                            data_recebimento_obra_valida, total_de_medicoes_valida, medicoes_ok_valida,
-                            num_fotos_medicao_valida, num_fotos_acompanhamento_valida, tem_georreferenciamento_valido, 
-                            numero_art_valido, projeto_basico_valido, tem_acompanhamentos_validos, numero_obra_valido)
+        criterios_validos = sum(numero_art_valido & !numero_art_opcional, valor_obra_valida, dimensao_valida, 
+                            tipo_obra_valida, tem_georreferenciamento_valido & !tem_georreferenciamento_opcional,
+                            dentro_municipio_valido & !dentro_municipio_opcional, 
+                            planilha_contratada_valida & !planilha_contratada_opcional, numero_contrato_valido,
+                            total_de_medicoes_valida & !total_de_medicoes_opcional, 
+                            medicoes_ok_valida & !medicoes_ok_opcional, 
+                            num_fotos_medicao_valida & !num_fotos_medicao_opcional, 
+                            num_fotos_acompanhamento_valida & !num_fotos_acompanhamento_opcional,
+                            data_inicio_obra_valida, data_prevista_conclusao_valida, 
+                            data_conclusao_obra_valida, data_recebimento_obra_valida, 
+                            projeto_basico_valido & !projeto_basico_opcional, 
+                            tem_acompanhamentos_validos & !tem_acompanhamentos_opcional, numero_obra_valido),
+        criterios_obrigatorios = nrow(porc.metricas.validas) - sum(numero_art_opcional, tem_georreferenciamento_opcional,
+                            dentro_municipio_opcional, planilha_contratada_opcional, total_de_medicoes_opcional, 
+                            medicoes_ok_opcional, num_fotos_medicao_opcional, num_fotos_acompanhamento_opcional,
+                            projeto_basico_opcional, tem_acompanhamentos_opcional),
+        porc_criterios_validos = criterios_validos / criterios_obrigatorios
         )
 
 panorama.municipios <- obras.metricas.relevantes %>% 
     group_by(municipio) %>% 
-    summarise(porc.dados.validos = sum(dados_validos) / (nrow(porc.metricas.validas) * n())) 
+    summarise(porc.criterios.validos = sum(porc_criterios_validos) / n())
 
 panorama.municipios %>% 
-    ggplot(aes(x = "municipios", y = porc.dados.validos)) + 
+    ggplot(aes(x = "municipios", y = porc.criterios.validos)) + 
     scale_y_continuous(labels = percent) +
     geom_boxplot() + 
     labs(x = "Municípios", y = "Porcentagem de critérios válidos", title = "Porcentagem de critérios válidos por município")
 ```
 
-A mediana de critérios válidos por município é cerca de 57% e os mesmos tem pequena variação, visto que 50% dos municípios preenchem entre cerca de 53% e 64% dos critérios. Apesar da baixa variação, existem municípios que se destacaram positivamente, tendo 80% dos critérios preenchidos.
+A mediana de critérios válidos por município é cerca de 52% e os mesmos tem pequena variação, visto que 50% dos municípios preenchem entre cerca de 47% e 57% dos critérios. Apesar da baixa variação, existem municípios que se destacaram positivamente, tendo cerca de 72% dos critérios preenchidos.
 
 Vejamos os municípios mais detalhadamente:
 
 ```{r, echo=FALSE, warning=FALSE, fig.height=30}
 panorama.municipios %>% 
-    ggplot(aes(x = reorder(municipio, porc.dados.validos), y = porc.dados.validos, label = paste0(format(porc.dados.validos * 100, decimal.mark=",", digits=2, nsmall=2), "%"))) +
+    ggplot(aes(x = reorder(municipio, porc.criterios.validos), y = porc.criterios.validos, label = paste0(format(porc.criterios.validos * 100, decimal.mark=",", digits=2, nsmall=2), "%"))) +
     geom_bar(stat = "identity") +
     geom_text(position = position_stack(vjust = 0.5), colour = "white") +
     labs(x = "Municípios", y = "Porcentagem de critérios válidos", title = "Porcentagem de critérios válidos por município") +
@@ -342,7 +354,7 @@ panorama.municipios %>%
     scale_y_continuous(label = percent)
 ```
 
-Vemos que os municípios que mais se destacaram foram São Sebastião do Umbuzeiro e Boa Vista, os quais tem pouco mais de 50% dos critérios preenchidos corretamente.
+Vemos que os municípios que mais se destacaram foram Areia e São João do Tigre, os quais tem pouco mais de 70% dos critérios preenchidos corretamente.
 
 Criaremos agora a visualização das informações faltantes das obras por municípios:
 
@@ -353,12 +365,10 @@ municipios <- obras.metricas.relevantes %>%
     distinct(municipio) %>%
     arrange(municipio) %>%
     pull(municipio)
-    
-municipios <- c("João Pessoa", "Campina Grande")
-
-div(bsselect(municipios, type = "text"))
 
 # municipios <- c("João Pessoa", "Campina Grande")
+
+div(bsselect(municipios, type = "text"))
 
 tags$script('
     $(document).ready(function(){
@@ -377,14 +387,15 @@ tags$script('
             }
             
     		$(".selectpicker").change(changeTable)
+            $(".bsselect").parent().find("p").text("")
             /*changeTable()*/
     })
 ')
 
-show_plot <- function(mun, porc.dados.validos, plot_object) {
+show_plot <- function(mun, porc.criterios.validos, plot_object) {
     div(style="margin:auto;text-align:center",
         div(class="table-municipio",
-            h3(paste0(mun, ": ", format(porc.dados.validos, decimal.mark=",", digits=2, nsmall=2), "% dos critérios válidos"))),
+            h3(paste0(mun, ": ", format(porc.criterios.validos, decimal.mark=",", digits=2, nsmall=2), "% dos critérios válidos"))),
         div(class="table-obras", plot_object),
         div(br())
         )
@@ -401,24 +412,25 @@ do.call(div, lapply(municipios, function(mun) {
                 dimensao = paste(format(dimensao, big.mark=".", decimal.mark=",", digits=2, nsmall=2), unidadeMedida),
                 projeto_basico = ifelse(is.na(projeto_basico), "", projeto_basico)
             ) %>%
-            select(-municipio, -unidadeMedida) %>%
-            arrange(-dados_validos, -numero_art_valido, -valor_obra_valida, -dimensao_valida, -tipo_obra_valida,
+            select(-municipio, -unidadeMedida, -criterios_obrigatorios, -porc_criterios_validos) %>%
+            arrange(-criterios_validos, -numero_art_valido, -valor_obra_valida, -dimensao_valida, -tipo_obra_valida,
                   -tem_georreferenciamento_valido, -dentro_municipio_valido, -planilha_contratada_valida, -numero_contrato_valido,
                   -total_de_medicoes_valida, -medicoes_ok_valida, -num_fotos_medicao_valida, -num_fotos_acompanhamento_valida,
                   -data_inicio_obra_valida,  -data_prevista_conclusao_valida, -data_conclusao_obra_valida, 
                   -data_recebimento_obra_valida, -projeto_basico_valido, -tem_acompanhamentos_validos, -numero_obra_valido)
 
-    porc.dados.validos <- panorama.municipios %>% 
+    porc.criterios.validos <- panorama.municipios %>% 
         filter(municipio == mun) %>% 
-        pull(porc.dados.validos) * 100
+        pull(porc.criterios.validos) * 100
 
-    show_plot(mun, porc.dados.validos, print(
+    show_plot(mun, porc.criterios.validos, print(
         obras.filt.mun %>%
             formattable(list(
               numero_art = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(numero_art_valido, "green", "red"))),
               numero_art_valido = FALSE,
+              numero_art_opcional = FALSE,
               valor_obra = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(valor_obra_valida, "green", "red"))),
@@ -435,14 +447,17 @@ do.call(div, lapply(municipios, function(mun) {
                 "span",
                 class = ~ paste("celula", ifelse(tem_georreferenciamento_valido, "green", "red"))),
               tem_georreferenciamento_valido = FALSE,
+              tem_georreferenciamento_opcional = FALSE,
               dentro_municipio = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(dentro_municipio_valido, "green", "red"))),
               dentro_municipio_valido = FALSE,
+              dentro_municipio_opcional = FALSE,
               planilha_contratada = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(planilha_contratada_valida, "green", "red"))),
               planilha_contratada_valida = FALSE,
+              planilha_contratada_opcional = FALSE,
               numero_contrato = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(numero_contrato_valido, "green", "red"))),
@@ -451,18 +466,22 @@ do.call(div, lapply(municipios, function(mun) {
                 "span",
                 class = ~ paste("celula", ifelse(total_de_medicoes_valida, "green", "red"))),
               total_de_medicoes_valida = FALSE,
+              total_de_medicoes_opcional = FALSE,
               medicoes_ok = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(medicoes_ok_valida, "green", "red"))),
               medicoes_ok_valida = FALSE,
+              medicoes_ok_opcional = FALSE,
               num_fotos_medicao = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(num_fotos_medicao_valida, "green", "red"))),
               num_fotos_medicao_valida = FALSE,
+              num_fotos_medicao_opcional = FALSE,
               num_fotos_acompanhamento = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(num_fotos_acompanhamento_valida, "green", "red"))),
               num_fotos_acompanhamento_valida = FALSE,
+              num_fotos_acompanhamento_opcional = FALSE,
               data_inicio_obra = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(data_inicio_obra_valida, "green", "red"))),
@@ -483,10 +502,12 @@ do.call(div, lapply(municipios, function(mun) {
                 "span",
                 class = ~ paste("celula", ifelse(projeto_basico_valido, "green", "red"))),
               projeto_basico_valido = FALSE,
+              projeto_basico_opcional = FALSE,
               tem_acompanhamentos = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(tem_acompanhamentos_validos, "green", "red"))),
               tem_acompanhamentos_validos = FALSE,
+              tem_acompanhamentos_opcional = FALSE,
               numero_obra = formatter(
                 "span",
                 class = ~ paste("celula", ifelse(numero_obra_valido, "green", "red"))),
