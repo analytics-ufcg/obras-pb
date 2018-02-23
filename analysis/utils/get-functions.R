@@ -32,7 +32,8 @@ is.dentro.municipio <- function(lat, lon, codigo_ibge, mapa_paraiba) {
   point_spatial <- SpatialPoints(point, proj4string = CRS(proj4string(mapa_paraiba)))
   point_spatial_meters <- spTransform(point_spatial, CRS(epsg.29101))
   mapa_municipio_meters <- spTransform(mapa_municipio, CRS(epsg.29101))
-  return(rgeos::gWithinDistance(point_spatial_meters, mapa_municipio_meters, dist = 5000))
+  dist.p.pol <- gDistance(point_spatial_meters, mapa_municipio_meters)
+  return(ifelse(dist.p.pol <= 5000, TRUE, FALSE ))
 }
 
 #' @title coord_divide
