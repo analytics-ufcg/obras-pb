@@ -26,10 +26,14 @@ is.dentro.pb <- function(lat,lon) {
 #' @param mapa_paraiba ShapeFile do mapa da Paraíba.
 #' @export
 is.dentro.municipio <- function(lat, lon, codigo_ibge, mapa_paraiba) {
+  epsg.29101 <- "+proj=poly +lat_0=0 +lon_0=-54 +x_0=5000000 +y_0=10000000 +ellps=aust_SA +units=m +no_defs"
   mapa_municipio <- subset(mapa_paraiba, GEOCODIG_M == codigo_ibge)
   point <- data.frame(lat = lon, lon = lat)
   point_spatial <- SpatialPoints(point, proj4string = CRS(proj4string(mapa_paraiba)))
-  return(rgeos::gContains(mapa_municipio, point_spatial))
+  point_spatial_meters <- spTransform(point_spatial, CRS(epsg.29101))
+  mapa_municipio_meters <- spTransform(mapa_municipio, CRS(epsg.29101))
+  dist.p.pol <- gDistance(point_spatial_meters, mapa_municipio_meters)
+  return(ifelse(dist.p.pol <= 5000, TRUE, FALSE ))
 }
 
 #' @title coord_divide
