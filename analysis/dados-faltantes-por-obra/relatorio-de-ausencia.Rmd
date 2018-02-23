@@ -232,7 +232,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         numero_art_opcional = ifelse(valor_obra > 10000 & valor_obra <= 30000, TRUE, FALSE),
         num_fotos_medicao_valida = num_fotos_medicao >= total_de_medicoes | (valor_obra > 10000 & valor_obra <= 150000),
         num_fotos_medicao_opcional = ifelse(valor_obra > 10000 & valor_obra <= 150000, TRUE, FALSE),
-        num_fotos_acompanhamento_valida = num_fotos_acompanhamento > 0 | (valor_obra > 10000 & valor_obra <= 30000),
+        num_fotos_acompanhamento_valida = num_fotos_acompanhamento > 0 | (valor_obra > 10000 & valor_obra <= 30000) | tempo.de.obra <= 90,
         num_fotos_acompanhamento_opcional = ifelse(valor_obra > 10000 & valor_obra <= 30000, TRUE, FALSE),
         projeto_basico_valido = !is.na(projeto_basico) | (valor_obra > 10000 & valor_obra <= 30000),
         projeto_basico_opcional = ifelse(valor_obra > 10000 & valor_obra <= 30000, TRUE, FALSE),
