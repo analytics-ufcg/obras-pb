@@ -245,7 +245,9 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
             (tem_acompanhamento_final_valido & 
             !is.na(tempo.data.prevista.acomp.final) & 
             tempo.data.prevista.acomp.final <= 90),
-        numero_obra_valido = str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")) | esfera != 1
+        numero_obra_valido = str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")) | esfera != 1,
+        tem_acompanhamento_final = ifelse(tem_acompanhamento_final_valido, "SIM", "NÃO"),
+        tem_acompanhamento_inicial = ifelse(tem_acompanhamento_final_valido, "SIM", "NÃO")
     ) %>% 
     select(
         municipio,
@@ -296,6 +298,8 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         num_fotos_medicao_opcional,
         num_fotos_acompanhamento_opcional,
         projeto_basico_opcional,
+        tem_acompanhamento_final,
+        tem_acompanhamento_inicial,
         tem_acompanhamentos_opcional,
         tem_acompanhamento_final_valido,
         tem_acompanhamento_inicial_valido
