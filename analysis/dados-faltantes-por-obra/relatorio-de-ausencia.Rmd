@@ -418,7 +418,7 @@ municipios <- obras.metricas.relevantes %>%
     arrange(municipio) %>%
     pull(municipio)
 
-municipios <- c("João Pessoa")
+#municipios <- c("João Pessoa")
 
 div(bsselect(municipios, type = "text"))
 
