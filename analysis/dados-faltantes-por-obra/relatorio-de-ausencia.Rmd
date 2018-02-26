@@ -208,7 +208,7 @@ Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos e
 obras.metricas.relevantes <- tb.dados.municipios %>% 
     mutate(
         numero_art_opcional = valor_obra >= 10000 & valor_obra < 30000,
-        numero_art_valido = str_detect(numero_art, paste0("(P|p)(B|b)(",lubridate::year(data_inicio_obra), "|1900)([:digit:]{7})")) | 
+        numero_art_valido = str_detect(numero_art, paste0("(P|p)(B|b)\\s?(201[4-8]|1900)([:digit:]{7})")) | 
             numero_art_opcional | lubridate::year(data_inicio_obra) < 2015,
         valor_obra_valida = valor_obra >= 10000 & valor_obra < 100000000,
         dimensao_valida = dimensao > 0 & !is.na(dimensao),
