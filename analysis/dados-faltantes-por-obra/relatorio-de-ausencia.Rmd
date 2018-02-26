@@ -140,8 +140,7 @@ tb.dados.municipios <- obras.2013 %>%
     left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id")) %>% 
     left_join(acomp.inicial.final, by = c("id" = "fk_obra")) %>% 
     mutate(tem_acompanhamento_inicial_valido = !is.na(tem.acomp.inicial) & tem.acomp.inicial,
-           tem_acompanhamento_final_valido = !is.na(tem.acomp.final) & tem.acomp.final,
-           tem_acompanhamentos = ifelse(tem_acompanhamento_inicial_valido & tem_acompanhamento_final_valido, "SIM", "NÃO")) %>% 
+           tem_acompanhamento_final_valido = !is.na(tem.acomp.final) & tem.acomp.final) %>% 
     select(-id, -fk_jurisdicionado, -tem.acomp.inicial, -tem.acomp.final)
 ```
 
@@ -241,7 +240,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         projeto_basico_opcional = valor_obra >= 10000 & valor_obra < 30000,
         projeto_basico_valido = !is.na(projeto_basico) | projeto_basico_opcional,
         tem_acompanhamentos_opcional = valor_obra >= 10000 & valor_obra < 30000,
-        tem_acompanhamentos_inicial_valido = tem_acompanhamento_inicial_valido | tempo.de.obra <= 90 | tem_acompanhamentos_opcional,
+        tem_acompanhamento_inicial_valido = tem_acompanhamento_inicial_valido | tempo.de.obra <= 90 | tem_acompanhamentos_opcional,
         tem_acompanhamento_final_valido = tem_acompanhamentos_opcional | (!is.na(tempo.data.prevista) & tempo.data.prevista <= 90) |
             (tem_acompanhamento_final_valido & 
             !is.na(tempo.data.prevista.acomp.final) & 
@@ -268,7 +267,6 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         data_conclusao_obra,
         data_recebimento_obra,
         projeto_basico,
-        tem_acompanhamentos,
         numero_obra,
         situacao_estimada,
         numero_art_valido,
@@ -416,7 +414,7 @@ municipios <- obras.metricas.relevantes %>%
     arrange(municipio) %>%
     pull(municipio)
 
-# municipios <- c("João Pessoa", "Campina Grande")
+municipios <- c("João Pessoa")
 
 div(bsselect(municipios, type = "text"))
 
