@@ -87,13 +87,13 @@ obra.medicao.agrupada <- obra.medicao %>%
     group_by(fk_obra) %>% 
     summarise(total_de_medicoes = n(), 
               medicoes_ok = sum(medicoes_ok),
-              data.medicao.final = max(data_final, na.rm = TRUE)) %>% 
-    left_join(select(obra.medicao, -planilha_medicoes), by = c("fk_obra", "data.medicao.final" = "data_final"))
+              data.ulti.medicao = max(data_final, na.rm = TRUE)) %>% 
+    left_join(select(obra.medicao, -planilha_medicoes), by = c("fk_obra", "data.ulti.medicao" = "data_final"))
 
-acomp.data.final <- acompanhamento %>% 
-    filter(tipo == 3) %>% 
+acomp.ulti.data <- acompanhamento %>% 
+    filter(tipo != 3) %>% 
     group_by(fk_obra) %>% 
-    summarise(data.acomp.final = max(data_cadastro, na.rm = TRUE))
+    summarise(data.ulti.acomp = max(data_cadastro, na.rm = TRUE))
 
 acomp.inicial.final <- acompanhamento %>% 
     group_by(fk_obra) %>% 
@@ -101,7 +101,7 @@ acomp.inicial.final <- acompanhamento %>%
         tem.acomp.inicial = sum(tipo == 1) > 0,
         tem.acomp.final = sum(tipo == 3) > 0
     ) %>% 
-    left_join(acomp.data.final, by = "fk_obra")
+    left_join(acomp.ulti.data, by = "fk_obra")
 
 tb.dados.municipios <- obras.2013 %>% 
     select(id,
@@ -153,7 +153,7 @@ Para estimar a situação das obras, que constam em execução normal, utilizare
     
 * Em andamento (deve satisfazer pelo menos um dos critérios):
     + Se a data da última medição não exceder 90 dias
-    + Se a data do último acompanhamento não exceder 90 dias
+    + Se a data do último acompanhamento não exceder 90 dias, contanto que o acompanhamento não seja final
     + Se a duração da obra não exceder 180 dias
     
 * Paralisada:
@@ -167,18 +167,18 @@ ultima.data <- "2017-12-15"
 tb.dados.municipios <- tb.dados.municipios %>% 
     mutate(
         tempo.de.obra = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_inicio_obra),units="days"),
-        tempo.acomp.final = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.acomp.final),units="days"),
-        tempo.medicao.final = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.medicao.final),units="days"),
-        acomp.final.menor.90.dias = !is.na(tempo.acomp.final) & tempo.acomp.final <= 90,
-        medicao.final.menor.90.dias = !is.na(tempo.medicao.final) & tempo.medicao.final <= 90,
+        tempo.ulti.acomp = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.acomp),units="days"),
+        tempo.ulti.medicao = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.medicao),units="days"),
+        acomp.menor.90.dias = !is.na(tempo.ulti.acomp) & tempo.ulti.acomp <= 90,
+        medicao.menor.90.dias = !is.na(tempo.ulti.medicao) & tempo.ulti.medicao <= 90,
         situacao_estimada = ifelse(!is.na(situacao) & situacao %in% c(7, 8) | !is.na(data_recebimento_obra),
                           "CONCLUÍDA",
-                          ifelse(!is.na(situacao) & situacao == 1 & (medicao.final.menor.90.dias | acomp.final.menor.90.dias | tempo.de.obra <= 180), 
+                          ifelse(!is.na(situacao) & situacao == 1 & (medicao.menor.90.dias | acomp.menor.90.dias | tempo.de.obra <= 180), 
                                  "EM ANDAMENTO", 
                                  "PARALISADA")
                           )
     ) %>% 
-    select(-tempo.acomp.final, -tempo.medicao.final, -acomp.final.menor.90.dias, -medicao.final.menor.90.dias)
+    select(-tempo.ulti.acomp, -tempo.ulti.medicao, -acomp.menor.90.dias, -medicao.menor.90.dias)
 ```
 
 Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos estes critérios no restante da análise:
