@@ -196,7 +196,7 @@ Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos e
 * total_de_medicoes -  obras com 0 medições, caso a obra tenha mais de 90 dias e o valor seja maior ou igual à R$150.000,00
 * medicoes_ok - menos de 80% dos arquivos de medição com “.xls”, “xlsx” ou “csv”, caso o valor seja maior ou igual à R$150.000,00
 * num_fotos_medicao - menos de uma foto por medição, caso o valor seja maior ou igual à R$150.000,00
-* num_fotos_acompanhamento - 0 fotos de acompanhamento, caso o valor seja maior ou igual à R$30.000,00
+* num_fotos_acompanhamento - 0 fotos de acompanhamento, caso a obra tenha mais de 90 dias e o valor seja maior ou igual à R$30.000,00
 * data_prevista_conclusao - valores faltantes
 * data_conclusao_obra - valores faltantes, caso a situacao estimada da obra não seja "EM ANDAMENTO"
 * data_recebimento_obra - valores faltantes, caso a situacao estimada da obra não seja "EM ANDAMENTO" ou os que tiverem recebimento anterior à conclusão
@@ -228,7 +228,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         num_fotos_medicao_opcional = valor_obra >= 10000 & valor_obra < 150000,
         num_fotos_medicao_valida = num_fotos_medicao >= total_de_medicoes | num_fotos_medicao_opcional,
         num_fotos_acompanhamento_opcional = valor_obra >= 10000 & valor_obra < 30000,
-        num_fotos_acompanhamento_valida = num_fotos_acompanhamento > 0 | num_fotos_acompanhamento_opcional,
+        num_fotos_acompanhamento_valida = num_fotos_acompanhamento > 0 | num_fotos_acompanhamento_opcional | tempo.de.obra <= 90,
         data_inicio_obra_valida = !is.na(data_inicio_obra),
         data_prevista_conclusao_valida = !is.na(data_prevista_conclusao),
         data_conclusao_obra_valida = !is.na(data_conclusao_obra) | situacao_estimada == "EM ANDAMENTO",
