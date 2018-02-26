@@ -185,60 +185,60 @@ tb.dados.municipios <- tb.dados.municipios %>%
 Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos estes critérios no restante da análise:
 
 * descricao_sucinta_obra - deixaremos a critério dos auditores verificar, visto que é muito variável 
-* numero_art - ARTS que não seguirem o padrão: UF (PB) + 11 Dígitos Numéricos, caso o valor seja acima de R$30.000,00 e registradas a partir de 01/01/2015
+* numero_art - ARTS que não seguirem o padrão: UF (PB) + 11 Dígitos Numéricos, caso o valor seja maior ou igual à R$30.000,00 e registradas a partir de 01/01/2015
 * valor_obra - os que tiverem valores menores que R$ 10.000,00 e maiores ou iguais à 100.000.000,00
 * dimensao - os que tiverem dimensão igual a 0 ou faltante
 * tipo_obra - os que tiverem valores iguais a "OUTRAS" ou faltante
-* tem_georreferenciamento - as que não tem georreferenciamento, ou seja, o valor do georreferenciamento é igual a “0”, caso a obra tenha mais de 90 dias e o valor seja acima de R$30.000,00 
-* dentro_municipio - os georreferenciamentos do tipo 1 e 3 que estão dentro do município (podendo ser até 5 km da fronteira), caso a obra tenha mais de 90 dias e o valor seja acima de R$30.000,00
-* planilha_contratada - um arquivo que não contenha “.xls”, “xlsx” ou “.csv”, caso o valor seja acima de R$30.000,00 
+* tem_georreferenciamento - as que não tem georreferenciamento, ou seja, o valor do georreferenciamento é igual a “0”, caso a obra tenha mais de 90 dias e o valor seja maior ou igual à R$30.000,00 
+* dentro_municipio - os georreferenciamentos do tipo 1 e 3 que estão dentro do município (podendo ser até 5 km da fronteira), caso a obra tenha mais de 90 dias e o valor seja maior ou igual à R$30.000,00
+* planilha_contratada - um arquivo que não contenha “.xls”, “xlsx” ou “.csv”, caso o valor seja maior ou igual à R$30.000,00 
 * numero_contrato - números de contratos que são iguais a “0000”, "-" ou faltante
-* total_de_medicoes -  obras com 0 medições, caso a obra tenha mais de 90 dias e o valor seja acima de R$150.000,00
-* medicoes_ok - menos de 80% dos arquivos de medição com “.xls”, “xlsx” ou “csv”, caso o valor seja acima de R$150.000,00
-* num_fotos_medicao - menos de uma foto por medição, caso o valor seja acima de R$150.000,00
-* num_fotos_acompanhamento - 0 fotos de acompanhamento, caso o valor seja acima de R$30.000,00
+* total_de_medicoes -  obras com 0 medições, caso a obra tenha mais de 90 dias e o valor seja maior ou igual à R$150.000,00
+* medicoes_ok - menos de 80% dos arquivos de medição com “.xls”, “xlsx” ou “csv”, caso o valor seja maior ou igual à R$150.000,00
+* num_fotos_medicao - menos de uma foto por medição, caso o valor seja maior ou igual à R$150.000,00
+* num_fotos_acompanhamento - 0 fotos de acompanhamento, caso o valor seja maior ou igual à R$30.000,00
 * data_prevista_conclusao - valores faltantes
 * data_conclusao_obra - valores faltantes, caso a situacao estimada da obra não seja "EM ANDAMENTO"
 * data_recebimento_obra - valores faltantes, caso a situacao estimada da obra não seja "EM ANDAMENTO" ou os que tiverem recebimento anterior à conclusão
-* projeto_basico - valores faltantes, caso o valor seja acima de R$30.000,00
-* tem_acompanhamentos - os que não tiverem acompanhamento inicial e final, caso a obra tenha mais de 90 dias e o valor seja acima de R$30.000,00
+* projeto_basico - valores faltantes, caso o valor seja maior ou igual à R$30.000,00
+* tem_acompanhamentos - os que não tiverem acompanhamento inicial e final, caso a obra tenha mais de 90 dias e o valor seja maior ou igual à R$30.000,00
 * numero_obra - valores que não seguirem o padrão: 8 dígitos, sendo os quatro primeiros um identificador interno da obra pelo jurisdicionado e os quatro últimos o ano da obra, válido apenas para a esfera municipal
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
 obras.metricas.relevantes <- tb.dados.municipios %>% 
     mutate(
-        tipo_obra_valida = !is.na(tipo_obra) & tipo_obra != "OUTRAS",
+        numero_art_opcional = valor_obra >= 10000 & valor_obra < 30000,
+        numero_art_valido = str_detect(numero_art, paste0("(P|p)(B|b)(",lubridate::year(data_inicio_obra), "|1900)([:digit:]{7})")) | 
+            numero_art_opcional | lubridate::year(data_inicio_obra) < 2015,
         valor_obra_valida = valor_obra >= 10000 & valor_obra < 100000000,
         dimensao_valida = dimensao > 0 & !is.na(dimensao),
-        tem_georreferenciamento_valido = tem_georreferenciamento_valido | tempo.de.obra <= 90 | (valor_obra >= 10000 & valor_obra < 30000),
-        tem_georreferenciamento_opcional = ifelse(valor_obra >= 10000 & valor_obra < 30000, TRUE, FALSE),
-        dentro_municipio_valido = dentro_municipio_valido | tempo.de.obra <= 90 | (valor_obra >= 10000 & valor_obra < 30000),
-        dentro_municipio_opcional = ifelse(valor_obra >= 10000 & valor_obra < 30000, TRUE, FALSE),
-        planilha_contratada_valida = str_detect(planilha_contratada, "([:print:]+)(.xls|.csv)") | (valor_obra >= 10000 & valor_obra < 30000),
-        planilha_contratada_opcional = ifelse(valor_obra >= 10000 & valor_obra < 30000, TRUE, FALSE),
+        tipo_obra_valida = !is.na(tipo_obra) & tipo_obra != "OUTRAS",
+        tem_georreferenciamento_opcional = valor_obra >= 10000 & valor_obra < 30000,
+        tem_georreferenciamento_valido = tem_georreferenciamento_valido | tempo.de.obra <= 90 | tem_georreferenciamento_opcional,
+        dentro_municipio_opcional = valor_obra >= 10000 & valor_obra < 30000,
+        dentro_municipio_valido = dentro_municipio_valido | tempo.de.obra <= 90 | dentro_municipio_opcional,
+        planilha_contratada_opcional = valor_obra >= 10000 & valor_obra < 30000,
+        planilha_contratada_valida = str_detect(planilha_contratada, "([:print:]+)(.xls|.csv)") | planilha_contratada_opcional,
         numero_contrato_valido = numero_contrato != "0000" & numero_contrato != "-" & !is.na(numero_contrato),
+        total_de_medicoes_opcional = valor_obra >= 10000 & valor_obra < 150000,
+        total_de_medicoes_valida = total_de_medicoes > 0 | tempo.de.obra <= 90 | total_de_medicoes_opcional,
+        medicoes_ok_opcional = valor_obra >= 10000 & valor_obra < 150000,
+        medicoes_ok_valida = ifelse(total_de_medicoes > 0, medicoes_ok/total_de_medicoes >= 0.8, FALSE) | tempo.de.obra <= 90 | 
+            medicoes_ok_opcional,
+        num_fotos_medicao_opcional = valor_obra >= 10000 & valor_obra < 150000,
+        num_fotos_medicao_valida = num_fotos_medicao >= total_de_medicoes | num_fotos_medicao_opcional,
+        num_fotos_acompanhamento_opcional = valor_obra >= 10000 & valor_obra < 30000,
+        num_fotos_acompanhamento_valida = num_fotos_acompanhamento > 0 | num_fotos_acompanhamento_opcional,
         data_inicio_obra_valida = !is.na(data_inicio_obra),
         data_prevista_conclusao_valida = !is.na(data_prevista_conclusao),
         data_conclusao_obra_valida = !is.na(data_conclusao_obra) | situacao_estimada == "EM ANDAMENTO",
         data_recebimento_obra_valida = (!is.na(data_recebimento_obra) & (!is.na(data_conclusao_obra) & data_recebimento_obra >= data_conclusao_obra)) |
             situacao_estimada == "EM ANDAMENTO",
-        total_de_medicoes_valida = total_de_medicoes > 0 | tempo.de.obra <= 90 | (valor_obra >= 10000 & valor_obra < 150000),
-        total_de_medicoes_opcional = ifelse(valor_obra >= 10000 & valor_obra < 150000, TRUE, FALSE),
-        medicoes_ok_valida = ifelse(total_de_medicoes > 0, medicoes_ok/total_de_medicoes >= 0.8, FALSE) | tempo.de.obra <= 90 | 
-            (valor_obra >= 10000 & valor_obra < 150000),
-        medicoes_ok_opcional = ifelse(valor_obra >= 10000 & valor_obra < 150000, TRUE, FALSE),
-        numero_art_valido = str_detect(numero_art, paste0("(P|p)(B|b)(",lubridate::year(data_inicio_obra), "|1900)([:digit:]{7})")) | 
-            (valor_obra >= 10000 & valor_obra < 30000) | lubridate::year(data_inicio_obra) < 2015,
-        numero_art_opcional = ifelse(valor_obra >= 10000 & valor_obra < 30000, TRUE, FALSE),
-        num_fotos_medicao_valida = num_fotos_medicao >= total_de_medicoes | (valor_obra >= 10000 & valor_obra < 150000),
-        num_fotos_medicao_opcional = ifelse(valor_obra >= 10000 & valor_obra < 150000, TRUE, FALSE),
-        num_fotos_acompanhamento_valida = num_fotos_acompanhamento > 0 | (valor_obra >= 10000 & valor_obra < 30000),
-        num_fotos_acompanhamento_opcional = ifelse(valor_obra >= 10000 & valor_obra < 30000, TRUE, FALSE),
-        projeto_basico_valido = !is.na(projeto_basico) | (valor_obra >= 10000 & valor_obra < 30000),
-        projeto_basico_opcional = ifelse(valor_obra >= 10000 & valor_obra < 30000, TRUE, FALSE),
-        numero_obra_valido = str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")) | esfera != 1,
-        tem_acompanhamentos_validos = tem_acompanhamentos_validos | tempo.de.obra <= 90 | (valor_obra >= 10000 & valor_obra < 30000),
-        tem_acompanhamentos_opcional = ifelse(valor_obra >= 10000 & valor_obra < 30000, TRUE, FALSE)
+        projeto_basico_opcional = valor_obra >= 10000 & valor_obra < 30000,
+        projeto_basico_valido = !is.na(projeto_basico) | projeto_basico_opcional,
+        tem_acompanhamentos_opcional = valor_obra >= 10000 & valor_obra < 30000,
+        tem_acompanhamentos_validos = tem_acompanhamentos_validos | tempo.de.obra <= 90 | tem_acompanhamentos_opcional,
+        numero_obra_valido = str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")) | esfera != 1
     ) %>% 
     select(
         municipio,
