@@ -147,7 +147,6 @@ tb.dados.municipios <- obras.2013 %>%
 Para estimar a situação das obras, que constam em execução normal, utilizaremos os seguintes critérios:
 
 * Concluída (deve satisfazer pelo menos um dos critérios):
-    + Se existir data de conclusão 
     + Se existir data de recebimento 
     + Se a última medição consta em situação "Finalizada por Conclusão de Construção" 
     + Se a última medição consta em situação "Finalizada Administrativa ou Judicialmente"
@@ -172,7 +171,7 @@ tb.dados.municipios <- tb.dados.municipios %>%
         tempo.medicao.final = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.medicao.final),units="days"),
         acomp.final.menor.90.dias = !is.na(tempo.acomp.final) & tempo.acomp.final <= 90,
         medicao.final.menor.90.dias = !is.na(tempo.medicao.final) & tempo.medicao.final <= 90,
-        situacao_estimada = ifelse(!is.na(situacao) & situacao %in% c(7, 8) | !is.na(data_conclusao_obra) | !is.na(data_recebimento_obra),
+        situacao_estimada = ifelse(!is.na(situacao) & situacao %in% c(7, 8) | !is.na(data_recebimento_obra),
                           "CONCLUÍDA",
                           ifelse(!is.na(situacao) & situacao == 1 & (medicao.final.menor.90.dias | acomp.final.menor.90.dias | tempo.de.obra <= 180), 
                                  "EM ANDAMENTO", 
