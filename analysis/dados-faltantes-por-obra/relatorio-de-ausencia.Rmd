@@ -146,24 +146,36 @@ tb.dados.municipios <- obras.2013 %>%
 
 Para estimar a situação das obras, que constam em execução normal, utilizaremos os seguintes critérios:
 
-* Concluída (deve satisfazer pelo menos um dos critérios):
+* Com informações de concluída (deve satisfazer pelo menos um dos critérios):
     + Se existir data de conclusão 
     + Se existir data de recebimento 
     + Se a última medição consta em situação "Finalizada por Conclusão de Construção" 
     + Se a última medição consta em situação "Finalizada Administrativa ou Judicialmente"
     
-* Em andamento (deve satisfazer pelo menos um dos critérios):
+* Com informações em andamento (deve satisfazer pelo menos um dos critérios):
     + Se a data da última medição não exceder 90 dias
     + Se a data do último acompanhamento não exceder 90 dias
     + Se a duração da obra não exceder 180 dias
     
-* Paralisada:
+* Desatualizada
     + Se não se encaixar nos critérios anteriores
+
+* Com informações de não concluídas 
+    + Se tiver como situação "Atrasada (Cronograma Atrasado)"
+    + Se tiver como situação "Paralisada (sem Execução)"
+    + Se tiver como situação "Inacabada (Não Concluída Após Término do Contrato)"
+    + Se tiver como situação "Abandonada"
 
 _As obras que constam em situação "Atrasada (Cronograma Atrasado)", "Paralisada (Sem Execução)", "Inacabada (Não Concluída Após Término do Contrato)" e "Abandonada" serão incluídas no grupo de obras paralisadas._
 
 ```{r, echo=FALSE, warning=FALSE}
 ultima.data <- "2017-12-15"
+
+
+desc.situacoes <- data.frame(situacao = c(1,2,3,4,7,8,9), tipo.situacao = c("Em Execução Normal (Dentro do Cronograma)","Atrasada (Cronograma Atrasado)",
+                                                          "Paralisada (Sem Execução)", "Inacabada (Não Concluída Após Término do Contrato)", 
+                                                          "Finalizada por Conclusão de Construção", "Finalizada Administrativa ou Judicialmente",
+                                                          "Abandonada"))
 
 tb.dados.municipios <- tb.dados.municipios %>% 
     mutate(
@@ -173,12 +185,13 @@ tb.dados.municipios <- tb.dados.municipios %>%
         acomp.final.menor.90.dias = !is.na(tempo.acomp.final) & tempo.acomp.final <= 90,
         medicao.final.menor.90.dias = !is.na(tempo.medicao.final) & tempo.medicao.final <= 90,
         situacao_estimada = ifelse(!is.na(situacao) & situacao %in% c(7, 8) | !is.na(data_conclusao_obra) | !is.na(data_recebimento_obra),
-                          "CONCLUÍDA",
+                          "COM INFORMAÇÕES DE CONCLUÍDA",
                           ifelse(!is.na(situacao) & situacao == 1 & (medicao.final.menor.90.dias | acomp.final.menor.90.dias | tempo.de.obra <= 180), 
-                                 "EM ANDAMENTO", 
-                                 "PARALISADA")
+                                 "COM INFORMAÇÕES EM ANDAMENTO", 
+                                 ifelse(!is.na(situacao) & situacao %in% c(2,3,4,9), "COM INFORMAÇÕES DE NÃO CONCLUÍDA", "DESATUALIZADA"))
                           )
     ) %>% 
+    left_join(desc.situacoes, by = 'situacao') %>% 
     select(-tempo.acomp.final, -tempo.medicao.final, -acomp.final.menor.90.dias, -medicao.final.menor.90.dias)
 ```
 
