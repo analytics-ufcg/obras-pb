@@ -203,7 +203,7 @@ Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos e
 * data_conclusao_obra - valores faltantes, caso a situacao estimada da obra não seja "EM ANDAMENTO"
 * data_recebimento_obra - valores faltantes, caso a situacao estimada da obra não seja "EM ANDAMENTO" ou os que tiverem recebimento anterior à conclusão
 * projeto_basico - valores faltantes, caso o valor seja maior ou igual à R$30.000,00
-* tem_acompanhamentos - os que não tiverem acompanhamento inicial e final, caso a obra tenha mais de 90 dias e o valor seja maior ou igual à R$30.000,00
+* tem_acompanhamento_inicial - os que não tiverem acompanhamento inicial, caso a obra já tenha mais de 90 dias e o valor seja maior ou igual à R$30.000,00
 * tem_acompanhamento_final - os que não tiverem acompanhamento final, caso já tenham passado mais de 90 dias da data prevista de conclusão e o valor seja maior ou igual à R$30.000,00.
 * numero_obra - valores que não seguirem o padrão: 8 dígitos, sendo os quatro primeiros um identificador interno da obra pelo jurisdicionado e os quatro últimos o ano da obra, válido apenas para a esfera municipal
 
