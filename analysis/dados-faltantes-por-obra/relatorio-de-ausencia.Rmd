@@ -199,7 +199,7 @@ desc.situacoes <- data.frame(situacao = c(1,2,3,4,7,8,9), tipo.situacao = c("Em 
 tb.dados.municipios <- tb.dados.municipios %>% 
     mutate(
         tempo.de.obra = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_inicio_obra),units="days"),
-        tempo.data.prevista.acomp.final = difftime(lubridate::ymd(data.acomp.final), lubridate::ymd(data_prevista_conclusao),units="days"),
+        tempo.data.prevista.acomp.final = difftime(lubridate::ymd(data.ulti.acomp), lubridate::ymd(data_prevista_conclusao),units="days"),
         tempo.data.prevista = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_prevista_conclusao),units="days"),
         tempo.ulti.acomp = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.acomp),units="days"),
         tempo.ulti.medicao = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.medicao),units="days"),
