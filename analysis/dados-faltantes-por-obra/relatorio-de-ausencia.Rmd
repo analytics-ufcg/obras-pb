@@ -82,6 +82,16 @@ dados.georref <- acompanhamento %>%
     group_by(fk_obra) %>%
     summarise(tem_georreferenciamento_valido = sum(tem_valor_georref) > 0)
 
+situacao.medicao.por.data <- obra.medicao %>% 
+    group_by(fk_obra, data_final) %>% 
+    summarise(situacao = ifelse(7 %in% situacao, 7,
+                                ifelse(8 %in% situacao, 8,
+                                       ifelse(1 %in% situacao, 1,
+                                              ifelse(9 %in% situacao, 9,
+                                                     ifelse(4 %in% situacao, 4,
+                                                            ifelse(3 %in% situacao, 3,
+                                                                   ifelse(2 %in% situacao, 2))))))))
+
 obra.medicao.agrupada <- obra.medicao %>% 
     mutate(medicoes_ok = grepl(".xls", planilha_medicoes) | grepl(".pdf", planilha_medicoes)) %>% 
     group_by(fk_obra) %>% 
@@ -139,34 +149,58 @@ tb.dados.municipios <- obras.2013 %>%
     left_join(obra.proj.basico, by = c("id" = "fk_obra")) %>% 
     left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id")) %>% 
     left_join(acomp.inicial.final, by = c("id" = "fk_obra")) %>% 
-    mutate(tem_acompanhamentos_validos = !is.na(tem.acomp.inicial) & !is.na(tem.acomp.final) & tem.acomp.inicial & tem.acomp.final,
-           tem_acompanhamentos = ifelse(tem_acompanhamentos_validos, "SIM", "NÃO")) %>% 
+    mutate(tem_acompanhamento_inicial_valido = !is.na(tem.acomp.inicial) & tem.acomp.inicial,
+           tem_acompanhamento_final_valido = !is.na(tem.acomp.final) & tem.acomp.final) %>% 
     select(-id, -fk_jurisdicionado, -tem.acomp.inicial, -tem.acomp.final)
 ```
 
 Para estimar a situação das obras, que constam em execução normal, utilizaremos os seguintes critérios:
 
-* Concluída (deve satisfazer pelo menos um dos critérios):
+* Com informações de concluída (deve satisfazer pelo menos um dos critérios):
     + Se existir data de recebimento 
     + Se a última medição consta em situação "Finalizada por Conclusão de Construção" 
     + Se a última medição consta em situação "Finalizada Administrativa ou Judicialmente"
     
-* Em andamento (deve satisfazer pelo menos um dos critérios):
+* Com informações em andamento (deve satisfazer pelo menos um dos critérios):
     + Se a data da última medição não exceder 90 dias
     + Se a data do último acompanhamento não exceder 90 dias, contanto que o acompanhamento não seja final
     + Se a duração da obra não exceder 180 dias
     
-* Paralisada:
+* Desatualizada
     + Se não se encaixar nos critérios anteriores
 
+* Com informações de não concluídas 
+    + Se tiver como situação "Atrasada (Cronograma Atrasado)"
+    + Se tiver como situação "Paralisada (sem Execução)"
+    + Se tiver como situação "Inacabada (Não Concluída Após Término do Contrato)"
+    + Se tiver como situação "Abandonada"
+
 _As obras que constam em situação "Atrasada (Cronograma Atrasado)", "Paralisada (Sem Execução)", "Inacabada (Não Concluída Após Término do Contrato)" e "Abandonada" serão incluídas no grupo de obras paralisadas._
+
+Para definir a situação da última medição, quando existe múltiplas medições na última data de medição da obra, utilizaremos a seguinte ordem de prioridade:
+
+1. Finalizada por Conclusão de Construção
+2. Finalizada Administrativa ou Judicialmente
+3. Em Execução Normal (Dentro do Cronograma)
+4. Abandonada
+5. Inacabada (Não Concluída Após Término do Contrato)
+6. Paralisada (Sem Execução)
+7. Atrasada (Cronograma Atrasado)
 
 ```{r, echo=FALSE, warning=FALSE}
 ultima.data <- "2017-12-15"
 
+
+desc.situacoes <- data.frame(situacao = c(1,2,3,4,7,8,9), tipo.situacao = c("Em Execução Normal (Dentro do Cronograma)","Atrasada (Cronograma Atrasado)",
+                                                          "Paralisada (Sem Execução)", "Inacabada (Não Concluída Após Término do Contrato)", 
+                                                          "Finalizada por Conclusão de Construção", "Finalizada Administrativa ou Judicialmente",
+                                                          "Abandonada"))
+
 tb.dados.municipios <- tb.dados.municipios %>% 
     mutate(
         tempo.de.obra = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_inicio_obra),units="days"),
+        tempo.data.prevista.acomp.final = difftime(lubridate::ymd(data.acomp.final), lubridate::ymd(data_prevista_conclusao),units="days"),
+        tempo.data.prevista = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_prevista_conclusao),units="days"),
         tempo.ulti.acomp = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.acomp),units="days"),
         tempo.ulti.medicao = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.medicao),units="days"),
         acomp.menor.90.dias = !is.na(tempo.ulti.acomp) & tempo.ulti.acomp <= 90,
@@ -200,7 +234,8 @@ Vamos definir o que são valores faltantes para cada coluna, onde utilizaremos e
 * data_conclusao_obra - valores faltantes, caso a situacao estimada da obra não seja "EM ANDAMENTO"
 * data_recebimento_obra - valores faltantes, caso a situacao estimada da obra não seja "EM ANDAMENTO" ou os que tiverem recebimento anterior à conclusão
 * projeto_basico - valores faltantes, caso o valor seja maior ou igual à R$30.000,00
-* tem_acompanhamentos - os que não tiverem acompanhamento inicial e final, caso a obra tenha mais de 90 dias e o valor seja maior ou igual à R$30.000,00
+* tem_acompanhamento_inicial - os que não tiverem acompanhamento inicial, caso a obra já tenha mais de 90 dias e o valor seja maior ou igual à R$30.000,00
+* tem_acompanhamento_final - os que não tiverem acompanhamento final, caso já tenham passado mais de 90 dias da data prevista de conclusão e o valor seja maior ou igual à R$30.000,00.
 * numero_obra - valores que não seguirem o padrão: 8 dígitos, sendo os quatro primeiros um identificador interno da obra pelo jurisdicionado e os quatro últimos o ano da obra, válido apenas para a esfera municipal
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
@@ -236,8 +271,14 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         projeto_basico_opcional = valor_obra >= 10000 & valor_obra < 30000,
         projeto_basico_valido = !is.na(projeto_basico) | projeto_basico_opcional,
         tem_acompanhamentos_opcional = valor_obra >= 10000 & valor_obra < 30000,
-        tem_acompanhamentos_validos = tem_acompanhamentos_validos | tempo.de.obra <= 90 | tem_acompanhamentos_opcional,
-        numero_obra_valido = str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")) | esfera != 1
+        tem_acompanhamento_inicial_valido = tem_acompanhamento_inicial_valido | tempo.de.obra <= 90 | tem_acompanhamentos_opcional,
+        tem_acompanhamento_final_valido = tem_acompanhamentos_opcional | (!is.na(tempo.data.prevista) & tempo.data.prevista <= 90) |
+            (tem_acompanhamento_final_valido & 
+            !is.na(tempo.data.prevista.acomp.final) & 
+            tempo.data.prevista.acomp.final <= 90),
+        numero_obra_valido = str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")) | esfera != 1,
+        tem_acompanhamento_final = ifelse(tem_acompanhamento_final_valido, "SIM", "NÃO"),
+        tem_acompanhamento_inicial = ifelse(tem_acompanhamento_final_valido, "SIM", "NÃO")
     ) %>% 
     select(
         municipio,
@@ -259,7 +300,6 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         data_conclusao_obra,
         data_recebimento_obra,
         projeto_basico,
-        tem_acompanhamentos,
         numero_obra,
         situacao_estimada,
         numero_art_valido,
@@ -279,7 +319,6 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         data_conclusao_obra_valida,
         data_recebimento_obra_valida,
         projeto_basico_valido,
-        tem_acompanhamentos_validos,
         numero_obra_valido,
         numero_art_opcional,
         tem_georreferenciamento_opcional,
@@ -290,7 +329,11 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         num_fotos_medicao_opcional,
         num_fotos_acompanhamento_opcional,
         projeto_basico_opcional,
-        tem_acompanhamentos_opcional
+        tem_acompanhamento_final,
+        tem_acompanhamento_inicial,
+        tem_acompanhamentos_opcional,
+        tem_acompanhamento_final_valido,
+        tem_acompanhamento_inicial_valido
     )
 ```
 
@@ -318,7 +361,8 @@ porc.metricas.validas <- obras.metricas.relevantes %>%
               data_conclusao_obra = sum(data_conclusao_obra_valida) / n(), 
               data_recebimento_obra = sum(data_recebimento_obra_valida) / n(), 
               projeto_basico = sum(projeto_basico_valido == TRUE & projeto_basico_opcional == FALSE) / sum(projeto_basico_opcional == FALSE), 
-              tem_acompanhamentos = sum(tem_acompanhamentos_validos == TRUE & tem_acompanhamentos_opcional == FALSE) / sum(tem_acompanhamentos_opcional == FALSE), 
+              tem_acompanhamento_inicial = sum(tem_acompanhamento_inicial_valido == TRUE & tem_acompanhamentos_opcional == FALSE) / sum(tem_acompanhamentos_opcional == FALSE), 
+              tem_acompanhamento_final = sum(tem_acompanhamento_final_valido == TRUE & tem_acompanhamentos_opcional == FALSE) / sum(tem_acompanhamentos_opcional == FALSE),
               numero_obra = sum(num_fotos_acompanhamento_valida) / n() 
               ) %>% 
     select(-grupo) %>% 
@@ -358,7 +402,9 @@ obras.metricas.relevantes <- obras.metricas.relevantes %>%
                             data_inicio_obra_valida, data_prevista_conclusao_valida, 
                             data_conclusao_obra_valida, data_recebimento_obra_valida, 
                             projeto_basico_valido & !projeto_basico_opcional, 
-                            tem_acompanhamentos_validos & !tem_acompanhamentos_opcional, numero_obra_valido),
+                            tem_acompanhamento_inicial_valido & !tem_acompanhamentos_opcional,
+                            tem_acompanhamento_final_valido & !tem_acompanhamentos_opcional,
+                            numero_obra_valido),
         criterios_obrigatorios = nrow(porc.metricas.validas) - sum(numero_art_opcional, tem_georreferenciamento_opcional,
                             dentro_municipio_opcional, planilha_contratada_opcional, total_de_medicoes_opcional, 
                             medicoes_ok_opcional, num_fotos_medicao_opcional, num_fotos_acompanhamento_opcional,
@@ -403,7 +449,7 @@ municipios <- obras.metricas.relevantes %>%
     arrange(municipio) %>%
     pull(municipio)
 
-# municipios <- c("João Pessoa", "Campina Grande")
+#municipios <- c("João Pessoa")
 
 div(bsselect(municipios, type = "text"))
 
@@ -454,7 +500,7 @@ do.call(div, lapply(municipios, function(mun) {
                   -tem_georreferenciamento_valido, -dentro_municipio_valido, -planilha_contratada_valida, -numero_contrato_valido,
                   -total_de_medicoes_valida, -medicoes_ok_valida, -num_fotos_medicao_valida, -num_fotos_acompanhamento_valida,
                   -data_inicio_obra_valida,  -data_prevista_conclusao_valida, -data_conclusao_obra_valida, 
-                  -data_recebimento_obra_valida, -projeto_basico_valido, -tem_acompanhamentos_validos, -numero_obra_valido)
+                  -data_recebimento_obra_valida, -projeto_basico_valido, -tem_acompanhamento_inicial_valido, -tem_acompanhamento_final_valido, -numero_obra_valido)
 
     porc.criterios.validos <- panorama.municipios %>% 
         filter(municipio == mun) %>% 
@@ -540,10 +586,15 @@ do.call(div, lapply(municipios, function(mun) {
                 class = ~ paste("celula", ifelse(projeto_basico_opcional, "gray", ifelse(projeto_basico_valido, "green", "red")))),
               projeto_basico_valido = FALSE,
               projeto_basico_opcional = FALSE,
-              tem_acompanhamentos = formatter(
+              tem_acompanhamento_inicial = formatter(
                 "span",
-                class = ~ paste("celula", ifelse(tem_acompanhamentos_opcional, "gray", ifelse(tem_acompanhamentos_validos, "green", "red")))),
-              tem_acompanhamentos_validos = FALSE,
+                class = ~ paste("celula", ifelse(tem_acompanhamentos_opcional, "gray", ifelse(tem_acompanhamento_inicial_valido, "green", "red")))),
+              tem_acompanhamento_inicial_valido = FALSE,
+              tem_acompanhamentos_opcional = FALSE,
+              tem_acompanhamento_final = formatter(
+                "span",
+                class = ~ paste("celula", ifelse(tem_acompanhamentos_opcional, "gray", ifelse(tem_acompanhamento_final_valido, "green", "red")))),
+              tem_acompanhamento_final_valido = FALSE,
               tem_acompanhamentos_opcional = FALSE,
               numero_obra = formatter(
                 "span",
