@@ -99,7 +99,7 @@ obra.medicao.agrupada <- obra.medicao %>%
     summarise(total_de_medicoes = n(), 
               medicoes_ok = sum(medicoes_ok),
               data.ulti.medicao = max(data_final, na.rm = TRUE)) %>% 
-    left_join(select(obra.medicao, -planilha_medicoes), by = c("fk_obra", "data.ulti.medicao" = "data_final"))
+    left_join(situacao.medicao.por.data, by = c("fk_obra", "data.ulti.medicao" = "data_final"))
 
 acomp.ulti.data <- acompanhamento %>% 
     filter(tipo != 3) %>% 
@@ -193,7 +193,6 @@ Para definir a situação da última medição, quando existe múltiplas mediç�
 ```{r, echo=FALSE, warning=FALSE}
 ultima.data <- "2017-12-15"
 
-
 desc.situacoes <- data.frame(situacao = c(1,2,3,4,7,8,9), tipo.situacao = c("Em Execução Normal (Dentro do Cronograma)","Atrasada (Cronograma Atrasado)",
                                                           "Paralisada (Sem Execução)", "Inacabada (Não Concluída Após Término do Contrato)", 
                                                           "Finalizada por Conclusão de Construção", "Finalizada Administrativa ou Judicialmente",
@@ -210,7 +209,7 @@ tb.dados.municipios <- tb.dados.municipios %>%
         medicao.menor.90.dias = !is.na(tempo.ulti.medicao) & tempo.ulti.medicao <= 90,
         situacao_estimada = ifelse(!is.na(situacao) & situacao %in% c(7, 8) | !is.na(data_recebimento_obra),
                           "COM INFORMAÇÕES DE CONCLUÍDA",
-                          ifelse(!is.na(situacao) & situacao == 1 & (medicao.final.menor.90.dias | acomp.final.menor.90.dias | tempo.de.obra <= 180), 
+                          ifelse(!is.na(situacao) & situacao == 1 & (medicao.menor.90.dias | acomp.menor.90.dias | tempo.de.obra <= 180), 
                                  "COM INFORMAÇÕES EM ANDAMENTO", 
                                  ifelse(!is.na(situacao) & situacao %in% c(2,3,4,9), "COM INFORMAÇÕES DE NÃO CONCLUÍDA", "DESATUALIZADA"))
                           )
