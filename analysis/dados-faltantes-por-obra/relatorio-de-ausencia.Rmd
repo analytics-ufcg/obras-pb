@@ -17,6 +17,7 @@ library(DT)
 library(formattable)
 library(htmltools)
 library(bsselectR)
+library(viridis)
 
 # Importa tabelas csv
 tipos.das.obras <<- read.csv("../dados/tipos_obra.csv")
@@ -97,13 +98,13 @@ obra.medicao.agrupada <- obra.medicao %>%
     group_by(fk_obra) %>% 
     summarise(total_de_medicoes = n(), 
               medicoes_ok = sum(medicoes_ok),
-              data.medicao.final = max(data_final, na.rm = TRUE)) %>% 
-    left_join(situacao.medicao.por.data, by = c("fk_obra", "data.medicao.final" = "data_final"))
+              data.ulti.medicao = max(data_final, na.rm = TRUE)) %>% 
+    left_join(select(obra.medicao, -planilha_medicoes), by = c("fk_obra", "data.ulti.medicao" = "data_final"))
 
-acomp.data.final <- acompanhamento %>% 
-    filter(tipo == 3) %>% 
+acomp.ulti.data <- acompanhamento %>% 
+    filter(tipo != 3) %>% 
     group_by(fk_obra) %>% 
-    summarise(data.acomp.final = max(data_cadastro, na.rm = TRUE))
+    summarise(data.ulti.acomp = max(data_cadastro, na.rm = TRUE))
 
 acomp.inicial.final <- acompanhamento %>% 
     group_by(fk_obra) %>% 
@@ -111,7 +112,7 @@ acomp.inicial.final <- acompanhamento %>%
         tem.acomp.inicial = sum(tipo == 1) > 0,
         tem.acomp.final = sum(tipo == 3) > 0
     ) %>% 
-    left_join(acomp.data.final, by = "fk_obra")
+    left_join(acomp.ulti.data, by = "fk_obra")
 
 tb.dados.municipios <- obras.2013 %>% 
     select(id,
@@ -165,7 +166,7 @@ Para estimar a situação das obras, que constam em execução normal, utilizare
     
 * Com informações em andamento (deve satisfazer pelo menos um dos critérios):
     + Se a data da última medição não exceder 90 dias
-    + Se a data do último acompanhamento não exceder 90 dias
+    + Se a data do último acompanhamento não exceder 90 dias, contanto que o acompanhamento não seja final
     + Se a duração da obra não exceder 180 dias
     
 * Com informações de não concluídas 
@@ -201,12 +202,12 @@ desc.situacoes <- data.frame(situacao = c(1,2,3,4,7,8,9), tipo.situacao = c("Em 
 tb.dados.municipios <- tb.dados.municipios %>% 
     mutate(
         tempo.de.obra = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_inicio_obra),units="days"),
-        tempo.data.prevista.acomp.final = difftime(lubridate::ymd(data.acomp.final), lubridate::ymd(data_prevista_conclusao),units="days"),
+        tempo.data.prevista.acomp.final = difftime(lubridate::ymd(data.ulti.acomp), lubridate::ymd(data_prevista_conclusao),units="days"),
         tempo.data.prevista = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_prevista_conclusao),units="days"),
-        tempo.acomp.final = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.acomp.final),units="days"),
-        tempo.medicao.final = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.medicao.final),units="days"),
-        acomp.final.menor.90.dias = !is.na(tempo.acomp.final) & tempo.acomp.final <= 90,
-        medicao.final.menor.90.dias = !is.na(tempo.medicao.final) & tempo.medicao.final <= 90,
+        tempo.ulti.acomp = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.acomp),units="days"),
+        tempo.ulti.medicao = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.medicao),units="days"),
+        acomp.menor.90.dias = !is.na(tempo.ulti.acomp) & tempo.ulti.acomp <= 90,
+        medicao.menor.90.dias = !is.na(tempo.ulti.medicao) & tempo.ulti.medicao <= 90,
         situacao_estimada = ifelse(!is.na(situacao) & situacao %in% c(7, 8) | !is.na(data_recebimento_obra),
                           "COM INFORMAÇÕES DE CONCLUÍDA",
                           ifelse(!is.na(situacao) & situacao == 1 & (medicao.final.menor.90.dias | acomp.final.menor.90.dias | tempo.de.obra <= 180), 
@@ -215,7 +216,7 @@ tb.dados.municipios <- tb.dados.municipios %>%
                           )
     ) %>% 
     left_join(desc.situacoes, by = 'situacao') %>% 
-    select(-tempo.acomp.final, -tempo.medicao.final, -acomp.final.menor.90.dias, -medicao.final.menor.90.dias)
+    select(-tempo.ulti.acomp, -tempo.ulti.medicao, -acomp.menor.90.dias, -medicao.menor.90.dias)
 ```
 
 Vamos definir o que são valores faltantes e incertos para cada coluna, onde utilizaremos estes critérios no restante da análise:
@@ -566,7 +567,8 @@ obras.metricas.relevantes <- obras.metricas.relevantes %>%
 
 panorama.municipios <- obras.metricas.relevantes %>% 
     group_by(municipio) %>% 
-    summarise(porc.criterios.validos = sum(porc_criterios_validos) / n())
+    summarise(porc.criterios.validos = sum(porc_criterios_validos) / n(),
+              qtde.obras = n())
 
 panorama.municipios %>% 
     ggplot(aes(x = "municipios", y = porc.criterios.validos)) + 
@@ -575,18 +577,22 @@ panorama.municipios %>%
     labs(x = "Municípios", y = "Porcentagem de critérios válidos", title = "Porcentagem de critérios válidos por município")
 ```
 
-A mediana de critérios válidos por município é cerca de 45% e os mesmos tem pequena variação, visto que 50% dos municípios preenchem entre cerca de 42% e 49% dos critérios. Apesar da baixa variação, existem municípios que se destacaram positivamente, tendo cerca de 61% dos critérios preenchidos.
+A mediana de critérios válidos por município é cerca de 46% e os mesmos tem pequena variação, visto que 50% dos municípios preenchem entre cerca de 44% e 49% dos critérios. Apesar da baixa variação, existem municípios que se destacaram positivamente, tendo cerca de 61% dos critérios preenchidos.
 
 Vejamos os municípios mais detalhadamente:
 
 ```{r, echo=FALSE, warning=FALSE, fig.height=30}
 panorama.municipios %>% 
-    ggplot(aes(x = reorder(municipio, porc.criterios.validos), y = porc.criterios.validos, label = paste0(format(porc.criterios.validos * 100, decimal.mark=",", digits=2, nsmall=2), "%"))) +
+    ggplot(aes(x = reorder(municipio, porc.criterios.validos), 
+               y = porc.criterios.validos, 
+               label = paste0(format(porc.criterios.validos * 100, decimal.mark=",", digits=2, nsmall=2), "% de ", qtde.obras, " obras"),
+               fill = qtde.obras)) +
     geom_bar(stat = "identity") +
     geom_text(position = position_stack(vjust = 0.5), colour = "white") +
     labs(x = "Municípios", y = "Porcentagem de critérios válidos", title = "Porcentagem de critérios válidos por município") +
     coord_flip() +
-    scale_y_continuous(label = percent)
+    scale_y_continuous(label = percent) +
+    scale_fill_viridis(name = "Quantidade de obras")
 ```
 
 Vemos que os municípios que mais se destacaram foram Pilões, os quais tem pouco mais de 60% dos critérios preenchidos corretamente.
