@@ -153,7 +153,7 @@ tb.dados.municipios <- obras.2013 %>%
            tem_acompanhamento_final_valido = !is.na(tem.acomp.final) & tem.acomp.final,
            tem_acompanhamento_final = ifelse(tem_acompanhamento_final_valido, "SIM", "NÃO"),
            tem_acompanhamento_inicial = ifelse(tem_acompanhamento_final_valido, "SIM", "NÃO")) %>% 
-    select(-id, -fk_jurisdicionado, -tem.acomp.inicial, -tem.acomp.final)
+    select(-id, -fk_jurisdicionado)
 ```
 
 Para estimar a situação das obras, que constam em execução normal, utilizaremos os seguintes critérios:
@@ -223,13 +223,13 @@ Vamos definir o que são valores faltantes e incertos para cada coluna, onde uti
 * descricao_sucinta_obra - deixaremos a critério dos auditores verificar, visto que é muito variável 
 * numero_art:
     + OPCIONAL: Obras com valor maior ou igual à R$10.000,00 e menor que R$30.000,00
-    + VÁLIDO: ARTS que seguirem o padrão: UF (PB) + ANO (2014-2018) + 7 Dígitos Numéricos e tiverem data a partir de 2015
+    + VÁLIDO: ARTS que seguirem o padrão: UF (PB) + ANO (2014-2018) + 7 dígitos numéricos e tiverem data a partir de 2015
     + INCERTO: Os que tiverem data anterior a 2015 ou com valor de obra menor que R$10.000,00
     + INVÁLIDO: Os demais
 * valor_obra:
-    + INVÁLIDO: Obras que tiverem valor igual à zero
+    + INVÁLIDO: Obras que tiverem valor igual à zero ou faltante
     + VÁLIDO: As que tiverem valor maior ou igual à R$10.000,00 e menor que R$100.000.000,00
-    + INCERTO: As que tiverem valor menor que R$10.000,00
+    + INCERTO: As demais
 * dimensao:
     + VÁLIDO: Obras que não tiverem valor faltante e dimensão maior que zero.
     + INVÁLIDO: As demais
@@ -240,7 +240,7 @@ Vamos definir o que são valores faltantes e incertos para cada coluna, onde uti
 * tem_georreferenciamento:
     + OPCIONAL: Obras com valor maior ou igual à R$10.000,00 e menor que R$30.000,00
     + VÁLIDO: As que possuem georreferenciamento
-    + INCERTO: As que tiverem tempo de obra menor que 90 dias ou valor da obra menor que R$10.000,00
+    + INCERTO: As que tiverem tempo de obra menor ou igual à 90 dias ou valor da obra menor que R$10.000,00
     + INVÁLIDO: As demais
 * dentro_municipio(apenas os que tiverem georreferenciamento do tipo 1 ou 3):
     + OPCIONAL: Obras com valor maior ou igual à R$10.000,00 e menor que R$30.000,00
@@ -302,7 +302,7 @@ Vamos definir o que são valores faltantes e incertos para cada coluna, onde uti
 * tem_acompanhamento_final
     + OPCIONAL: Obras com valor maior ou igual à R$10.000,00 e menor que R$30.000,00
     + VÁLIDO: As que possuem pelo menos um acompanhamento final
-    + INCERTO: As que possuem mais de 90 dias passados da data prevista de conclusão ou valor menor que R$10.000,00 
+    + INCERTO: As que possuem menos ou igual à 90 dias passados da data prevista de conclusão ou valor menor que R$10.000,00 
     + INVÁLIDO: As demais
 * numero_obra:
     + OPCIONAL: Obras que não sejam da esfera municipal
@@ -324,10 +324,9 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
                                              ifelse(lubridate::year(data_inicio_obra) < 2015 | valor_obra < 10000, "INCERTO",
                                                     "INVALIDO"))),
         valor_obra_valida = valor_obra >= 10000 & valor_obra < 100000000,
-        corretude_valor_obra = ifelse(valor_obra == 0, "INVALIDO",
-                                      ifelse(valor_obra >= 10000 & valor_obra < 100000000, "VALIDO",
-                                        ifelse(valor_obra < 10000, "INCERTO"))),
-        dimensao_valida = dimensao > 0 & !is.na(dimensao),
+        corretude_valor_obra = ifelse(valor_obra <= 0 | is.na(valor_obra), "INVALIDO",
+                                      ifelse(valor_obra >= 10000 & valor_obra < 100000000, "VALIDO", "INCERTO")),
+        dimensao_valida = !is.na(dimensao) & dimensao > 0,
         corretude_dimensao = ifelse(!is.na(dimensao) & dimensao > 0, "VALIDO", "INVALIDO"),
         tipo_obra_valida = !is.na(tipo_obra) & tipo_obra != "OUTRAS",
         corretude_tipo_obra = ifelse(is.na(tipo_obra), "INVALIDO",
@@ -339,14 +338,14 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         tem_georreferenciamento_opcional = valor_obra >= 10000 & valor_obra < 30000,
         tem_georreferenciamento_valido = tem_georreferenciamento_valido | tempo.de.obra <= 90 | tem_georreferenciamento_opcional,
         corretude_dentro_municipio = ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
-                                            ifelse(dentro_municipio_valido, "VALIDO", 
+                                            ifelse(dentro_municipio_valido, "VALIDO",
                                                    ifelse(tempo.de.obra <= 90 | valor_obra < 10000, "INCERTO", "INVALIDO"))),
         dentro_municipio_opcional = valor_obra >= 10000 & valor_obra < 30000,
         dentro_municipio_valido = dentro_municipio_valido | tempo.de.obra <= 90 | dentro_municipio_opcional,
         planilha_contratada_opcional = valor_obra >= 10000 & valor_obra < 30000,
         planilha_contratada_valida = str_detect(planilha_contratada, "([:print:]+)(.xls|.csv)") | planilha_contratada_opcional,
         corretude_planilha_contratada = ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
-                                            ifelse(str_detect(planilha_contratada, "([:print:]+)(.xls|.csv)"), "VALIDO", 
+                                            ifelse(str_detect(planilha_contratada, "([:print:]+)(.xls|.csv)"), "VALIDO",
                                                    ifelse(valor_obra < 10000, "INCERTO", "INVALIDO"))),
         numero_contrato_valido = numero_contrato != "0000" & numero_contrato != "-" & !is.na(numero_contrato),
         corretude_numero_contrato = ifelse(is.na(numero_contrato) | numero_contrato == "0000" | numero_contrato == "-", "INVALIDO", "VALIDO"),
@@ -356,7 +355,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
                                              ifelse(total_de_medicoes > 0, "VALIDO",
                                                     ifelse(valor_obra < 10000, "INCERTO", "INVALIDO"))),
         medicoes_ok_opcional = valor_obra >= 10000 & valor_obra < 150000,
-        medicoes_ok_valida = ifelse(total_de_medicoes > 0, medicoes_ok/total_de_medicoes >= 0.8, FALSE) | tempo.de.obra <= 90 | 
+        medicoes_ok_valida = ifelse(total_de_medicoes > 0, medicoes_ok/total_de_medicoes >= 0.8, FALSE) | tempo.de.obra <= 90 |
             medicoes_ok_opcional,
         corretude_medicoes_ok = ifelse(valor_obra >= 10000 & valor_obra < 150000, "OPCIONAL",
                                        ifelse(total_de_medicoes > 0 & medicoes_ok/total_de_medicoes >= 0.8, "VALIDO",
@@ -376,15 +375,15 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         data_prevista_conclusao_valida = !is.na(data_prevista_conclusao),
         corretude_data_prevista_conclusao = ifelse(!is.na(data_prevista_conclusao), "VALIDO", "INVALIDO"),
         data_conclusao_obra_valida = !is.na(data_conclusao_obra) | situacao_estimada == "EM ANDAMENTO",
-        corretude_data_conclusao_obra = ifelse(!is.na(data_conclusao_obra) | situacao_estimada == "COM INFORMAÇÕES EM ANDAMENTO" | 
+        corretude_data_conclusao_obra = ifelse(!is.na(data_conclusao_obra) | situacao_estimada == "COM INFORMAÇÕES EM ANDAMENTO" |
                                                    situacao_estimada == "COM INFORMAÇÕES DE NÃO CONCLUÍDA", "VALIDO",
                                                ifelse(is.na(data_conclusao_obra) & situacao_estimada == "COM INFORMAÇÕES DE CONCLUÍDA", "INVALIDO",
                                                       "INCERTO")),
         data_recebimento_obra_valida = (!is.na(data_recebimento_obra) & (!is.na(data_conclusao_obra) & data_recebimento_obra >= data_conclusao_obra)) |
             situacao_estimada == "EM ANDAMENTO",
-        corretude_data_recebimento_obra = ifelse(!is.na(data_recebimento_obra) | situacao_estimada == "COM INFORMAÇÕES EM ANDAMENTO" | 
+        corretude_data_recebimento_obra = ifelse(!is.na(data_recebimento_obra) | situacao_estimada == "COM INFORMAÇÕES EM ANDAMENTO" |
                                                    situacao_estimada == "COM INFORMAÇÕES DE NÃO CONCLUÍDA", "VALIDO",
-                                               ifelse(is.na(data_recebimento_obra) & situacao_estimada == "COM INFORMAÇÕES DE CONCLUÍDA" | 
+                                               ifelse(is.na(data_recebimento_obra) & situacao_estimada == "COM INFORMAÇÕES DE CONCLUÍDA" |
                                                           data_recebimento_obra < data_conclusao_obra, "INVALIDO", "INCERTO")),
         projeto_basico_opcional = valor_obra >= 10000 & valor_obra < 30000,
         projeto_basico_valido = !is.na(projeto_basico) | projeto_basico_opcional,
@@ -398,15 +397,15 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         tem_acompanhamento_inicial_valido = tem_acompanhamento_inicial_valido | tempo.de.obra <= 90 | tem_acompanhamentos_opcional,
         corretude_tem_acompanhamento_final = ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
                                                     ifelse(tem_acompanhamento_final_valido, "VALIDO",
-                                                           ifelse((!is.na(tempo.data.prevista) & tempo.data.prevista <= 90) | 
+                                                           ifelse((!is.na(tempo.data.prevista) & tempo.data.prevista <= 90) |
                                                                       valor_obra < 10000, "INCERTO", "INVALIDO"))),
         tem_acompanhamento_final_valido = tem_acompanhamentos_opcional | (!is.na(tempo.data.prevista) & tempo.data.prevista <= 90) |
-            (tem_acompanhamento_final_valido & 
-            !is.na(tempo.data.prevista.acomp.final) & 
+            (tem_acompanhamento_final_valido &
+            !is.na(tempo.data.prevista.acomp.final) &
             tempo.data.prevista.acomp.final <= 90),
         numero_obra_valido = str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")) | esfera != 1,
-        corretude_numero_obra = ifelse(esfera != 1, "OPCIONAL", 
-                                       ifelse(str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")), "VALIDO", 
+        corretude_numero_obra = ifelse(esfera != 1, "OPCIONAL",
+                                       ifelse(str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")), "VALIDO",
                                               "INVALIDO")),
         situacao_estimada_valida = situacao_estimada != "DESATUALIZADA",
         corretude_situacao_estimada = ifelse(situacao_estimada == "DESATUALIZADA", "INVALIDO", "VALIDO")
@@ -432,6 +431,8 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         data_recebimento_obra,
         projeto_basico,
         numero_obra,
+        tem_acompanhamento_final,
+        tem_acompanhamento_inicial,
         situacao_estimada,
         numero_art_valido,
         valor_obra_valida,
@@ -451,6 +452,9 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         data_recebimento_obra_valida,
         projeto_basico_valido,
         numero_obra_valido,
+        tem_acompanhamento_final_valido,
+        tem_acompanhamento_inicial_valido,
+        situacao_estimada_valida,
         numero_art_opcional,
         tem_georreferenciamento_opcional,
         dentro_municipio_opcional,
@@ -460,11 +464,28 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         num_fotos_medicao_opcional,
         num_fotos_acompanhamento_opcional,
         projeto_basico_opcional,
-        tem_acompanhamento_final,
-        tem_acompanhamento_inicial,
         tem_acompanhamentos_opcional,
-        tem_acompanhamento_final_valido,
-        tem_acompanhamento_inicial_valido
+        corretude_numero_art,
+        corretude_valor_obra,
+        corretude_dimensao,
+        corretude_tipo_obra,
+        corretude_tem_georreferenciamento,
+        corretude_dentro_municipio,
+        corretude_planilha_contratada,
+        corretude_numero_contrato,
+        corretude_total_de_medicoes,
+        corretude_medicoes_ok,
+        corretude_num_fotos_medicao,
+        corretude_num_fotos_acompanhamento,
+        corretude_data_inicio_obra,
+        corretude_data_prevista_conclusao,
+        corretude_data_conclusao_obra,
+        corretude_data_recebimento_obra,
+        corretude_projeto_basico,
+        corretude_tem_acompanhamento_inicial,
+        corretude_tem_acompanhamento_final,
+        corretude_numero_obra,
+        corretude_situacao_estimada
     )
 ```
 
