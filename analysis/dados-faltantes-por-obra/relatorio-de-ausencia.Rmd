@@ -267,7 +267,7 @@ Vamos definir o que são valores faltantes e incertos para cada coluna, onde uti
     + INVÁLIDO: As demais
 * num_fotos_medicao:
     + OPCIONAL: Obras com valor maior ou igual à R$10.000,00 e menor que R$150.000,00
-    + VÁLIDO: As que possuem no mínimo uma foto por medição
+    + VÁLIDO: As que possuem no mínimo uma foto por medição, caso tenha pelo menos uma medição
     + INCERTO: As que tiverem valor da obra menor que R$10.000,00
     + INVÁLIDO: As demais
 * num_fotos_acompanhamento
@@ -302,7 +302,7 @@ Vamos definir o que são valores faltantes e incertos para cada coluna, onde uti
 * tem_acompanhamento_final
     + OPCIONAL: Obras com valor maior ou igual à R$10.000,00 e menor que R$30.000,00
     + VÁLIDO: As que possuem pelo menos um acompanhamento final
-    + INCERTO: As que possuem menos ou igual à 90 dias passados da data prevista de conclusão ou valor menor que R$10.000,00 
+    + INCERTO: As que possuem menos ou igual à 90 dias passados da data prevista de conclusão ou valor menor que R$10.000,00 ou tem situação estimada como desatualizada
     + INVÁLIDO: As demais
 * numero_obra:
     + OPCIONAL: Obras que não sejam da esfera municipal
@@ -606,7 +606,7 @@ municipios <- obras.metricas.relevantes %>%
     arrange(municipio) %>%
     pull(municipio)
 
-municipios <- c("Emas")
+#municipios <- c("Emas")
 
 div(bsselect(municipios, type = "text"))
 
