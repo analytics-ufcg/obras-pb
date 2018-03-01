@@ -78,11 +78,13 @@ Inicialmente selecionaremos as colunas a serem utilizadas como método de avalia
 Como existem dados com data de início desde 1900, serão filtrados dados a partir de 2013 visto que possuem uma maior relevância para o contexto.
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
+# Agrupa por obra verificando se existem dados georreferenciados 
 dados.georref <- acompanhamento %>%
     mutate(tem_valor_georref = valor_georeferenciamento != "0") %>%
     group_by(fk_obra) %>%
     summarise(tem_georreferenciamento_valido = sum(tem_valor_georref) > 0)
 
+# Agrupa por obra adquirindo qual a situação associada ao último acompanhamento
 situacao.medicao.por.data <- obra.medicao %>% 
     group_by(fk_obra, data_final) %>% 
     summarise(situacao = ifelse(7 %in% situacao, 7,
@@ -93,19 +95,22 @@ situacao.medicao.por.data <- obra.medicao %>%
                                                             ifelse(3 %in% situacao, 3,
                                                                    ifelse(2 %in% situacao, 2))))))))
 
+# Agrupa por obra adquirindo o total de medições, total de medições que contém planilhas válidas e a data da última medição
 obra.medicao.agrupada <- obra.medicao %>% 
-    mutate(medicoes_ok = grepl(".xls", planilha_medicoes) | grepl(".pdf", planilha_medicoes)) %>% 
+    mutate(medicoes_ok = grepl(".xls", planilha_medicoes) | grepl(".csv", planilha_medicoes)) %>% 
     group_by(fk_obra) %>% 
     summarise(total_de_medicoes = n(), 
               medicoes_ok = sum(medicoes_ok),
               data.ulti.medicao = max(data_final, na.rm = TRUE)) %>% 
     left_join(situacao.medicao.por.data, by = c("fk_obra", "data.ulti.medicao" = "data_final"))
 
+# Agrupa por obra adquirindo a data de último acompanhamento que não seja final
 acomp.ulti.data <- acompanhamento %>% 
     filter(tipo != 3) %>% 
     group_by(fk_obra) %>% 
-    summarise(data.ulti.acomp = max(data_cadastro, na.rm = TRUE))
+    summarise(data.ulti.acomp.nao.final = max(data_cadastro, na.rm = TRUE))
 
+# Agrupa por obra adquirindo se existe pelo menos um acompanhamento inicial e final, além da última data de acompanhamento não final
 acomp.inicial.final <- acompanhamento %>% 
     group_by(fk_obra) %>% 
     summarise(
@@ -114,6 +119,7 @@ acomp.inicial.final <- acompanhamento %>%
     ) %>% 
     left_join(acomp.ulti.data, by = "fk_obra")
 
+# Junta dados de diversas tabelas em uma só
 tb.dados.municipios <- obras.2013 %>% 
     select(id,
            nome.x,
@@ -193,17 +199,20 @@ Para definir a situação da última medição, quando existe múltiplas mediç�
 ```{r, echo=FALSE, warning=FALSE}
 ultima.data <- "2017-12-15"
 
-desc.situacoes <- data.frame(situacao = c(1,2,3,4,7,8,9), tipo.situacao = c("Em Execução Normal (Dentro do Cronograma)","Atrasada (Cronograma Atrasado)",
-                                                          "Paralisada (Sem Execução)", "Inacabada (Não Concluída Após Término do Contrato)", 
-                                                          "Finalizada por Conclusão de Construção", "Finalizada Administrativa ou Judicialmente",
-                                                          "Abandonada"))
+desc.situacoes <- data.frame(
+    situacao = c(1,2,3,4,7,8,9),
+    tipo.situacao = c("Em Execução Normal (Dentro do Cronograma)", "Atrasada (Cronograma Atrasado)", "Paralisada (Sem Execução)", 
+                      "Inacabada (Não Concluída Após Término do Contrato)", "Finalizada por Conclusão de Construção",
+                      "Finalizada Administrativa ou Judicialmente", "Abandonada")
+    )
 
+# Adiciona informações de situação estimada da obra
 tb.dados.municipios <- tb.dados.municipios %>% 
     mutate(
         tempo.de.obra = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_inicio_obra),units="days"),
-        tempo.data.prevista.acomp.final = difftime(lubridate::ymd(data.ulti.acomp), lubridate::ymd(data_prevista_conclusao),units="days"),
+        tempo.data.prevista.acomp.final = difftime(lubridate::ymd(data.ulti.acomp.nao.final), lubridate::ymd(data_prevista_conclusao),units="days"),
         tempo.data.prevista = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_prevista_conclusao),units="days"),
-        tempo.ulti.acomp = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.acomp),units="days"),
+        tempo.ulti.acomp = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.acomp.nao.final),units="days"),
         tempo.ulti.medicao = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.medicao),units="days"),
         acomp.menor.90.dias = !is.na(tempo.ulti.acomp) & tempo.ulti.acomp <= 90,
         medicao.menor.90.dias = !is.na(tempo.ulti.medicao) & tempo.ulti.medicao <= 90,
@@ -313,6 +322,7 @@ Vamos definir o que são valores faltantes e incertos para cada coluna, onde uti
     + VÁLIDO: As demais
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
+# Adiciona critérios de corretude
 obras.metricas.relevantes <- tb.dados.municipios %>% 
     mutate(
         numero_art_opcional = valor_obra >= 10000 & valor_obra < 30000,
@@ -492,6 +502,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
 Vejamos um panorama das colunas mais preenchidas:
 
 ```{r, echo=FALSE, warning=FALSE}
+# Cria dataset para panorama de métricas
 porc.metricas.validas <- obras.metricas.relevantes %>%  
     mutate(grupo = 1) %>% 
     group_by(grupo) %>% 
@@ -526,20 +537,20 @@ porc.metricas.validas$criterios <- rownames(porc.metricas.validas)
 porc.metricas.validas <- porc.metricas.validas %>%
     rename(porcentagem.criterios.validos = V1) 
     
-
+# Plota panorama geral por critério
 porc.metricas.validas %>% 
     ggplot(aes(x = reorder(criterios, porcentagem.criterios.validos), y = porcentagem.criterios.validos)) +
     geom_bar(stat = "identity") +
     labs(x = "Critérios", y = "Porcentagem de critérios válidos", title = "Porcentagem dos critérios válidos") +
     coord_flip() +
     scale_y_continuous(label = percent) 
-    
 ```
 
 
 Vejamos agora um panorama geral dos municípios:
 
 ```{r, echo=FALSE, warning=FALSE}
+# Cria dataset de panorama por município
 obras.metricas.relevantes <- obras.metricas.relevantes %>% 
     rowwise() %>% 
     mutate(
@@ -564,11 +575,13 @@ obras.metricas.relevantes <- obras.metricas.relevantes %>%
         porc_criterios_validos = criterios_validos / criterios_obrigatorios
         )
 
+# Agrupa por município descrevendo quantidade de obras e porcentagem de critérios válidos
 panorama.municipios <- obras.metricas.relevantes %>% 
     group_by(municipio) %>% 
     summarise(porc.criterios.validos = sum(porc_criterios_validos) / n(),
               qtde.obras = n())
 
+# Plota panorama geral por município
 panorama.municipios %>% 
     ggplot(aes(x = "municipios", y = porc.criterios.validos)) + 
     scale_y_continuous(labels = percent) +
@@ -581,6 +594,7 @@ A mediana de critérios válidos por município é cerca de 46% e os mesmos tem 
 Vejamos os municípios mais detalhadamente:
 
 ```{r, echo=FALSE, warning=FALSE, fig.height=30}
+# Plota panorama detalhado por município
 panorama.municipios %>% 
     ggplot(aes(x = reorder(municipio, porc.criterios.validos), 
                y = porc.criterios.validos, 
@@ -601,6 +615,7 @@ Criaremos agora a visualização das informações faltantes das obras por munic
 ```{r, echo=FALSE, warning=FALSE}
 options("scipen"=100, "digits"=4)
 
+# Pega municípios
 municipios <- obras.metricas.relevantes %>%
     distinct(municipio) %>%
     arrange(municipio) %>%
@@ -608,8 +623,10 @@ municipios <- obras.metricas.relevantes %>%
 
 #municipios <- c("Emas")
 
+# Adiciona municípios no dropdown
 div(bsselect(municipios, type = "text"))
 
+# Muda tabela ao mudar dropdown
 tags$script('
     $(document).ready(function(){
             $(".bsselect").css("display", "none")
@@ -632,6 +649,7 @@ tags$script('
     })
 ')
 
+# Plota tabela de um município
 show_plot <- function(mun, porc.criterios.validos, plot_object) {
     div(style="margin:auto;text-align:center",
         div(class="table-municipio",
@@ -641,11 +659,13 @@ show_plot <- function(mun, porc.criterios.validos, plot_object) {
         )
 }
 
+# Muda cor da célula
 get_cor_celula <- function(classe) {
     ifelse(classe == "INVALIDO", "red",
            ifelse(classe == "INCERTO", "yellow", ""))
 }
 
+# Plota tabela
 do.call(div, lapply(municipios, function(mun) {
     obras.filt.mun <- obras.metricas.relevantes %>%
             filter(municipio == mun) %>%
