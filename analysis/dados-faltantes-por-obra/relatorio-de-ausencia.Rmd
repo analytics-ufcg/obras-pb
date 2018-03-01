@@ -267,7 +267,7 @@ Vamos definir o que são valores faltantes e incertos para cada coluna, onde uti
     + INVÁLIDO: As demais
 * num_fotos_medicao:
     + OPCIONAL: Obras com valor maior ou igual à R$10.000,00 e menor que R$150.000,00
-    + VÁLIDO: As que possuem no mínimo uma foto por medição
+    + VÁLIDO: As que possuem no mínimo uma foto por medição, caso tenha pelo menos uma medição
     + INCERTO: As que tiverem valor da obra menor que R$10.000,00
     + INVÁLIDO: As demais
 * num_fotos_acompanhamento
@@ -302,7 +302,7 @@ Vamos definir o que são valores faltantes e incertos para cada coluna, onde uti
 * tem_acompanhamento_final
     + OPCIONAL: Obras com valor maior ou igual à R$10.000,00 e menor que R$30.000,00
     + VÁLIDO: As que possuem pelo menos um acompanhamento final
-    + INCERTO: As que possuem menos ou igual à 90 dias passados da data prevista de conclusão ou valor menor que R$10.000,00 
+    + INCERTO: As que possuem menos ou igual à 90 dias passados da data prevista de conclusão ou valor menor que R$10.000,00 ou tem situação estimada como desatualizada
     + INVÁLIDO: As demais
 * numero_obra:
     + OPCIONAL: Obras que não sejam da esfera municipal
@@ -360,9 +360,9 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
                                        ifelse(total_de_medicoes > 0 & medicoes_ok/total_de_medicoes >= 0.8, "VALIDO",
                                               ifelse(valor_obra < 10000, "INCERTO", "INVALIDO")))),
         num_fotos_medicao_opcional = valor_obra >= 10000 & valor_obra < 150000,
-        num_fotos_medicao_valida = num_fotos_medicao >= total_de_medicoes | num_fotos_medicao_opcional,
+        num_fotos_medicao_valida = num_fotos_medicao >= (total_de_medicoes | num_fotos_medicao_opcional) & num_fotos_medicao != 0,
         corretude_num_fotos_medicao = factor(ifelse(valor_obra >= 10000 & valor_obra < 150000, "OPCIONAL",
-                                             ifelse(num_fotos_medicao >= total_de_medicoes, "VALIDO",
+                                             ifelse(num_fotos_medicao >= total_de_medicoes & num_fotos_medicao != 0, "VALIDO",
                                                     ifelse(valor_obra < 10000, "INCERTO", "INVALIDO")))),
         num_fotos_acompanhamento_opcional = valor_obra >= 10000 & valor_obra < 30000,
         num_fotos_acompanhamento_valida = num_fotos_acompanhamento > 0 | num_fotos_acompanhamento_opcional | tempo.de.obra <= 90,
@@ -398,7 +398,7 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         corretude_tem_acompanhamento_final = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
                                                     ifelse(tem_acompanhamento_final_valido, "VALIDO",
                                                            ifelse((!is.na(tempo.data.prevista) & tempo.data.prevista <= 90) |
-                                                                      valor_obra < 10000, "INCERTO", "INVALIDO")))),
+                                                                      valor_obra < 10000 | situacao_estimada == "DESATUALIZADA", "INCERTO", "INVALIDO")))),
         tem_acompanhamento_final_valido = tem_acompanhamentos_opcional | (!is.na(tempo.data.prevista) & tempo.data.prevista <= 90) |
             (tem_acompanhamento_final_valido &
             !is.na(tempo.data.prevista.acomp.final) &
@@ -596,7 +596,7 @@ panorama.municipios %>%
 
 Vemos que os municípios que mais se destacaram foram Pilões, os quais tem pouco mais de 60% dos critérios preenchidos corretamente.
 
-Criaremos agora a visualização das informações faltantes das obras por municípios, onde os critérios inválidos são representados por laranja, os válidos por verde e os opcionais por cinza:
+Criaremos agora a visualização das informações faltantes das obras por municípios, onde os critérios inválidos são representados por laranja e os incertos por amarelo:
 
 ```{r, echo=FALSE, warning=FALSE}
 options("scipen"=100, "digits"=4)
@@ -606,7 +606,7 @@ municipios <- obras.metricas.relevantes %>%
     arrange(municipio) %>%
     pull(municipio)
 
-#municipios <- c("João Pessoa")
+#municipios <- c("Emas")
 
 div(bsselect(municipios, type = "text"))
 
@@ -650,12 +650,13 @@ do.call(div, lapply(municipios, function(mun) {
     obras.filt.mun <- obras.metricas.relevantes %>%
             filter(municipio == mun) %>%
             left_join(select(tipos.das.obras, nome, unidadeMedida), by = c("tipo_obra" = "nome")) %>%
-            mutate(unidadeMedida = ifelse(unidadeMedida == "-", "", as.character(unidadeMedida))) %>%
+            mutate(unidadeMedida = ifelse(unidadeMedida == "-" | is.na(unidadeMedida), "", as.character(unidadeMedida))) %>%
             rowwise() %>%
             mutate(
                 valor_obra = paste("R$", format(valor_obra, big.mark=".", decimal.mark=",", digits=2, nsmall=2)),
                 dimensao = paste(format(dimensao, big.mark=".", decimal.mark=",", digits=2, nsmall=2), unidadeMedida),
-                projeto_basico = ifelse(is.na(projeto_basico), "", projeto_basico)
+                projeto_basico = ifelse(is.na(projeto_basico), "", projeto_basico),
+                tipo_obra = ifelse(is.na(tipo_obra), "", as.character(tipo_obra))
             ) %>%
             select(-municipio, -unidadeMedida, -criterios_obrigatorios, -porc_criterios_validos) %>%
             arrange(-criterios_validos, -numero_art_valido, -valor_obra_valida, -dimensao_valida, -tipo_obra_valida,
