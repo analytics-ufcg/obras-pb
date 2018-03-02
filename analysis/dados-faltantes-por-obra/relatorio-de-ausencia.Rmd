@@ -127,6 +127,7 @@ tb.dados.municipios <- obras.2013 %>%
            nome.y, 
            valor_obra, 
            dimensao,
+           tipo_georeferenciamento,
            dentro_municipio,
            planilha_contratada,
            numero_contrato, 
@@ -151,8 +152,9 @@ tb.dados.municipios <- obras.2013 %>%
     left_join(dados.georref, by = c("id" = "fk_obra")) %>% 
     mutate(tem_georreferenciamento_valido = ifelse(is.na(tem_georreferenciamento_valido), FALSE, tem_georreferenciamento_valido),
            tem_georreferenciamento = ifelse(tem_georreferenciamento_valido, "SIM", "NÃO"),
-           dentro_municipio_valido = ifelse(is.na(dentro_municipio_valido), FALSE, dentro_municipio_valido),
-           dentro_municipio = ifelse(dentro_municipio_valido, "SIM", "NÃO")) %>% 
+           dentro_municipio = ifelse(is.na(dentro_municipio_valido), "NÃO CONSTA", 
+                                             ifelse(tipo_georeferenciamento == 2, "INCERTO", 
+                                                    ifelse(dentro_municipio_valido, "SIM", "NÃO")))) %>% 
     left_join(obra.proj.basico, by = c("id" = "fk_obra")) %>% 
     left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id")) %>% 
     left_join(acomp.inicial.final, by = c("id" = "fk_obra")) %>% 
@@ -254,7 +256,7 @@ Vamos definir o que são valores faltantes e incertos para cada coluna, onde uti
 * dentro_municipio(apenas os que tiverem georreferenciamento do tipo 1 ou 3):
     + OPCIONAL: Obras com valor maior ou igual à R$10.000,00 e menor que R$30.000,00
     + VÁLIDO: As que possuem georreferenciamento dentro do município
-    + INCERTO: As que tiverem tempo de obra menor ou igual à 90 dias ou valor da obra menor que R$10.000,00
+    + INCERTO: As que tiverem tempo de obra menor ou igual à 90 dias ou valor da obra menor que R$10.000,00 ou as que tiverem georreferenciamento do tipo 2 (arquivos KML)
     + INVÁLIDO: As demais
 * planilha_contratada:
     + OPCIONAL: Obras com valor maior ou igual à R$10.000,00 e menor que R$30.000,00
@@ -339,8 +341,9 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
                                                    ifelse(tem_georreferenciamento_valido, "VALIDO",
                                                           ifelse(tempo.de.obra <= 90 | valor_obra < 10000, "INCERTO", "INVALIDO")))),
         corretude_dentro_municipio = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
-                                            ifelse(dentro_municipio_valido, "VALIDO",
-                                                   ifelse(tempo.de.obra <= 90 | valor_obra < 10000, "INCERTO", "INVALIDO")))),
+                                            ifelse(dentro_municipio == "SIM", "VALIDO",
+                                                   ifelse(tempo.de.obra <= 90 | valor_obra < 10000 | 
+                                                              dentro_municipio == "INCERTO", "INCERTO", "INVALIDO")))),
         corretude_planilha_contratada = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
                                             ifelse(str_detect(planilha_contratada, "([:print:]+)(.xls|.csv)"), "VALIDO",
                                                    ifelse(valor_obra < 10000, "INCERTO", "INVALIDO")))),
@@ -525,7 +528,7 @@ panorama.municipios %>%
     labs(x = "Municípios", y = "Porcentagem de critérios válidos", title = "Porcentagem de critérios válidos por município")
 ```
 
-A mediana de critérios válidos por município é cerca de 46% e os mesmos tem pequena variação, visto que 50% dos municípios preenchem entre cerca de 44% e 49% dos critérios. Apesar da baixa variação, existem municípios que se destacaram positivamente, tendo cerca de 61% dos critérios preenchidos.
+A mediana de critérios válidos por município é cerca de 44% e os mesmos tem pequena variação, visto que 50% dos municípios preenchem entre cerca de 41% e 47% dos critérios. Apesar da baixa variação, existem municípios que se destacaram positivamente, tendo cerca de 59% dos critérios preenchidos.
 
 Vejamos os municípios mais detalhadamente:
 
@@ -544,7 +547,7 @@ panorama.municipios %>%
     scale_fill_viridis(name = "Quantidade de obras")
 ```
 
-Vemos que os municípios que mais se destacaram foram Pilões, os quais tem pouco mais de 60% dos critérios preenchidos corretamente.
+Vemos que os municípios que mais se destacaram foram Pilões, os quais tem quase 59% dos critérios preenchidos corretamente.
 
 Criaremos agora a visualização das informações faltantes das obras por municípios, onde os critérios inválidos são representados por laranja e os incertos por amarelo:
 
