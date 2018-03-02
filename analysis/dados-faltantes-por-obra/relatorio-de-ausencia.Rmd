@@ -45,7 +45,7 @@ con2 <- DBI::dbConnect(drv,
                        dbname = config::get("dbname2", file = CONFIG_FILE_PATH)
 )
 
-get.data.faltantes(con1, con2, mapa_paraiba)
+GeoPBUtils::get.data.faltantes(con1, con2, mapa_paraiba)
 
 dbDisconnect(con1)
 dbDisconnect(con2)
@@ -147,7 +147,7 @@ tb.dados.municipios <- obras.2013 %>%
     mutate(tem_georreferenciamento_valido = ifelse(is.na(tem_georreferenciamento_valido), FALSE, tem_georreferenciamento_valido),
            tem_georreferenciamento = ifelse(tem_georreferenciamento_valido, "SIM", "NÃO"),
            dentro_municipio = ifelse(is.na(dentro_municipio_valido), "NÃO CONSTA", 
-                                             ifelse(tipo_georeferenciamento == 2, "TALVEZ", 
+                                             ifelse(tipo_georeferenciamento == 2, "INCERTO", 
                                                     ifelse(dentro_municipio_valido, "SIM", "NÃO")))) %>% 
     left_join(obra.proj.basico, by = c("id" = "fk_obra")) %>% 
     left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id")) %>% 
@@ -247,7 +247,7 @@ Vamos definir o que são valores faltantes e incertos para cada coluna, onde uti
 * dentro_municipio(apenas os que tiverem georreferenciamento do tipo 1 ou 3):
     + OPCIONAL: Obras com valor maior ou igual à R$10.000,00 e menor que R$30.000,00
     + VÁLIDO: As que possuem georreferenciamento dentro do município
-    + INCERTO: As que tiverem tempo de obra menor ou igual à 90 dias ou valor da obra menor que R$10.000,00 ou as que tiverem georreferenciamento do tipo 2
+    + INCERTO: As que tiverem tempo de obra menor ou igual à 90 dias ou valor da obra menor que R$10.000,00 ou as que tiverem georreferenciamento do tipo 2 (arquivos KML)
     + INVÁLIDO: As demais
 * planilha_contratada:
     + OPCIONAL: Obras com valor maior ou igual à R$10.000,00 e menor que R$30.000,00
@@ -341,9 +341,9 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         corretude_dentro_municipio = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
                                             ifelse(dentro_municipio == "SIM", "VALIDO",
                                                    ifelse(tempo.de.obra <= 90 | valor_obra < 10000 | 
-                                                              dentro_municipio == "TALVEZ", "INCERTO", "INVALIDO")))),
+                                                              dentro_municipio == "INCERTO", "INCERTO", "INVALIDO")))),
         dentro_municipio_opcional = valor_obra >= 10000 & valor_obra < 30000,
-        dentro_municipio_valido = dentro_municipio_valido | tempo.de.obra <= 90 | dentro_municipio_opcional,
+        dentro_municipio_valido = (!is.na(dentro_municipio_valido) & dentro_municipio_valido) | tempo.de.obra <= 90 | dentro_municipio_opcional,
         planilha_contratada_opcional = valor_obra >= 10000 & valor_obra < 30000,
         planilha_contratada_valida = str_detect(planilha_contratada, "([:print:]+)(.xls|.csv)") | planilha_contratada_opcional,
         corretude_planilha_contratada = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
@@ -579,7 +579,7 @@ panorama.municipios %>%
     labs(x = "Municípios", y = "Porcentagem de critérios válidos", title = "Porcentagem de critérios válidos por município")
 ```
 
-A mediana de critérios válidos por município é cerca de 44% e os mesmos tem pequena variação, visto que 50% dos municípios preenchem entre cerca de 42% e 47% dos critérios. Apesar da baixa variação, existem municípios que se destacaram positivamente, tendo cerca de 59% dos critérios preenchidos.
+A mediana de critérios válidos por município é cerca de 44% e os mesmos tem pequena variação, visto que 50% dos municípios preenchem entre cerca de 41% e 47% dos critérios. Apesar da baixa variação, existem municípios que se destacaram positivamente, tendo cerca de 59% dos critérios preenchidos.
 
 Vejamos os municípios mais detalhadamente:
 
