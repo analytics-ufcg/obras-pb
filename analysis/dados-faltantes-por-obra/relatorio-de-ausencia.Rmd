@@ -561,7 +561,7 @@ municipios <- obras.metricas.relevantes %>%
     arrange(municipio) %>%
     pull(municipio)
 
-#municipios <- c("Emas")
+municipios <- c("Emas")
 
 # Adiciona municípios no dropdown
 div(bsselect(municipios, type = "text"))
@@ -598,7 +598,7 @@ show_plot <- function(mun, porc.criterios.validos, plot_object) {
         div(br())
         )
 }
-F
+
 gera_planilha_xlsx <- function(obras.filt.mun){
      
     validos <- obras.filt.mun %>% select(criterios_validos, numero_art_valido, valor_obra_valida, dimensao_valida, tipo_obra_valida,
@@ -738,7 +738,7 @@ do.call(div, lapply(municipios, function(mun) {
         filter(municipio == mun) %>% 
         pull(porc.criterios.validos) * 100
     
-    gera_planilha_xlsx(obras.filt.mun)
+    #gera_planilha_xlsx(obras.filt.mun)
 
     show_plot(mun, porc.criterios.validos, print(
         obras.filt.mun %>%
