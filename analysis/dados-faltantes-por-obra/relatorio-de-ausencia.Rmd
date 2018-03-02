@@ -599,6 +599,7 @@ show_plot <- function(mun, porc.criterios.validos, plot_object) {
         )
 }
 
+#Gera uma tabela .xlsx (possivelmente imprimível) para as obras de um município
 gera_planilha_xlsx <- function(obras.filt.mun){
      
     corretudes <- obras.filt.mun %>% select(
