@@ -78,11 +78,13 @@ Inicialmente selecionaremos as colunas a serem utilizadas como método de avalia
 Como existem dados com data de início desde 1900, serão filtrados dados a partir de 2013 visto que possuem uma maior relevância para o contexto.
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
+# Agrupa por obra verificando se existem dados georreferenciados 
 dados.georref <- acompanhamento %>%
     mutate(tem_valor_georref = valor_georeferenciamento != "0") %>%
     group_by(fk_obra) %>%
     summarise(tem_georreferenciamento_valido = sum(tem_valor_georref) > 0)
 
+# Agrupa por obra adquirindo qual a situação associada ao último acompanhamento
 situacao.medicao.por.data <- obra.medicao %>% 
     group_by(fk_obra, data_final) %>% 
     summarise(situacao = ifelse(7 %in% situacao, 7,
@@ -93,19 +95,22 @@ situacao.medicao.por.data <- obra.medicao %>%
                                                             ifelse(3 %in% situacao, 3,
                                                                    ifelse(2 %in% situacao, 2))))))))
 
+# Agrupa por obra adquirindo o total de medições, total de medições que contém planilhas válidas e a data da última medição
 obra.medicao.agrupada <- obra.medicao %>% 
-    mutate(medicoes_ok = grepl(".xls", planilha_medicoes) | grepl(".pdf", planilha_medicoes)) %>% 
+    mutate(medicoes_ok = grepl(".xls", planilha_medicoes) | grepl(".csv", planilha_medicoes)) %>% 
     group_by(fk_obra) %>% 
     summarise(total_de_medicoes = n(), 
               medicoes_ok = sum(medicoes_ok),
               data.ulti.medicao = max(data_final, na.rm = TRUE)) %>% 
     left_join(situacao.medicao.por.data, by = c("fk_obra", "data.ulti.medicao" = "data_final"))
 
+# Agrupa por obra adquirindo a data de último acompanhamento que não seja final
 acomp.ulti.data <- acompanhamento %>% 
     filter(tipo != 3) %>% 
     group_by(fk_obra) %>% 
-    summarise(data.ulti.acomp = max(data_cadastro, na.rm = TRUE))
+    summarise(data.ulti.acomp.nao.final = max(data_cadastro, na.rm = TRUE))
 
+# Agrupa por obra adquirindo se existe pelo menos um acompanhamento inicial e final, além da última data de acompanhamento não final
 acomp.inicial.final <- acompanhamento %>% 
     group_by(fk_obra) %>% 
     summarise(
@@ -114,6 +119,7 @@ acomp.inicial.final <- acompanhamento %>%
     ) %>% 
     left_join(acomp.ulti.data, by = "fk_obra")
 
+# Junta dados de diversas tabelas em uma só
 tb.dados.municipios <- obras.2013 %>% 
     select(id,
            nome.x,
@@ -193,17 +199,20 @@ Para definir a situação da última medição, quando existe múltiplas mediç�
 ```{r, echo=FALSE, warning=FALSE}
 ultima.data <- "2017-12-15"
 
-desc.situacoes <- data.frame(situacao = c(1,2,3,4,7,8,9), tipo.situacao = c("Em Execução Normal (Dentro do Cronograma)","Atrasada (Cronograma Atrasado)",
-                                                          "Paralisada (Sem Execução)", "Inacabada (Não Concluída Após Término do Contrato)", 
-                                                          "Finalizada por Conclusão de Construção", "Finalizada Administrativa ou Judicialmente",
-                                                          "Abandonada"))
+desc.situacoes <- data.frame(
+    situacao = c(1,2,3,4,7,8,9),
+    tipo.situacao = c("Em Execução Normal (Dentro do Cronograma)", "Atrasada (Cronograma Atrasado)", "Paralisada (Sem Execução)", 
+                      "Inacabada (Não Concluída Após Término do Contrato)", "Finalizada por Conclusão de Construção",
+                      "Finalizada Administrativa ou Judicialmente", "Abandonada")
+    )
 
+# Adiciona informações de situação estimada da obra
 tb.dados.municipios <- tb.dados.municipios %>% 
     mutate(
         tempo.de.obra = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_inicio_obra),units="days"),
-        tempo.data.prevista.acomp.final = difftime(lubridate::ymd(data.ulti.acomp), lubridate::ymd(data_prevista_conclusao),units="days"),
+        tempo.data.prevista.acomp.final = difftime(lubridate::ymd(data.ulti.acomp.nao.final), lubridate::ymd(data_prevista_conclusao),units="days"),
         tempo.data.prevista = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data_prevista_conclusao),units="days"),
-        tempo.ulti.acomp = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.acomp),units="days"),
+        tempo.ulti.acomp = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.acomp.nao.final),units="days"),
         tempo.ulti.medicao = difftime(lubridate::ymd(ultima.data), lubridate::ymd(data.ulti.medicao),units="days"),
         acomp.menor.90.dias = !is.na(tempo.ulti.acomp) & tempo.ulti.acomp <= 90,
         medicao.menor.90.dias = !is.na(tempo.ulti.medicao) & tempo.ulti.medicao <= 90,
@@ -313,101 +322,65 @@ Vamos definir o que são valores faltantes e incertos para cada coluna, onde uti
     + VÁLIDO: As demais
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
+# Adiciona critérios de corretude
 obras.metricas.relevantes <- tb.dados.municipios %>% 
     mutate(
-        numero_art_opcional = valor_obra >= 10000 & valor_obra < 30000,
-        numero_art_valido = str_detect(numero_art, paste0("(P|p)(B|b)\\s?(201[4-8]|1900)([:digit:]{7})")) | 
-            numero_art_opcional | lubridate::year(data_inicio_obra) < 2015,
         corretude_numero_art = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
                                       ifelse(str_detect(numero_art, paste0("(P|p)(B|b)\\s?(201[4-8]|1900)([:digit:]{7})")), "VALIDO", 
                                              ifelse(lubridate::year(data_inicio_obra) < 2015 | valor_obra < 10000, "INCERTO",
                                                     "INVALIDO")))),
-        valor_obra_valida = valor_obra >= 10000 & valor_obra < 100000000,
         corretude_valor_obra = factor(ifelse(valor_obra <= 0 | is.na(valor_obra), "INVALIDO",
                                       ifelse(valor_obra >= 10000 & valor_obra < 100000000, "VALIDO", "INCERTO"))),
-        dimensao_valida = !is.na(dimensao) & dimensao > 0,
         corretude_dimensao = factor(ifelse(!is.na(dimensao) & dimensao > 0, "VALIDO", "INVALIDO")),
-        tipo_obra_valida = !is.na(tipo_obra) & tipo_obra != "OUTRAS",
         corretude_tipo_obra = factor(ifelse(is.na(tipo_obra), "INVALIDO",
                                      ifelse(tipo_obra != "OUTRAS", "VALIDO",
                                             "INCERTO"))),
         corretude_tem_georreferenciamento = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
                                                    ifelse(tem_georreferenciamento_valido, "VALIDO",
                                                           ifelse(tempo.de.obra <= 90 | valor_obra < 10000, "INCERTO", "INVALIDO")))),
-        tem_georreferenciamento_opcional = valor_obra >= 10000 & valor_obra < 30000,
-        tem_georreferenciamento_valido = tem_georreferenciamento_valido | tempo.de.obra <= 90 | tem_georreferenciamento_opcional,
         corretude_dentro_municipio = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
                                             ifelse(dentro_municipio_valido, "VALIDO",
                                                    ifelse(tempo.de.obra <= 90 | valor_obra < 10000, "INCERTO", "INVALIDO")))),
-        dentro_municipio_opcional = valor_obra >= 10000 & valor_obra < 30000,
-        dentro_municipio_valido = dentro_municipio_valido | tempo.de.obra <= 90 | dentro_municipio_opcional,
-        planilha_contratada_opcional = valor_obra >= 10000 & valor_obra < 30000,
-        planilha_contratada_valida = str_detect(planilha_contratada, "([:print:]+)(.xls|.csv)") | planilha_contratada_opcional,
         corretude_planilha_contratada = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
                                             ifelse(str_detect(planilha_contratada, "([:print:]+)(.xls|.csv)"), "VALIDO",
                                                    ifelse(valor_obra < 10000, "INCERTO", "INVALIDO")))),
-        numero_contrato_valido = numero_contrato != "0000" & numero_contrato != "-" & !is.na(numero_contrato),
         corretude_numero_contrato = factor(ifelse(is.na(numero_contrato) | numero_contrato == "0000" | numero_contrato == "-", "INVALIDO", "VALIDO")),
-        total_de_medicoes_opcional = valor_obra >= 10000 & valor_obra < 150000,
-        total_de_medicoes_valida = total_de_medicoes > 0 | tempo.de.obra <= 90 | total_de_medicoes_opcional,
         corretude_total_de_medicoes = factor(ifelse(valor_obra >= 10000 & valor_obra < 150000, "OPCIONAL",
                                              ifelse(total_de_medicoes > 0, "VALIDO",
                                                     ifelse(valor_obra < 10000, "INCERTO", "INVALIDO")))),
-        medicoes_ok_opcional = valor_obra >= 10000 & valor_obra < 150000,
-        medicoes_ok_valida = ifelse(total_de_medicoes > 0, medicoes_ok/total_de_medicoes >= 0.8, FALSE) | tempo.de.obra <= 90 |
-            medicoes_ok_opcional,
         corretude_medicoes_ok = factor(ifelse(valor_obra >= 10000 & valor_obra < 150000, "OPCIONAL",
                                        ifelse(total_de_medicoes > 0 & medicoes_ok/total_de_medicoes >= 0.8, "VALIDO",
                                               ifelse(valor_obra < 10000, "INCERTO", "INVALIDO")))),
-        num_fotos_medicao_opcional = valor_obra >= 10000 & valor_obra < 150000,
-        num_fotos_medicao_valida = num_fotos_medicao >= (total_de_medicoes | num_fotos_medicao_opcional) & num_fotos_medicao != 0,
         corretude_num_fotos_medicao = factor(ifelse(valor_obra >= 10000 & valor_obra < 150000, "OPCIONAL",
                                              ifelse(num_fotos_medicao >= total_de_medicoes & num_fotos_medicao != 0, "VALIDO",
                                                     ifelse(valor_obra < 10000, "INCERTO", "INVALIDO")))),
-        num_fotos_acompanhamento_opcional = valor_obra >= 10000 & valor_obra < 30000,
-        num_fotos_acompanhamento_valida = num_fotos_acompanhamento > 0 | num_fotos_acompanhamento_opcional | tempo.de.obra <= 90,
         corretude_num_fotos_acompanhamento = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
                                                     ifelse(num_fotos_acompanhamento > 0, "VALIDO",
                                                            ifelse(tempo.de.obra <= 90 | valor_obra < 10000, "INCERTO", "INVALIDO")))),
-        data_inicio_obra_valida = !is.na(data_inicio_obra),
         corretude_data_inicio_obra = factor(ifelse(!is.na(data_inicio_obra), "VALIDO", "INVALIDO")),
-        data_prevista_conclusao_valida = !is.na(data_prevista_conclusao),
         corretude_data_prevista_conclusao = factor(ifelse(!is.na(data_prevista_conclusao), "VALIDO", "INVALIDO")),
-        data_conclusao_obra_valida = !is.na(data_conclusao_obra) | situacao_estimada == "EM ANDAMENTO",
         corretude_data_conclusao_obra = factor(ifelse(!is.na(data_conclusao_obra) | situacao_estimada == "COM INFORMAÇÕES EM ANDAMENTO" |
                                                    situacao_estimada == "COM INFORMAÇÕES DE NÃO CONCLUÍDA", "VALIDO",
                                                ifelse(is.na(data_conclusao_obra) & situacao_estimada == "COM INFORMAÇÕES DE CONCLUÍDA", "INVALIDO",
                                                       "INCERTO"))),
-        data_recebimento_obra_valida = (!is.na(data_recebimento_obra) & (!is.na(data_conclusao_obra) & data_recebimento_obra >= data_conclusao_obra)) |
-            situacao_estimada == "EM ANDAMENTO",
         corretude_data_recebimento_obra = factor(ifelse(!is.na(data_recebimento_obra) | situacao_estimada == "COM INFORMAÇÕES EM ANDAMENTO" |
                                                    situacao_estimada == "COM INFORMAÇÕES DE NÃO CONCLUÍDA", "VALIDO",
                                                ifelse(is.na(data_recebimento_obra) & situacao_estimada == "COM INFORMAÇÕES DE CONCLUÍDA" |
                                                           (!is.na(data_recebimento_obra) & data_recebimento_obra < data_conclusao_obra), "INVALIDO", 
                                                       "INCERTO"))),
-        projeto_basico_opcional = valor_obra >= 10000 & valor_obra < 30000,
-        projeto_basico_valido = !is.na(projeto_basico) | projeto_basico_opcional,
         corretude_projeto_basico = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
                                           ifelse(!is.na(projeto_basico), "VALIDO",
                                                  ifelse(valor_obra < 10000, "INCERTO", "INVALIDO")))),
         corretude_tem_acompanhamento_inicial = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
                                                       ifelse(tem_acompanhamento_inicial_valido, "VALIDO",
                                                              ifelse(valor_obra < 10000 | tempo.de.obra <= 90, "INCERTO", "INVALIDO")))),
-        tem_acompanhamentos_opcional = valor_obra >= 10000 & valor_obra < 30000,
-        tem_acompanhamento_inicial_valido = tem_acompanhamento_inicial_valido | tempo.de.obra <= 90 | tem_acompanhamentos_opcional,
         corretude_tem_acompanhamento_final = factor(ifelse(valor_obra >= 10000 & valor_obra < 30000, "OPCIONAL",
                                                     ifelse(tem_acompanhamento_final_valido, "VALIDO",
                                                            ifelse((!is.na(tempo.data.prevista) & tempo.data.prevista <= 90) |
                                                                       valor_obra < 10000 | situacao_estimada == "DESATUALIZADA", "INCERTO", "INVALIDO")))),
-        tem_acompanhamento_final_valido = tem_acompanhamentos_opcional | (!is.na(tempo.data.prevista) & tempo.data.prevista <= 90) |
-            (tem_acompanhamento_final_valido &
-            !is.na(tempo.data.prevista.acomp.final) &
-            tempo.data.prevista.acomp.final <= 90),
-        numero_obra_valido = str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")) | esfera != 1,
         corretude_numero_obra = factor(ifelse(esfera != 1, "OPCIONAL",
                                        ifelse(str_detect(numero_obra, paste0("^([:digit:]{4})", lubridate::year(data_inicio_obra), "$")), "VALIDO",
                                               "INVALIDO"))),
-        situacao_estimada_valida = situacao_estimada != "DESATUALIZADA",
         corretude_situacao_estimada = factor(ifelse(situacao_estimada == "DESATUALIZADA", "INVALIDO", "VALIDO"))
     ) %>% 
     select(
@@ -434,37 +407,6 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
         tem_acompanhamento_final,
         tem_acompanhamento_inicial,
         situacao_estimada,
-        numero_art_valido,
-        valor_obra_valida,
-        dimensao_valida,
-        tipo_obra_valida,
-        tem_georreferenciamento_valido,
-        dentro_municipio_valido,
-        planilha_contratada_valida,
-        numero_contrato_valido,
-        total_de_medicoes_valida,
-        medicoes_ok_valida,
-        num_fotos_medicao_valida,
-        num_fotos_acompanhamento_valida,
-        data_inicio_obra_valida,
-        data_prevista_conclusao_valida,
-        data_conclusao_obra_valida,
-        data_recebimento_obra_valida,
-        projeto_basico_valido,
-        numero_obra_valido,
-        tem_acompanhamento_final_valido,
-        tem_acompanhamento_inicial_valido,
-        situacao_estimada_valida,
-        numero_art_opcional,
-        tem_georreferenciamento_opcional,
-        dentro_municipio_opcional,
-        planilha_contratada_opcional,
-        total_de_medicoes_opcional,
-        medicoes_ok_opcional,
-        num_fotos_medicao_opcional,
-        num_fotos_acompanhamento_opcional,
-        projeto_basico_opcional,
-        tem_acompanhamentos_opcional,
         corretude_numero_art,
         corretude_valor_obra,
         corretude_dimensao,
@@ -492,30 +434,32 @@ obras.metricas.relevantes <- tb.dados.municipios %>%
 Vejamos um panorama das colunas mais preenchidas:
 
 ```{r, echo=FALSE, warning=FALSE}
+# Cria dataset para panorama de métricas
 porc.metricas.validas <- obras.metricas.relevantes %>%  
     mutate(grupo = 1) %>% 
     group_by(grupo) %>% 
     summarise(
-              numero_art = sum(numero_art_valido == TRUE & numero_art_opcional == FALSE) / sum(numero_art_opcional == FALSE),
-              valor_obra = sum(valor_obra_valida) / n(), 
-              dimensao = sum(dimensao_valida) / n(), 
-              tipo_obra = sum(tipo_obra_valida) / n(),
-              tem_georreferenciamento = sum(tem_georreferenciamento_valido == TRUE & tem_georreferenciamento_opcional == FALSE) / sum(tem_georreferenciamento_opcional == FALSE), 
-              dentro_municipio = sum(dentro_municipio_valido & !dentro_municipio_opcional) / sum(!dentro_municipio_opcional), 
-              planilha_contratada = sum(planilha_contratada_valida == TRUE & planilha_contratada_opcional == FALSE) / sum(planilha_contratada_opcional == FALSE), 
-              numero_contrato = sum(numero_contrato_valido) / n(),
-              total_de_medicoes = sum(total_de_medicoes_valida == TRUE & total_de_medicoes_opcional == FALSE) / sum(total_de_medicoes_opcional == FALSE), 
-              medicoes_ok = sum(medicoes_ok_valida == TRUE & medicoes_ok_opcional == FALSE) / sum(!medicoes_ok_opcional),
-              num_fotos_medicao = sum(num_fotos_medicao_valida == TRUE & num_fotos_medicao_opcional == FALSE) / sum(num_fotos_medicao_opcional == FALSE), 
-              num_fotos_acompanhamento = sum(num_fotos_acompanhamento_valida == TRUE & num_fotos_acompanhamento_opcional == FALSE) / sum(num_fotos_acompanhamento_opcional == FALSE), 
-              data_inicio_obra = sum(data_inicio_obra_valida) / n(),
-              data_prevista_conclusao = sum(data_prevista_conclusao_valida) / n(), 
-              data_conclusao_obra = sum(data_conclusao_obra_valida) / n(), 
-              data_recebimento_obra = sum(data_recebimento_obra_valida) / n(), 
-              projeto_basico = sum(projeto_basico_valido == TRUE & projeto_basico_opcional == FALSE) / sum(projeto_basico_opcional == FALSE), 
-              tem_acompanhamento_inicial = sum(tem_acompanhamento_inicial_valido == TRUE & tem_acompanhamentos_opcional == FALSE) / sum(tem_acompanhamentos_opcional == FALSE), 
-              tem_acompanhamento_final = sum(tem_acompanhamento_final_valido == TRUE & tem_acompanhamentos_opcional == FALSE) / sum(tem_acompanhamentos_opcional == FALSE),
-              numero_obra = sum(num_fotos_acompanhamento_valida) / n() 
+              numero_art = sum(corretude_numero_art == "VALIDO") / sum(corretude_numero_art != "OPCIONAL"),
+              valor_obra = sum(corretude_valor_obra == "VALIDO") / sum(corretude_valor_obra != "OPCIONAL"), 
+              dimensao = sum(corretude_dimensao == "VALIDO") / sum(corretude_dimensao != "OPCIONAL"), 
+              tipo_obra = sum(corretude_tipo_obra == "VALIDO") / sum(corretude_tipo_obra != "OPCIONAL"),
+              tem_georreferenciamento = sum(corretude_tem_georreferenciamento == "VALIDO") / sum(corretude_tem_georreferenciamento != "OPCIONAL"), 
+              dentro_municipio = sum(corretude_dentro_municipio == "VALIDO") / sum(corretude_dentro_municipio != "OPCIONAL"), 
+              planilha_contratada = sum(corretude_planilha_contratada == "VALIDO") / sum(corretude_planilha_contratada != "OPCIONAL"), 
+              numero_contrato = sum(corretude_numero_contrato == "VALIDO") / sum(corretude_numero_contrato != "OPCIONAL"),
+              total_de_medicoes = sum(corretude_total_de_medicoes == "VALIDO") / sum(corretude_total_de_medicoes != "OPCIONAL"),
+              medicoes_ok = sum(corretude_medicoes_ok == "VALIDO") / sum(corretude_medicoes_ok != "OPCIONAL"),
+              num_fotos_medicao = sum(corretude_num_fotos_medicao == "VALIDO") / sum(corretude_num_fotos_medicao != "OPCIONAL"), 
+              num_fotos_acompanhamento = sum(corretude_num_fotos_acompanhamento == "VALIDO") / sum(corretude_num_fotos_acompanhamento != "OPCIONAL"), 
+              data_inicio_obra = sum(corretude_data_inicio_obra == "VALIDO") / sum(corretude_data_inicio_obra != "OPCIONAL"),
+              data_prevista_conclusao = sum(corretude_data_prevista_conclusao == "VALIDO") / sum(corretude_data_prevista_conclusao != "OPCIONAL"), 
+              data_conclusao_obra = sum(corretude_data_conclusao_obra == "VALIDO") / sum(corretude_data_conclusao_obra != "OPCIONAL"), 
+              data_recebimento_obra = sum(corretude_data_recebimento_obra == "VALIDO") / sum(corretude_data_recebimento_obra != "OPCIONAL"), 
+              projeto_basico = sum(corretude_projeto_basico == "VALIDO") / sum(corretude_projeto_basico != "OPCIONAL"), 
+              tem_acompanhamento_inicial = sum(corretude_tem_acompanhamento_inicial == "VALIDO") / sum(corretude_tem_acompanhamento_inicial != "OPCIONAL"), 
+              tem_acompanhamento_final = sum(corretude_tem_acompanhamento_final == "VALIDO") / sum(corretude_tem_acompanhamento_final != "OPCIONAL"),
+              numero_obra = sum(corretude_numero_obra == "VALIDO") / sum(corretude_numero_obra != "OPCIONAL"),
+              situacao_estimada = sum(corretude_situacao_estimada == "VALIDO") / sum(corretude_situacao_estimada != "OPCIONAL")
               ) %>% 
     select(-grupo) %>% 
     t() %>% 
@@ -526,49 +470,54 @@ porc.metricas.validas$criterios <- rownames(porc.metricas.validas)
 porc.metricas.validas <- porc.metricas.validas %>%
     rename(porcentagem.criterios.validos = V1) 
     
-
+# Plota panorama geral por critério
 porc.metricas.validas %>% 
     ggplot(aes(x = reorder(criterios, porcentagem.criterios.validos), y = porcentagem.criterios.validos)) +
     geom_bar(stat = "identity") +
     labs(x = "Critérios", y = "Porcentagem de critérios válidos", title = "Porcentagem dos critérios válidos") +
     coord_flip() +
     scale_y_continuous(label = percent) 
-    
 ```
 
 
 Vejamos agora um panorama geral dos municípios:
 
 ```{r, echo=FALSE, warning=FALSE}
+# Cria dataset de panorama por município
 obras.metricas.relevantes <- obras.metricas.relevantes %>% 
     rowwise() %>% 
     mutate(
-        criterios_validos = sum(numero_art_valido & !numero_art_opcional, valor_obra_valida, dimensao_valida, 
-                            tipo_obra_valida, tem_georreferenciamento_valido & !tem_georreferenciamento_opcional,
-                            dentro_municipio_valido & !dentro_municipio_opcional, 
-                            planilha_contratada_valida & !planilha_contratada_opcional, numero_contrato_valido,
-                            total_de_medicoes_valida & !total_de_medicoes_opcional, 
-                            medicoes_ok_valida & !medicoes_ok_opcional, 
-                            num_fotos_medicao_valida & !num_fotos_medicao_opcional, 
-                            num_fotos_acompanhamento_valida & !num_fotos_acompanhamento_opcional,
-                            data_inicio_obra_valida, data_prevista_conclusao_valida, 
-                            data_conclusao_obra_valida, data_recebimento_obra_valida, 
-                            projeto_basico_valido & !projeto_basico_opcional, 
-                            tem_acompanhamento_inicial_valido & !tem_acompanhamentos_opcional,
-                            tem_acompanhamento_final_valido & !tem_acompanhamentos_opcional,
-                            numero_obra_valido),
-        criterios_obrigatorios = nrow(porc.metricas.validas) - sum(numero_art_opcional, tem_georreferenciamento_opcional,
-                            dentro_municipio_opcional, planilha_contratada_opcional, total_de_medicoes_opcional, 
-                            medicoes_ok_opcional, num_fotos_medicao_opcional, num_fotos_acompanhamento_opcional,
-                            projeto_basico_opcional, tem_acompanhamentos_opcional),
+        criterios_validos = sum(corretude_numero_art == "VALIDO", corretude_valor_obra == "VALIDO", corretude_dimensao == "VALIDO", 
+                            corretude_tipo_obra == "VALIDO", corretude_tem_georreferenciamento == "VALIDO",
+                            corretude_dentro_municipio == "VALIDO", corretude_planilha_contratada == "VALIDO",
+                            corretude_numero_contrato == "VALIDO", corretude_total_de_medicoes == "VALIDO", 
+                            corretude_medicoes_ok == "VALIDO", corretude_num_fotos_medicao == "VALIDO", 
+                            corretude_num_fotos_acompanhamento == "VALIDO", corretude_data_inicio_obra == "VALIDO",
+                            corretude_data_prevista_conclusao == "VALIDO", corretude_data_conclusao_obra == "VALIDO",
+                            corretude_data_recebimento_obra == "VALIDO", corretude_projeto_basico == "VALIDO", 
+                            corretude_tem_acompanhamento_inicial == "VALIDO", corretude_tem_acompanhamento_final == "VALIDO",
+                            corretude_numero_obra == "VALIDO"),
+        criterios_obrigatorios = nrow(porc.metricas.validas) - sum(
+            corretude_numero_art == "OPCIONAL", corretude_valor_obra == "OPCIONAL", corretude_dimensao == "OPCIONAL", 
+            corretude_tipo_obra == "OPCIONAL", corretude_tem_georreferenciamento == "OPCIONAL",
+            corretude_dentro_municipio == "OPCIONAL", corretude_planilha_contratada == "OPCIONAL",
+            corretude_numero_contrato == "OPCIONAL", corretude_total_de_medicoes == "OPCIONAL", 
+            corretude_medicoes_ok == "OPCIONAL", corretude_num_fotos_medicao == "OPCIONAL", 
+            corretude_num_fotos_acompanhamento == "OPCIONAL", corretude_data_inicio_obra == "OPCIONAL",
+            corretude_data_prevista_conclusao == "OPCIONAL", corretude_data_conclusao_obra == "OPCIONAL",
+            corretude_data_recebimento_obra == "OPCIONAL", corretude_projeto_basico == "OPCIONAL", 
+            corretude_tem_acompanhamento_inicial == "OPCIONAL", corretude_tem_acompanhamento_final == "OPCIONAL",
+            corretude_numero_obra == "OPCIONAL"),
         porc_criterios_validos = criterios_validos / criterios_obrigatorios
         )
 
+# Agrupa por município descrevendo quantidade de obras e porcentagem de critérios válidos
 panorama.municipios <- obras.metricas.relevantes %>% 
     group_by(municipio) %>% 
     summarise(porc.criterios.validos = sum(porc_criterios_validos) / n(),
               qtde.obras = n())
 
+# Plota panorama geral por município
 panorama.municipios %>% 
     ggplot(aes(x = "municipios", y = porc.criterios.validos)) + 
     scale_y_continuous(labels = percent) +
@@ -581,6 +530,7 @@ A mediana de critérios válidos por município é cerca de 46% e os mesmos tem 
 Vejamos os municípios mais detalhadamente:
 
 ```{r, echo=FALSE, warning=FALSE, fig.height=30}
+# Plota panorama detalhado por município
 panorama.municipios %>% 
     ggplot(aes(x = reorder(municipio, porc.criterios.validos), 
                y = porc.criterios.validos, 
@@ -601,6 +551,7 @@ Criaremos agora a visualização das informações faltantes das obras por munic
 ```{r, echo=FALSE, warning=FALSE}
 options("scipen"=100, "digits"=4)
 
+# Pega municípios
 municipios <- obras.metricas.relevantes %>%
     distinct(municipio) %>%
     arrange(municipio) %>%
@@ -608,8 +559,10 @@ municipios <- obras.metricas.relevantes %>%
 
 #municipios <- c("Emas")
 
+# Adiciona municípios no dropdown
 div(bsselect(municipios, type = "text"))
 
+# Muda tabela ao mudar dropdown
 tags$script('
     $(document).ready(function(){
             $(".bsselect").css("display", "none")
@@ -632,6 +585,7 @@ tags$script('
     })
 ')
 
+# Plota tabela de um município
 show_plot <- function(mun, porc.criterios.validos, plot_object) {
     div(style="margin:auto;text-align:center",
         div(class="table-municipio",
@@ -641,11 +595,13 @@ show_plot <- function(mun, porc.criterios.validos, plot_object) {
         )
 }
 
+# Muda cor da célula
 get_cor_celula <- function(classe) {
     ifelse(classe == "INVALIDO", "red",
            ifelse(classe == "INCERTO", "yellow", ""))
 }
 
+# Plota tabela
 do.call(div, lapply(municipios, function(mun) {
     obras.filt.mun <- obras.metricas.relevantes %>%
             filter(municipio == mun) %>%
@@ -659,11 +615,12 @@ do.call(div, lapply(municipios, function(mun) {
                 tipo_obra = ifelse(is.na(tipo_obra), "", as.character(tipo_obra))
             ) %>%
             select(-municipio, -unidadeMedida, -criterios_obrigatorios, -porc_criterios_validos) %>%
-            arrange(-criterios_validos, -numero_art_valido, -valor_obra_valida, -dimensao_valida, -tipo_obra_valida,
-                  -tem_georreferenciamento_valido, -dentro_municipio_valido, -planilha_contratada_valida, -numero_contrato_valido,
-                  -total_de_medicoes_valida, -medicoes_ok_valida, -num_fotos_medicao_valida, -num_fotos_acompanhamento_valida,
-                  -data_inicio_obra_valida,  -data_prevista_conclusao_valida, -data_conclusao_obra_valida, 
-                  -data_recebimento_obra_valida, -projeto_basico_valido, -tem_acompanhamento_inicial_valido, -tem_acompanhamento_final_valido, -numero_obra_valido)
+            arrange(-criterios_validos, -corretude_numero_art, -corretude_valor_obra, -corretude_dimensao, -corretude_tipo_obra,
+                  -corretude_tem_georreferenciamento, -corretude_dentro_municipio, -corretude_planilha_contratada, -corretude_numero_contrato,
+                  -corretude_total_de_medicoes, -corretude_medicoes_ok, -corretude_num_fotos_medicao, -corretude_num_fotos_acompanhamento,
+                  -corretude_data_inicio_obra,  -corretude_data_prevista_conclusao, -corretude_data_conclusao_obra, 
+                  -corretude_data_recebimento_obra, -corretude_projeto_basico, -corretude_tem_acompanhamento_inicial,
+                  -corretude_tem_acompanhamento_final, -corretude_numero_obra, -corretude_situacao_estimada)
 
     porc.criterios.validos <- panorama.municipios %>% 
         filter(municipio == mun) %>% 
@@ -675,115 +632,83 @@ do.call(div, lapply(municipios, function(mun) {
               numero_art = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_numero_art))),
-              numero_art_valido = FALSE,
-              numero_art_opcional = FALSE,
               corretude_numero_art = FALSE,
               valor_obra = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_valor_obra))),
-              valor_obra_valida = FALSE,
               corretude_valor_obra = FALSE,
               dimensao = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_dimensao))),
-              dimensao_valida = FALSE,
               corretude_dimensao = FALSE,
               tipo_obra = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_tipo_obra))),
-              tipo_obra_valida = FALSE,
               corretude_tipo_obra = FALSE,
               tem_georreferenciamento = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_tem_georreferenciamento))),
-              tem_georreferenciamento_valido = FALSE,
-              tem_georreferenciamento_opcional = FALSE,
               corretude_tem_georreferenciamento = FALSE,
               dentro_municipio = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_dentro_municipio))),
-              dentro_municipio_valido = FALSE,
-              dentro_municipio_opcional = FALSE,
               corretude_dentro_municipio = FALSE,
               planilha_contratada = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_planilha_contratada))),
-              planilha_contratada_valida = FALSE,
-              planilha_contratada_opcional = FALSE,
               corretude_planilha_contratada = FALSE,
               numero_contrato = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_numero_contrato))),
-              numero_contrato_valido = FALSE,
               corretude_numero_contrato = FALSE,
               total_de_medicoes = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_total_de_medicoes))),
-              total_de_medicoes_valida = FALSE,
-              total_de_medicoes_opcional = FALSE,
               corretude_total_de_medicoes = FALSE,
               medicoes_ok = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_medicoes_ok))),
-              medicoes_ok_valida = FALSE,
-              medicoes_ok_opcional = FALSE,
               corretude_medicoes_ok = FALSE,
               num_fotos_medicao = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_num_fotos_medicao))),
-              num_fotos_medicao_valida = FALSE,
-              num_fotos_medicao_opcional = FALSE,
               corretude_num_fotos_medicao = FALSE,
               num_fotos_acompanhamento = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_num_fotos_acompanhamento))),
-              num_fotos_acompanhamento_valida = FALSE,
-              num_fotos_acompanhamento_opcional = FALSE,
               corretude_num_fotos_acompanhamento = FALSE,
               data_inicio_obra = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_data_inicio_obra))),
-              data_inicio_obra_valida = FALSE,
               corretude_data_inicio_obra = FALSE,
               data_prevista_conclusao = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_data_prevista_conclusao))),
-              data_prevista_conclusao_valida = FALSE,
               corretude_data_prevista_conclusao = FALSE,
               data_conclusao_obra = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_data_conclusao_obra))),
-              data_conclusao_obra_valida = FALSE,
               corretude_data_conclusao_obra = FALSE,
               data_recebimento_obra = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_data_recebimento_obra))),
-              data_recebimento_obra_valida = FALSE,
               corretude_data_recebimento_obra = FALSE,
               projeto_basico = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_projeto_basico))),
-              projeto_basico_valido = FALSE,
-              projeto_basico_opcional = FALSE,
               corretude_projeto_basico = FALSE,
               tem_acompanhamento_inicial = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_tem_acompanhamento_inicial))),
-              tem_acompanhamento_inicial_valido = FALSE,
-              tem_acompanhamentos_opcional = FALSE,
               corretude_tem_acompanhamento_inicial = FALSE,
               tem_acompanhamento_final = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_tem_acompanhamento_final))),
-              tem_acompanhamento_final_valido = FALSE,
-              tem_acompanhamentos_opcional = FALSE,
               corretude_tem_acompanhamento_final = FALSE,
               numero_obra = formatter(
                 "span",
                 class = ~ paste("celula", get_cor_celula(corretude_numero_obra))),
-              numero_obra_valido = FALSE,
               corretude_numero_obra = FALSE,
-              situacao_estimada_valida = FALSE,
               corretude_situacao_estimada = FALSE,
               situacao_estimada = formatter(
                 "span",
