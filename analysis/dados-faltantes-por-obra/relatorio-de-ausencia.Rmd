@@ -561,7 +561,7 @@ municipios <- obras.metricas.relevantes %>%
     arrange(municipio) %>%
     pull(municipio)
 
-municipios <- c("Emas")
+#municipios <- c("Emas")
 
 # Adiciona municípios no dropdown
 div(bsselect(municipios, type = "text"))
@@ -601,20 +601,33 @@ show_plot <- function(mun, porc.criterios.validos, plot_object) {
 
 gera_planilha_xlsx <- function(obras.filt.mun){
      
-    validos <- obras.filt.mun %>% select(criterios_validos, numero_art_valido, valor_obra_valida, dimensao_valida, tipo_obra_valida,
-                  tem_georreferenciamento_valido, dentro_municipio_valido, planilha_contratada_valida, numero_contrato_valido,
-                  total_de_medicoes_valida, medicoes_ok_valida, num_fotos_medicao_valida, num_fotos_acompanhamento_valida,
-                  data_inicio_obra_valida,  data_prevista_conclusao_valida, data_conclusao_obra_valida, 
-                  data_recebimento_obra_valida, projeto_basico_valido, tem_acompanhamento_inicial_valido, tem_acompanhamento_final_valido, numero_obra_valido)
+    corretudes <- obras.filt.mun %>% select(
+        corretude_numero_art,
+        corretude_valor_obra,
+        corretude_dimensao,
+        corretude_tipo_obra,
+        corretude_tem_georreferenciamento,
+        corretude_dentro_municipio,
+        corretude_planilha_contratada,
+        corretude_numero_contrato,
+        corretude_total_de_medicoes,
+        corretude_medicoes_ok,
+        corretude_num_fotos_medicao,
+        corretude_num_fotos_acompanhamento,
+        corretude_data_inicio_obra,
+        corretude_data_prevista_conclusao,
+        corretude_data_conclusao_obra,
+        corretude_data_recebimento_obra,
+        corretude_projeto_basico,
+        corretude_tem_acompanhamento_inicial,
+        corretude_tem_acompanhamento_final,
+        corretude_numero_obra,
+        corretude_situacao_estimada)
     
-    opcionais <- obras.filt.mun %>% select(tem_acompanhamentos_opcional, projeto_basico_opcional, num_fotos_acompanhamento_opcional, tem_georreferenciamento_opcional, numero_art_opcional, dentro_municipio_opcional, planilha_contratada_opcional, total_de_medicoes_opcional, medicoes_ok_opcional, num_fotos_medicao_opcional)
-    
-    valores <-  obras.filt.mun %>% select(-criterios_validos, -numero_art_valido, -valor_obra_valida, -dimensao_valida, -tipo_obra_valida,
-                  -tem_georreferenciamento_valido, -dentro_municipio_valido, -planilha_contratada_valida, -numero_contrato_valido,
-                  -total_de_medicoes_valida, -medicoes_ok_valida, -num_fotos_medicao_valida, -num_fotos_acompanhamento_valida,
-                  -data_inicio_obra_valida,  -data_prevista_conclusao_valida, -data_conclusao_obra_valida, 
-                  -data_recebimento_obra_valida, -projeto_basico_valido, -tem_acompanhamento_inicial_valido, -tem_acompanhamento_final_valido, -numero_obra_valido, -tem_acompanhamentos_opcional, -projeto_basico_opcional, -num_fotos_acompanhamento_opcional, -tem_georreferenciamento_opcional, -numero_art_opcional, -dentro_municipio_opcional, -planilha_contratada_opcional, -total_de_medicoes_opcional, -medicoes_ok_opcional, -num_fotos_medicao_opcional)
-    
+    valores <-  obras.filt.mun %>% 
+        select(descricao_sucinta_obra,numero_art, valor_obra, dimensao, tipo_obra, tem_georreferenciamento, dentro_municipio, planilha_contratada, numero_contrato,
+              total_de_medicoes, medicoes_ok, num_fotos_medicao, num_fotos_acompanhamento, data_inicio_obra, data_prevista_conclusao, 
+              data_conclusao_obra, data_recebimento_obra, projeto_basico, tem_acompanhamento_inicial, tem_acompanhamento_final, numero_obra, situacao_estimada)
 
     wb <- createWorkbook()
     sheet <- createSheet(wb, "Sheet1")
@@ -623,69 +636,69 @@ gera_planilha_xlsx <- function(obras.filt.mun){
     
     getColor <- function(colname, index){
         if(colname == 'numero_art'){
-            return(ifelse(opcionais[[index, 'numero_art_opcional']], "gray", ifelse(validos[[index, 'numero_art_valido']], "green", "red")))
+            return(get_cor_celula(corretudes[[index, 'corretude_numero_art']]))
         }
         else if(colname == 'valor_obra'){
-            return(ifelse(validos[[index, 'valor_obra_valida']], "green", "red"))
+            return(get_cor_celula(corretudes[[index, 'corretude_valor_obra']]))
         }
         else if(colname == 'dimensao'){
-            return(ifelse(validos[[index, 'dimensao_valida']], "green", "red"))
+            return(get_cor_celula(corretudes[[index, 'corretude_dimensao']]))
         }
         else if(colname == 'tipo_obra'){
-            return(ifelse(validos[[index, 'tipo_obra_valida']], "green", "red"))
+           return(get_cor_celula(corretudes[[index, 'corretude_tipo_obra']]))
         }
         else if(colname == 'tem_georreferenciamento'){
-            return(ifelse(opcionais[[index, 'tem_georreferenciamento_opcional']] , "gray", ifelse(validos[[index, 'tem_georreferenciamento_valido']], "green", "red")))
+            return(get_cor_celula(corretudes[[index, 'corretude_tem_georreferenciamento']]))
         }
         else if(colname == 'dentro_municipio'){
-            return(ifelse(opcionais[[index, 'dentro_municipio_opcional']], "gray", ifelse(validos[[index, 'dentro_municipio_valido']], "green", "red")))
+            return(get_cor_celula(corretudes[[index, 'corretude_dentro_municipio']]))
         }
         else if(colname == 'planilha_contratada'){
-            return(ifelse(opcionais[[index, 'planilha_contratada_opcional']], "gray", ifelse(validos[[index, 'planilha_contratada_valida']], "green", "red")))
+            return(get_cor_celula(corretudes[[index, 'corretude_planilha_contratada']]))
         }
         else if(colname == 'numero_contrato'){
-            return(ifelse(validos[[index, 'numero_contrato_valido']], "green", "red"))
+            return(get_cor_celula(corretudes[[index, 'corretude_numero_contrato']]))
         }
         else if(colname == 'total_de_medicoes'){
-            return(ifelse(opcionais[[index, 'total_de_medicoes_opcional']], "gray", ifelse(validos[[index, 'total_de_medicoes_valida']], "green", "red")))
+            return(get_cor_celula(corretudes[[index, 'corretude_total_de_medicoes']]))
         }
         else if(colname == 'medicoes_ok'){
-            return(ifelse(opcionais[[index, 'medicoes_ok_opcional']], "gray", ifelse(validos[[index, 'medicoes_ok_valida']], "green", "red")))
+            return(get_cor_celula(corretudes[[index, 'corretude_medicoes_ok']]))
         }
         else if(colname == 'num_fotos_medicao'){
-            return(ifelse(opcionais[[index, 'num_fotos_medicao_opcional']], "gray", ifelse(validos[[index, 'num_fotos_medicao_valida']], "green", "red")))
+            return(get_cor_celula(corretudes[[index, 'corretude_num_fotos_medicao']]))
         }
         else if(colname == 'num_fotos_acompanhamento'){
-            return(ifelse(opcionais[[index, 'num_fotos_acompanhamento_opcional']], "gray", ifelse(validos[[index, 'num_fotos_acompanhamento_valida']], "green", "red")))
+            return(get_cor_celula(corretudes[[index, 'corretude_num_fotos_acompanhamento']]))
         }
         else if(colname == 'data_inicio_obra'){
-            return(ifelse(validos[[index, 'data_inicio_obra_valida']], "green", "red"))
+            return(get_cor_celula(corretudes[[index, 'corretude_data_inicio_obra']]))
         }
         else if(colname == 'data_prevista_conclusao'){
-            return(ifelse(validos[[index, 'data_prevista_conclusao_valida']], "green", "red"))
+            return(get_cor_celula(corretudes[[index, 'corretude_data_prevista_conclusao']]))
         }
         else if(colname == 'data_conclusao_obra'){
-            return(ifelse(validos[[index, 'data_conclusao_obra_valida']], "green", "red"))
+            return(get_cor_celula(corretudes[[index, 'corretude_data_conclusao_obra']]))
         }
         else if(colname == 'data_recebimento_obra'){
-            return(ifelse(validos[[index, 'data_recebimento_obra_valida']], "green", "red"))
+            return(get_cor_celula(corretudes[[index, 'corretude_data_recebimento_obra']]))
         }
         else if(colname == 'projeto_basico'){
-            return(ifelse(opcionais[[index, 'projeto_basico_opcional']], "gray", ifelse(validos[[index, 'projeto_basico_valido']], "green", "red")))
+            return(get_cor_celula(corretudes[[index, 'corretude_projeto_basico']]))
         }
         else if(colname == 'tem_acompanhamento_inicial'){
-            return(ifelse(opcionais[[index, 'tem_acompanhamentos_opcional']], "gray", ifelse(validos[[index, 'tem_acompanhamento_inicial_valido']], "green", "red")))
+            return(get_cor_celula(corretudes[[index, 'corretude_tem_acompanhamento_inicial']]))
         }
          else if(colname == 'tem_acompanhamento_final'){
-            return(ifelse(opcionais[[index, 'tem_acompanhamentos_opcional']], "gray", ifelse(validos[[index, 'tem_acompanhamento_final_valido']], "green", "red")))
+            return(get_cor_celula(corretudes[[index, 'corretude_tem_acompanhamento_final']]))
          }
         else if(colname == 'numero_obra'){
-            return(ifelse(validos[[index, 'numero_obra_valido']], "green", "red"))
+            return(get_cor_celula(corretudes[[index, 'corretude_numero_obra']]))
         }
         else if(colname == 'situacao_estimada'){
-            return(ifelse(valores[[index, 'situacao_estimada']] != "PARALISADA", "green", "red"))
+            return(get_cor_celula(corretudes[[index, 'corretude_situacao_estimada']]))
         }
-        else return("blue")
+        else return("transparent")
     }
     
     for(i in seq(1:nrow(cells))){
@@ -710,7 +723,7 @@ gera_planilha_xlsx <- function(obras.filt.mun){
 # Muda cor da célula
 get_cor_celula <- function(classe) {
     ifelse(classe == "INVALIDO", "red",
-           ifelse(classe == "INCERTO", "yellow", ""))
+           ifelse(classe == "INCERTO", "yellow", "transparent"))
 }
 
 # Plota tabela
