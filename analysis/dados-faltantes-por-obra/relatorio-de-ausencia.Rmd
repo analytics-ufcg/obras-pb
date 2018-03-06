@@ -7,6 +7,7 @@ output:
 ---
 
 ```{r, include=FALSE, warning=FALSE, echo=FALSE}
+library (config)
 library(RPostgreSQL)
 library(tidyverse)
 library(rgdal)
@@ -16,7 +17,7 @@ library(GeoPBUtils)
 library(DT)
 library(formattable)
 library(htmltools)
-# devtools::install_github("walkerke/bsselectR")
+#devtools::install_github("walkerke/bsselectR")
 library(bsselectR)
 library(viridis)
 
@@ -162,7 +163,7 @@ tb.dados.municipios <- obras.2013 %>%
     mutate(tem_acompanhamento_inicial_valido = !is.na(tem.acomp.inicial) & tem.acomp.inicial,
            tem_acompanhamento_final_valido = !is.na(tem.acomp.final) & tem.acomp.final,
            tem_acompanhamento_final = ifelse(tem_acompanhamento_final_valido, "SIM", "NÃO"),
-           tem_acompanhamento_inicial = ifelse(tem_acompanhamento_final_valido, "SIM", "NÃO")) %>% 
+           tem_acompanhamento_inicial = ifelse(tem_acompanhamento_inicial_valido, "SIM", "NÃO")) %>% 
     select(-id, -fk_jurisdicionado)
 ```
 
