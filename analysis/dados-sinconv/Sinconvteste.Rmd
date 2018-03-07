@@ -48,7 +48,8 @@ propostasPbTratada <- propostasPbSinconv %>%
 
 ```{r setup, include=FALSE}
 
-consolida_convenios()
+propostascempenho <- propostasPbTratada %>% 
+    left_join(empenhos, by = "NR_CONVENIO")
 
 ```
 
