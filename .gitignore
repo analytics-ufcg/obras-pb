@@ -28,3 +28,4 @@ analysis/**/*.html
 **/*.Rproj.user
 **/*.Rbuildignore
 .Rproj.user
+analysis/dados-sinconv/*.csv
