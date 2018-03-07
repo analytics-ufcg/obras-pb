@@ -3,12 +3,6 @@ title: "Sinconv"
 output: html_document
 ---
 
-
-
-
-
-
-
 ```{r setup, include=FALSE}
 
 #importa csv
@@ -21,12 +15,51 @@ situacao <- read.csv("siconv_historico_situacao.csv", sep = ";")
 library(RPostgreSQL)
 library(tidyverse)
 library(rgdal)
+source('funcoes-sinconv.R')
 
+drv <- DBI::dbDriver("PostgreSQL")
+
+CONFIG_FILE_PATH = "../config/config.yml"
+
+con1 <- DBI::dbConnect(drv,
+                       host = config::get("host", file = CONFIG_FILE_PATH),
+                       port = config::get("port", file = CONFIG_FILE_PATH),
+                       user = config::get("user", file = CONFIG_FILE_PATH),
+                       password = config::get("password", file = CONFIG_FILE_PATH),
+                       dbname = config::get("dbname1", file = CONFIG_FILE_PATH)
+)
+
+con2 <- DBI::dbConnect(drv,
+                       host = config::get("host", file = CONFIG_FILE_PATH),
+                       port = config::get("port", file = CONFIG_FILE_PATH),
+                       user = config::get("user", file = CONFIG_FILE_PATH),
+                       password = config::get("password", file = CONFIG_FILE_PATH),
+                       dbname = config::get("dbname2", file = CONFIG_FILE_PATH)
+)
+
+convenio.geopb <- dbGetQuery(con1, "select * from t_convenio") %>%
+    filter(
+        str_detect(numero_convenio, "^[0-9]{6}/") |
+        nchar(numero_convenio) == 6
+    )
+
+#filter(grep('^([0-9]{6}/)', numero_convenio))
+
+obra.geopb <- dbGetQuery(con1, "select * from t_obra")
+
+ids_conhecidos_geopb <- convenio.geopb$numero_convenio
+
+obra.convenio.geopb <- obra.geopb %>% 
+    left_join(convenio.geopb, by = c("id" = "fk_obra")) %>%
+    filter(!is.na(numero_convenio) & nchar(numero_convenio) == 6)
+
+dbDisconnect(con1)
+dbDisconnect(con2)
 
 ```
 
 
-```{r setup, include=FALSE}
+```{r}
 
 #importa csv
 
@@ -43,12 +76,39 @@ propostasPbTratada <- propostasPbSinconv %>%
                                " Prestação de Contas Aprovada com Ressalvas", "Prestação de Contas Iniciada Por Antecipação",
                                "Prestação de Contas em Complementação", "Prestação de Contas Rejeitada"))
 
+join.geopb.propostas <- obra.convenio.geopb %>% 
+    left_join(propostasPbTratada %>% mutate(NR_CONVENIO = as.character(NR_CONVENIO)), by = c('numero_convenio' = 'NR_CONVENIO'))
+```
+
+
+```{r}
+
+consolida.convenios <- consolida_convenios("/home/lucasd/Desktop/obras-pb/analysis/dados-sinconv") %>% 
+    filter(UF_PROPONENTE == "PB") %>%
+    filter(ANO >= 2013) %>% 
+    filter(SIT_CONVENIO %in% c("Em execução", "Prestação de Contas em Análise", "Prestação de Contas Aprovada", "Prestação de Contas enviada para Análise",
+                               " Prestação de Contas Aprovada com Ressalvas", "Prestação de Contas Iniciada Por Antecipação",
+                               "Prestação de Contas em Complementação", "Prestação de Contas Rejeitada"))
+
+join.geopb.consolida.convenios <- obra.convenio.geopb %>% 
+    left_join(consolida.convenios %>% mutate(NR_CONVENIO = as.character(NR_CONVENIO)), by = c('numero_convenio' = 'NR_CONVENIO'))
+```
+
+
+```{r}
+
+carrega.limpa.historicos <- carrega_e_limpa_historicos("/home/lucasd/Desktop/obras-pb/analysis/dados-sinconv", ids_conhecidos_geopb)
+
+
+join.geopb.historico <- obra.convenio.geopb %>% 
+    left_join(carrega.limpa.historicos %>% mutate(NR_CONVENIO = as.character(NR_CONVENIO)), by = c('numero_convenio' = 'NR_CONVENIO'))
 ```
 
 
 ```{r setup, include=FALSE}
 
-consolida_convenios()
+join.geopb.empenhos <- obra.convenio.geopb %>% 
+    left_join(empenhos %>% mutate(NR_CONVENIO = as.character(NR_CONVENIO)), by = c('numero_convenio' = 'NR_CONVENIO'))
 
 ```
 

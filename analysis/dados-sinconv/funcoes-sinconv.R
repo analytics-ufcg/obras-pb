@@ -29,15 +29,3 @@ carrega_e_limpa_historicos <- function(data_dir, ids_conhecidos){
     return(historico)
 }
 
-
-
-consolida <- consolida_convenios("/home/joeberths/obras-pb/analysis/dados-sinconv/")
-
-consolida <- consolida %>% 
-    filter(UF_PROPONENTE == "PB") %>% 
-    filter(ANO >= 2013) %>% 
-    filter(SIT_CONVENIO %in% c("Em execução", "Prestação de Contas em Análise", "Prestação de Contas Aprovada", "Prestação de Contas enviada para Análise",
-                               " Prestação de Contas Aprovada com Ressalvas", "Prestação de Contas Iniciada Por Antecipação",
-                               "Prestação de Contas em Complementação", "Prestação de Contas Rejeitada"))
-
-
