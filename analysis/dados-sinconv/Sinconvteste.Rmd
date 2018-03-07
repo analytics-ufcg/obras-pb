@@ -1,0 +1,56 @@
+---
+title: "Sinconv"
+output: html_document
+---
+
+
+
+
+
+
+
+```{r setup, include=FALSE}
+
+#importa csv
+#Data da extração dos dados: ?06/03/2018 02:22:03
+sinconv <- read.csv("siconv_convenio.csv", sep = ";")
+empenhos <- read.csv("siconv_empenho.csv", sep = ";")
+propostas <- read.csv("siconv_proposta.csv", sep = ";")
+situacao <- read.csv("siconv_historico_situacao.csv", sep = ";")
+
+library(RPostgreSQL)
+library(tidyverse)
+library(rgdal)
+
+
+```
+
+
+```{r setup, include=FALSE}
+
+#importa csv
+
+propostasPb <- propostas %>% 
+    filter(UF_PROPONENTE == "PB") %>% 
+    filter(ANO_PROP >= "2013") 
+
+
+propostasPbSinconv <- propostasPb %>% 
+    left_join(sinconv, by = "ID_PROPOSTA") 
+
+propostasPbTratada <- propostasPbSinconv %>% 
+    filter(SIT_CONVENIO %in% c("Em execução", "Prestação de Contas em Análise", "Prestação de Contas Aprovada", "Prestação de Contas enviada para Análise",
+                               " Prestação de Contas Aprovada com Ressalvas", "Prestação de Contas Iniciada Por Antecipação",
+                               "Prestação de Contas em Complementação", "Prestação de Contas Rejeitada"))
+
+```
+
+
+```{r setup, include=FALSE}
+
+consolida_convenios()
+
+```
+
+
+
