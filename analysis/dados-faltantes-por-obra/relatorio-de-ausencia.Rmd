@@ -523,6 +523,15 @@ panorama.municipios <- obras.metricas.relevantes %>%
     summarise(porc.criterios.validos = sum(porc_criterios_validos) / n(),
               qtde.obras = n())
 
+panorama.municipios.julio <- obras.metricas.relevantes %>% 
+    group_by(municipio) %>% 
+    summarise(
+        quantiadade_obras = n(),
+        quantidade_obras_cadastro_incompleto = sum(porc_criterios_validos < 1),
+        porcentagem_criterios_validos = sum(porc_criterios_validos) / quantiadade_obras
+    )
+#write.csv(panorama.municipios.julio, "panorama_municipios.csv",fileEncoding = "UTF-8", na = "")
+
 # Plota panorama geral por município
 panorama.municipios %>% 
     ggplot(aes(x = "municipios", y = porc.criterios.validos)) + 
@@ -601,39 +610,81 @@ show_plot <- function(mun, porc.criterios.validos, plot_object) {
         )
 }
 
+# Muda cor da célula
+get_cor_celula <- function(classe) {
+    ifelse(classe == "INVALIDO", "red",
+           ifelse(classe == "INCERTO", "yellow", "transparent"))
+}
+
 #Gera uma tabela .xlsx (possivelmente imprimível) para as obras de um município
-gera_planilha_xlsx <- function(obras.filt.mun, municipio){
-     
-    corretudes <- obras.filt.mun %>% select(
-        corretude_numero_art,
-        corretude_valor_obra,
-        corretude_dimensao,
-        corretude_tipo_obra,
-        corretude_tem_georreferenciamento,
-        corretude_dentro_municipio,
-        corretude_planilha_contratada,
-        corretude_numero_contrato,
-        corretude_total_de_medicoes,
-        corretude_medicoes_ok,
-        corretude_num_fotos_medicao,
-        corretude_num_fotos_acompanhamento,
-        corretude_data_inicio_obra,
-        corretude_data_prevista_conclusao,
-        corretude_data_conclusao_obra,
-        corretude_data_recebimento_obra,
-        corretude_projeto_basico,
-        corretude_tem_acompanhamento_inicial,
-        corretude_tem_acompanhamento_final,
-        corretude_numero_obra,
-        corretude_situacao_estimada)
+gera_planilha_xlsx <- function(obras){
+    obras.formatadas <- obras %>%
+        left_join(select(tipos.das.obras, nome, unidadeMedida), by = c("tipo_obra" = "nome")) %>%
+        mutate(unidadeMedida = ifelse(unidadeMedida == "-" | is.na(unidadeMedida), "", as.character(unidadeMedida))) %>%
+        rowwise() %>%
+        mutate(
+            valor_obra = paste("R$", format(valor_obra, big.mark=".", decimal.mark=",", digits=2, nsmall=2)),
+            dimensao = paste(format(dimensao, big.mark=".", decimal.mark=",", digits=2, nsmall=2), unidadeMedida),
+            projeto_basico = ifelse(is.na(projeto_basico), "", projeto_basico),
+            tipo_obra = ifelse(is.na(tipo_obra), "", as.character(tipo_obra))
+        ) %>%
+        select(-unidadeMedida, -criterios_obrigatorios, -porc_criterios_validos) %>% 
+        arrange(municipio)
     
-    valores <-  obras.filt.mun %>% 
-        select(descricao_sucinta_obra,numero_art, valor_obra, dimensao, tipo_obra, tem_georreferenciamento, dentro_municipio, planilha_contratada, numero_contrato,
-              total_de_medicoes, medicoes_ok, num_fotos_medicao, num_fotos_acompanhamento, data_inicio_obra, data_prevista_conclusao, 
-              data_conclusao_obra, data_recebimento_obra, projeto_basico, tem_acompanhamento_inicial, tem_acompanhamento_final, numero_obra, situacao_estimada)
+    corretudes <- obras.formatadas %>% 
+        select(
+            corretude_numero_art,
+            corretude_valor_obra,
+            corretude_dimensao,
+            corretude_tipo_obra,
+            corretude_tem_georreferenciamento,
+            corretude_dentro_municipio,
+            corretude_planilha_contratada,
+            corretude_numero_contrato,
+            corretude_total_de_medicoes,
+            corretude_medicoes_ok,
+            corretude_num_fotos_medicao,
+            corretude_num_fotos_acompanhamento,
+            corretude_data_inicio_obra,
+            corretude_data_prevista_conclusao,
+            corretude_data_conclusao_obra,
+            corretude_data_recebimento_obra,
+            corretude_projeto_basico,
+            corretude_tem_acompanhamento_inicial,
+            corretude_tem_acompanhamento_final,
+            corretude_numero_obra,
+            corretude_situacao_estimada
+            )
+    
+    valores <-  obras.formatadas %>% 
+        select(
+            municipio,
+            descricao_sucinta_obra,
+            numero_art,
+            valor_obra,
+            dimensao,
+            tipo_obra,
+            tem_georreferenciamento,
+            dentro_municipio,
+            planilha_contratada,
+            numero_contrato,
+            total_de_medicoes,
+            medicoes_ok, 
+            num_fotos_medicao,
+            num_fotos_acompanhamento,
+            data_inicio_obra,
+            data_prevista_conclusao, 
+            data_conclusao_obra,
+            data_recebimento_obra,
+            projeto_basico, 
+            tem_acompanhamento_inicial, 
+            tem_acompanhamento_final, 
+            numero_obra, 
+            situacao_estimada
+            )
 
     wb <- createWorkbook()
-    sheet <- createSheet(wb, paste0("sheet", municipio))
+    sheet <- createSheet(wb, paste0("planilha"))
     rows  <- createRow(sheet, rowIndex=1:nrow(valores) + 1)
     cells <- createCell(rows, colIndex=1:ncol(valores))   
     
@@ -705,11 +756,11 @@ gera_planilha_xlsx <- function(obras.filt.mun, municipio){
     }
     
     datas_colnames <- c('data_inicio_obra', 'data_prevista_conclusao', 'data_conclusao_obra', 'data_recebimento_obra')
-    
+        
     for(i in seq(1:nrow(cells))){
-        for(j in seq(1:ncol(cells))){
+        for(j in names(valores)){
                 if(i == 1){
-                    setCellValue(cells[[i,j]], colnames(valores[,j]))
+                    setCellValue(cells[[i,j]], j)
                 }
                 else{
                     cell.i.j = cells[[i,j]]
@@ -727,14 +778,10 @@ gera_planilha_xlsx <- function(obras.filt.mun, municipio){
         }
     }
     
-    saveWorkbook(wb, paste0("planilha_", municipio, ".xlsx"))
+    saveWorkbook(wb, "planilha_municipios.xlsx")
 }
 
-# Muda cor da célula
-get_cor_celula <- function(classe) {
-    ifelse(classe == "INVALIDO", "red",
-           ifelse(classe == "INCERTO", "yellow", "transparent"))
-}
+gera_planilha_xlsx(obras.metricas.relevantes)
 
 # Plota tabela
 do.call(div, lapply(municipios, function(mun) {
@@ -760,8 +807,6 @@ do.call(div, lapply(municipios, function(mun) {
     porc.criterios.validos <- panorama.municipios %>% 
         filter(municipio == mun) %>% 
         pull(porc.criterios.validos) * 100
-    
-    gera_planilha_xlsx(obras.filt.mun, mun)
 
     show_plot(mun, porc.criterios.validos, print(
         obras.filt.mun %>%
