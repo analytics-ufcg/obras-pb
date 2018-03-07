@@ -19,6 +19,7 @@ library(formattable)
 library(htmltools)
 #devtools::install_github("walkerke/bsselectR")
 library(bsselectR)
+library(xlsx)
 library(viridis)
 
 # Importa tabelas csv
@@ -600,10 +601,139 @@ show_plot <- function(mun, porc.criterios.validos, plot_object) {
         )
 }
 
+#Gera uma tabela .xlsx (possivelmente imprimível) para as obras de um município
+gera_planilha_xlsx <- function(obras.filt.mun, municipio){
+     
+    corretudes <- obras.filt.mun %>% select(
+        corretude_numero_art,
+        corretude_valor_obra,
+        corretude_dimensao,
+        corretude_tipo_obra,
+        corretude_tem_georreferenciamento,
+        corretude_dentro_municipio,
+        corretude_planilha_contratada,
+        corretude_numero_contrato,
+        corretude_total_de_medicoes,
+        corretude_medicoes_ok,
+        corretude_num_fotos_medicao,
+        corretude_num_fotos_acompanhamento,
+        corretude_data_inicio_obra,
+        corretude_data_prevista_conclusao,
+        corretude_data_conclusao_obra,
+        corretude_data_recebimento_obra,
+        corretude_projeto_basico,
+        corretude_tem_acompanhamento_inicial,
+        corretude_tem_acompanhamento_final,
+        corretude_numero_obra,
+        corretude_situacao_estimada)
+    
+    valores <-  obras.filt.mun %>% 
+        select(descricao_sucinta_obra,numero_art, valor_obra, dimensao, tipo_obra, tem_georreferenciamento, dentro_municipio, planilha_contratada, numero_contrato,
+              total_de_medicoes, medicoes_ok, num_fotos_medicao, num_fotos_acompanhamento, data_inicio_obra, data_prevista_conclusao, 
+              data_conclusao_obra, data_recebimento_obra, projeto_basico, tem_acompanhamento_inicial, tem_acompanhamento_final, numero_obra, situacao_estimada)
+
+    wb <- createWorkbook()
+    sheet <- createSheet(wb, paste0("sheet", municipio))
+    rows  <- createRow(sheet, rowIndex=1:nrow(valores) + 1)
+    cells <- createCell(rows, colIndex=1:ncol(valores))   
+    
+    getColor <- function(colname, index){
+        if(colname == 'numero_art'){
+            return(get_cor_celula(corretudes[[index, 'corretude_numero_art']]))
+        }
+        else if(colname == 'valor_obra'){
+            return(get_cor_celula(corretudes[[index, 'corretude_valor_obra']]))
+        }
+        else if(colname == 'dimensao'){
+            return(get_cor_celula(corretudes[[index, 'corretude_dimensao']]))
+        }
+        else if(colname == 'tipo_obra'){
+           return(get_cor_celula(corretudes[[index, 'corretude_tipo_obra']]))
+        }
+        else if(colname == 'tem_georreferenciamento'){
+            return(get_cor_celula(corretudes[[index, 'corretude_tem_georreferenciamento']]))
+        }
+        else if(colname == 'dentro_municipio'){
+            return(get_cor_celula(corretudes[[index, 'corretude_dentro_municipio']]))
+        }
+        else if(colname == 'planilha_contratada'){
+            return(get_cor_celula(corretudes[[index, 'corretude_planilha_contratada']]))
+        }
+        else if(colname == 'numero_contrato'){
+            return(get_cor_celula(corretudes[[index, 'corretude_numero_contrato']]))
+        }
+        else if(colname == 'total_de_medicoes'){
+            return(get_cor_celula(corretudes[[index, 'corretude_total_de_medicoes']]))
+        }
+        else if(colname == 'medicoes_ok'){
+            return(get_cor_celula(corretudes[[index, 'corretude_medicoes_ok']]))
+        }
+        else if(colname == 'num_fotos_medicao'){
+            return(get_cor_celula(corretudes[[index, 'corretude_num_fotos_medicao']]))
+        }
+        else if(colname == 'num_fotos_acompanhamento'){
+            return(get_cor_celula(corretudes[[index, 'corretude_num_fotos_acompanhamento']]))
+        }
+        else if(colname == 'data_inicio_obra'){
+            return(get_cor_celula(corretudes[[index, 'corretude_data_inicio_obra']]))
+        }
+        else if(colname == 'data_prevista_conclusao'){
+            return(get_cor_celula(corretudes[[index, 'corretude_data_prevista_conclusao']]))
+        }
+        else if(colname == 'data_conclusao_obra'){
+            return(get_cor_celula(corretudes[[index, 'corretude_data_conclusao_obra']]))
+        }
+        else if(colname == 'data_recebimento_obra'){
+            return(get_cor_celula(corretudes[[index, 'corretude_data_recebimento_obra']]))
+        }
+        else if(colname == 'projeto_basico'){
+            return(get_cor_celula(corretudes[[index, 'corretude_projeto_basico']]))
+        }
+        else if(colname == 'tem_acompanhamento_inicial'){
+            return(get_cor_celula(corretudes[[index, 'corretude_tem_acompanhamento_inicial']]))
+        }
+         else if(colname == 'tem_acompanhamento_final'){
+            return(get_cor_celula(corretudes[[index, 'corretude_tem_acompanhamento_final']]))
+         }
+        else if(colname == 'numero_obra'){
+            return(get_cor_celula(corretudes[[index, 'corretude_numero_obra']]))
+        }
+        else if(colname == 'situacao_estimada'){
+            return(get_cor_celula(corretudes[[index, 'corretude_situacao_estimada']]))
+        }
+        else return("transparent")
+    }
+    
+    datas_colnames <- c('data_inicio_obra', 'data_prevista_conclusao', 'data_conclusao_obra', 'data_recebimento_obra')
+    
+    for(i in seq(1:nrow(cells))){
+        for(j in seq(1:ncol(cells))){
+                if(i == 1){
+                    setCellValue(cells[[i,j]], colnames(valores[,j]))
+                }
+                else{
+                    cell.i.j = cells[[i,j]]
+                    cellValue = valores[[i,j]]
+                    if(colnames(valores[,j]) %in% datas_colnames){
+                        cellValue = as.character(cellValue)
+                        if(is.na(cellValue)) cellValue = ""
+                    }
+                    setCellValue(cell.i.j, cellValue)
+                    cellStyle1 <- CellStyle(wb) +
+                    Fill(foregroundColor=getColor(colnames(valores[,j]), i),
+                            pattern="SOLID_FOREGROUND") + Alignment(wrapText=TRUE) 
+                    setCellStyle(cell.i.j, cellStyle1)    
+                }
+        }
+    }
+    
+    saveWorkbook(wb, paste0("planilha_", municipio, ".xlsx"))
+}
+
 # Muda cor da célula
 get_cor_celula <- function(classe) {
     ifelse(classe == "INVALIDO", "red",
-           ifelse(classe == "INCERTO", "yellow", ""))
+           ifelse(classe == "INCERTO", "yellow", "transparent"))
 }
 
 # Plota tabela
@@ -630,6 +760,8 @@ do.call(div, lapply(municipios, function(mun) {
     porc.criterios.validos <- panorama.municipios %>% 
         filter(municipio == mun) %>% 
         pull(porc.criterios.validos) * 100
+    
+    gera_planilha_xlsx(obras.filt.mun, mun)
 
     show_plot(mun, porc.criterios.validos, print(
         obras.filt.mun %>%
