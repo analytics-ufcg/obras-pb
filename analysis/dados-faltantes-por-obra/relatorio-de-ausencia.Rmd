@@ -600,7 +600,7 @@ show_plot <- function(mun, porc.criterios.validos, plot_object) {
 }
 
 #Gera uma tabela .xlsx (possivelmente imprimível) para as obras de um município
-gera_planilha_xlsx <- function(obras.filt.mun){
+gera_planilha_xlsx <- function(obras.filt.mun, municipio){
      
     corretudes <- obras.filt.mun %>% select(
         corretude_numero_art,
@@ -631,7 +631,7 @@ gera_planilha_xlsx <- function(obras.filt.mun){
               data_conclusao_obra, data_recebimento_obra, projeto_basico, tem_acompanhamento_inicial, tem_acompanhamento_final, numero_obra, situacao_estimada)
 
     wb <- createWorkbook()
-    sheet <- createSheet(wb, "Sheet1")
+    sheet <- createSheet(wb, paste0("sheet", municipio))
     rows  <- createRow(sheet, rowIndex=1:nrow(valores) + 1)
     cells <- createCell(rows, colIndex=1:ncol(valores))   
     
@@ -702,6 +702,8 @@ gera_planilha_xlsx <- function(obras.filt.mun){
         else return("transparent")
     }
     
+    datas_colnames <- c('data_inicio_obra', 'data_prevista_conclusao', 'data_conclusao_obra', 'data_recebimento_obra')
+    
     for(i in seq(1:nrow(cells))){
         for(j in seq(1:ncol(cells))){
                 if(i == 1){
@@ -709,7 +711,12 @@ gera_planilha_xlsx <- function(obras.filt.mun){
                 }
                 else{
                     cell.i.j = cells[[i,j]]
-                    setCellValue(cell.i.j, valores[[i,j]])
+                    cellValue = valores[[i,j]]
+                    if(colnames(valores[,j]) %in% datas_colnames){
+                        cellValue = as.character(cellValue)
+                        if(is.na(cellValue)) cellValue = ""
+                    }
+                    setCellValue(cell.i.j, cellValue)
                     cellStyle1 <- CellStyle(wb) +
                     Fill(foregroundColor=getColor(colnames(valores[,j]), i),
                             pattern="SOLID_FOREGROUND") + Alignment(wrapText=TRUE) 
@@ -718,7 +725,7 @@ gera_planilha_xlsx <- function(obras.filt.mun){
         }
     }
     
-    saveWorkbook(wb, "filename.xlsx")
+    saveWorkbook(wb, paste0("planilha_", municipio, ".xlsx"))
 }
 
 # Muda cor da célula
@@ -752,7 +759,7 @@ do.call(div, lapply(municipios, function(mun) {
         filter(municipio == mun) %>% 
         pull(porc.criterios.validos) * 100
     
-    #gera_planilha_xlsx(obras.filt.mun)
+    gera_planilha_xlsx(obras.filt.mun, mun)
 
     show_plot(mun, porc.criterios.validos, print(
         obras.filt.mun %>%
