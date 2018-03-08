@@ -773,16 +773,29 @@ gera_planilha_xlsx <- function(obras){
     }
     
     datas_colnames <- c('data_inicio_obra', 'data_prevista_conclusao', 'data_conclusao_obra', 'data_recebimento_obra')
+    
+    pinta.celula <- function(linha, coluna, cor) {
+        style <- openxlsx::createStyle(fontSize = 11, fontColour = "#000000", halign = "center",
+                        fgFill = cor, border="TopBottom")
 
-    for(i in seq(1:nrow(valores))){
-        for(j in seq(1:ncol(valores))){
-
-              headerStyle <- openxlsx::createStyle(fontSize = 11, fontColour = "#000000", halign = "center",
-                        fgFill = getColor(colnames(valores[,j]), i), border="TopBottom")
-          
-              openxlsx::addStyle(wb, sheet = 1, headerStyle, rows = i+1, cols = j+1, gridExpand = TRUE)
-      }
+        openxlsx::addStyle(wb, sheet = 1, style, rows = linha+1, cols = coluna+1, gridExpand = TRUE)
+        TRUE
     }
+    
+    colunas.valores <- data.frame(nome_coluna = names(valores), numero_coluna = 1:ncol(valores))
+    
+    celulas.para.colorir <- valores %>% 
+        mutate(linha = row_number()) %>% 
+        gather(nome_coluna, valor, municipio:situacao_estimada) %>% 
+        rowwise() %>% 
+        mutate(cor = getColor(nome_coluna, linha)) %>% 
+        filter(cor != "#FFFFFF") %>% 
+        left_join(colunas.valores, by = "nome_coluna")
+    
+    celulas.para.colorir %>% 
+        rowwise() %>% 
+        mutate(pinta.celula(linha, numero_coluna, cor))
+    
     openxlsx::setColWidths(wb, 1, cols=1, widths = "auto")
     openxlsx::saveWorkbook(wb, "planilha_municipios.xlsx", overwrite = TRUE)
 }
