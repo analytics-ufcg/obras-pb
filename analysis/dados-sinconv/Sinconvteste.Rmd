@@ -37,10 +37,15 @@ con2 <- DBI::dbConnect(drv,
                        dbname = config::get("dbname2", file = CONFIG_FILE_PATH)
 )
 
-convenio.geopb <- dbGetQuery(con1, "select * from t_convenio") %>%
+convenio.geopb.nao.tratado <- dbGetQuery(con1, "select * from t_convenio")
+
+convenio.geopb <- convenio.geopb.nao.tratado %>%
     filter(
         str_detect(numero_convenio, "^[0-9]{6}/") |
         nchar(numero_convenio) == 6
+    ) %>%
+    mutate(
+        numero_convenio = ifelse(nchar(numero_convenio) > 6, substr(numero_convenio, 1, 6), numero_convenio)
     )
 
 #filter(grep('^([0-9]{6}/)', numero_convenio))
