@@ -137,13 +137,19 @@ filtraArtigos <- function(lista){
 dados_sinconv_cg <- propostasPbTratada %>% filter(MUNIC_PROPONENTE == 'CAMPINA GRANDE')
 dados_geopb_cg <- obras.2013 %>% filter(nome.x == 'Campina Grande')
 
-merjou <- merge(dados_sinconv_cg, dados_geopb_cg, all=T)
+cross_join_sinconv_geopb <- merge(dados_sinconv_cg, dados_geopb_cg, all=T)
 
-merjou <- merjou %>% mutate(OBJETO_PROPOSTA = as.character(OBJETO_PROPOSTA)) %>% group_by(id.y)
-merjou <- merjou %>% mutate(OBJETO_PROPOSTA = tolower(OBJETO_PROPOSTA), descricao_sucinta_obra = tolower(descricao_sucinta_obra))
-merjou <- merjou %>% mutate(palavras_iguais = length(intersect(filtraArtigos(unlist(strsplit(OBJETO_PROPOSTA, " "))), filtraArtigos(unlist(strsplit(descricao_sucinta_obra, " "))))))
-View(merjou %>% select(OBJETO_PROPOSTA, descricao_sucinta_obra, palavras_iguais))
+cross_join_sinconv_geopb <- cross_join_sinconv_geopb %>% 
+    mutate(OBJETO_PROPOSTA = as.character(OBJETO_PROPOSTA)) %>% 
+    group_by(id.y)
 
+cross_join_sinconv_geopb <- cross_join_sinconv_geopb %>% 
+    mutate(OBJETO_PROPOSTA = tolower(OBJETO_PROPOSTA), descricao_sucinta_obra = tolower(descricao_sucinta_obra))
+
+cross_join_sinconv_geopb <- cross_join_sinconv_geopb %>% 
+    mutate(palavras_iguais = length(intersect(filtraArtigos(unlist(strsplit(OBJETO_PROPOSTA, " "))), filtraArtigos(unlist(strsplit(descricao_sucinta_obra, " "))))))
+
+View(cross_join_sinconv_geopb %>% select(OBJETO_PROPOSTA, descricao_sucinta_obra, palavras_iguais))
 ```
 
 
