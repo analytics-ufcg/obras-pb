@@ -11,6 +11,8 @@ sinconv <- read.csv("siconv_convenio.csv", sep = ";")
 empenhos <- read.csv("siconv_empenho.csv", sep = ";")
 propostas <- read.csv("siconv_proposta.csv", sep = ";")
 situacao <- read.csv("siconv_historico_situacao.csv", sep = ";")
+meta <- read.csv("siconv_meta_crono_fisico.csv", sep = ";")
+obtv <- read.csv("siconv_obtv_convenente.csv", sep = ";")
 
 library(RPostgreSQL)
 library(tidyverse)
@@ -116,6 +118,36 @@ join.geopb.empenhos <- obra.convenio.geopb %>%
     left_join(empenhos %>% mutate(NR_CONVENIO = as.character(NR_CONVENIO)), by = c('numero_convenio' = 'NR_CONVENIO'))
 
 ```
+
+
+Tenta criar heurística pra fazer join dos dados do geopb com o sinconv através da descrição da obra presente em cada sistema.
+
+```{r}
+filtraArtigos <- function(lista){
+    result = c()
+    for(palavra in lista){
+        if(nchar(palavra) > 3){
+             result = c(result, palavra)
+        }
+    }
+    return(result)
+}
+
+
+dados_sinconv_cg <- propostasPbTratada %>% filter(MUNIC_PROPONENTE == 'CAMPINA GRANDE')
+dados_geopb_cg <- obras.2013 %>% filter(nome.x == 'Campina Grande')
+
+merjou <- merge(dados_sinconv_cg, dados_geopb_cg, all=T)
+
+merjou <- merjou %>% mutate(OBJETO_PROPOSTA = as.character(OBJETO_PROPOSTA)) %>% group_by(id.y)
+merjou <- merjou %>% mutate(OBJETO_PROPOSTA = tolower(OBJETO_PROPOSTA), descricao_sucinta_obra = tolower(descricao_sucinta_obra))
+merjou <- merjou %>% mutate(palavras_iguais = length(intersect(filtraArtigos(unlist(strsplit(OBJETO_PROPOSTA, " "))), filtraArtigos(unlist(strsplit(descricao_sucinta_obra, " "))))))
+View(merjou %>% select(OBJETO_PROPOSTA, descricao_sucinta_obra, palavras_iguais))
+
+```
+
+
+
 
 
 
