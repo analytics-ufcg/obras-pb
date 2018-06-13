@@ -1,0 +1,182 @@
+---
+title: "Número de Obras"
+author: "Luiza Carvalho Silveira"
+date: "June 13, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importando os dados
+
+```{r, message=FALSE, warning=FALSE}
+#install.packages(c("openxlsx", "config", "RPostgreSQL", #"tidyverse","rgdal","DT","formattable","htmltools","viridis","ggplot2","plotly"))
+#install.packages("devtools")
+
+#devtools::install_github("analytics-ufcg/geopbutils")
+#devtools::install_github("walkerke/bsselectR")
+
+library (openxlsx)
+library (config)
+library(RPostgreSQL)
+library(tidyverse)
+library(rgdal)
+source("../utils/get-functions.R")
+library(GeoPBUtils)
+library(DT)
+library(formattable)
+library(htmltools)
+library(bsselectR)
+library(viridis)
+library(ggplot2)
+library(plotly)
+library(dygraphs)
+library(xts)
+
+
+# Importa tabelas csv
+tipos.das.obras <<- read.csv("../dados/tipos_obra.csv")
+municipios.pb <- read.csv("../dados/municipios_pb.csv")
+mapa_paraiba <<- readOGR("../dados/mapa-paraiba-ibge/Municipios.shp")
+
+# Pega dados
+drv <- DBI::dbDriver("PostgreSQL")
+
+CONFIG_FILE_PATH = "../config/config.yml"
+
+con1 <- DBI::dbConnect(drv,
+                       host = config::get("host", file = CONFIG_FILE_PATH),
+                       port = config::get("port", file = CONFIG_FILE_PATH),
+                       user = config::get("user", file = CONFIG_FILE_PATH),
+                       password = config::get("password", file = CONFIG_FILE_PATH),
+                       dbname = config::get("dbname1", file = CONFIG_FILE_PATH)
+)
+
+con2 <- DBI::dbConnect(drv,
+                       host = config::get("host", file = CONFIG_FILE_PATH),
+                       port = config::get("port", file = CONFIG_FILE_PATH),
+                       user = config::get("user", file = CONFIG_FILE_PATH),
+                       password = config::get("password", file = CONFIG_FILE_PATH),
+                       dbname = config::get("dbname2", file = CONFIG_FILE_PATH)
+)
+
+GeoPBUtils::get.data.faltantes(con1, con2, mapa_paraiba)
+
+dbDisconnect(con1)
+dbDisconnect(con2)
+
+municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, 
+                         lat = coordinates(mapa_paraiba)[,2], 
+                         lon = coordinates(mapa_paraiba)[,1])
+
+obras.98 <- get.georreferencia.inputada(obra, localidade, tipos.das.obras, municipios,
+                                          obra.georref.centroide.sumarizado, 1998) %>% 
+    filter(codigo_ibge != 0)
+
+
+```
+
+### Observações
+
+- Tabela de evolução guarda as informações de cada obra ao longo do tempo;
+
+- Acompanhamento não pussui todas as obras, portanto não deve ser utilizado para catalogar a quantidade de obras, e sim para verificar as alterações em cada uma;
+
+- Utilizando o pacote GeoPBUtils foi criado um data frame com as informações completas de todas as obras "válidas";
+
+- Foram consideradas válidas todas as obras que possuem data de inicio acima do ano 1998, pois todas com datas inferiores apresentavam inicio de obra em 1900, não era plausível;
+
+- NA em data_cadastrada é descartado.
+
+
+### Evolução do Cadastro de Obras
+
+```{r}
+# Setando datas mínimas para o zoom do gráfico
+min_zoom_date <- as.Date("2011-01-01", "%Y-%m-%d")
+max_zoom_date <- max(obras.98$data_cadastro, na.rm = TRUE)
+
+# Definindo quais obras são georreferenciadas
+obra_georef <- obras.98 %>%
+    group_by(id) %>%
+    summarise(tem_georeferenciamento = any(tipo_georeferenciamento != 0))
+
+# Quando não existe resposta é porque não existe georreferenciamento
+obra_georef$tem_georeferenciamento[is.na(obra_georef$tem_georeferenciamento)] <- FALSE;
+
+# Criando data frame de evolução do quadro do cadastro de obras de acordo com o tempo
+evolucao_tempo <- obras.98 %>%
+    select(id, data_cadastro, data_ultima_alteracao) %>%
+    collect(n = Inf) %>%
+    left_join(obra_georef, by = "id", all.x = TRUE) %>%
+    mutate(data_cadastro = data_cadastro) %>%
+    group_by(data_cadastro) %>%
+    summarise(n_obras = n(),
+              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
+              n_nao_georeferenciadas = n() - n_georeferenciadas) %>%
+    mutate(n_obras = cumsum(n_obras),
+           n_georeferenciadas = cumsum(n_georeferenciadas),
+           n_nao_georeferenciadas = cumsum(n_nao_georeferenciadas))
+
+evolucao_tempo <- na.omit(evolucao_tempo)
+
+evolucao_tempo_xts <- xts(select(evolucao_tempo, 2), evolucao_tempo$data_cadastro)
+
+dygraph(evolucao_tempo_xts) %>%
+    dySeries("n_obras", label = "Total de obras") %>%
+    dyAxis("x", label = "Período de Tempo") %>%
+    dyAxis("y", label = "Quantidade de obras (acumulada)") %>%
+    dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+p <- ggplot() + geom_area(data=evolucao_tempo, fill = '#000e26',aes(x=data_cadastro, y=n_georeferenciadas)) + xlab("Período de Tempo") + ylab("Quantidade de Obras Georreferenciadas (acumulada)")
+
+ggplotly(p)
+
+```
+
+### Cadastros de acompanhamento de obras ao longo do tempo
+
+```{r}
+
+colnames(obra_georef) <- c("fk_obra","tem_georeferenciamento")
+
+acompanhamento_tempo <- acompanhamento %>%
+    select(fk_obra, data_cadastro, tipo_georeferenciamento) %>%
+    filter(!is.na(data_cadastro)) %>%
+    collect(n = Inf) %>%
+    left_join(obra_georef,by= "fk_obra", all.x= TRUE) %>%
+    group_by(data_cadastro) %>%
+    summarise(n_obras = n(),
+              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
+              n_nao_georeferenciadas = n() - n_georeferenciadas) %>%
+    mutate(n_obras = cumsum(n_obras),
+           n_georeferenciadas = cumsum(n_georeferenciadas),
+           n_nao_georeferenciadas = cumsum(n_nao_georeferenciadas))
+
+acompanhamento_tempo_xts <- xts(select(acompanhamento_tempo, 2), acompanhamento_tempo$data_cadastro)
+
+dygraph(acompanhamento_tempo_xts) %>%
+    dySeries("n_obras", label = "Total de registros") %>%
+    dyAxis("x", label = "Data de cadastro") %>%
+    dyAxis("y", label = "Quantidade de registros de acompanhamento (acumulada)") %>%
+    dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+min_date <- as.Date("2000-01-01", "%Y-%m-%d")
+max_date <- max(obras.98$data_cadastro, na.rm = TRUE)
+
+p <- ggplot() + geom_area(data=acompanhamento_tempo, fill = '#000e26',aes(x=data_cadastro, y=n_georeferenciadas)) + xlab("Período de Tempo") + ylab("Quantidade de Obras Georreferenciadas (acumulada)") + xlim(min_date, max_date)
+
+ggplotly(p)
+```
+
+### Atualizações das Obras ao longo do tempo
+
+```{r}
+
+
+```
+
