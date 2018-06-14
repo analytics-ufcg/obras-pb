@@ -81,6 +81,9 @@ min_date <- as.Date("1998-01-01", "%Y-%m-%d")
 obra_georef <- acompanhamento %>%
     group_by(fk_obra) %>%
     summarise(tem_georeferenciamento = any(tipo_georeferenciamento != 0))
+
+obras.completo <- obra %>% left_join(evolucao, by="id", all.x = TRUE)
+
 ```
 
 Quantidade de obras
@@ -154,8 +157,9 @@ obra_georef$tem_georeferenciamento[is.na(obra_georef$tem_georeferenciamento)] <-
 colnames(obra_georef) <- c("id","tem_georeferenciamento")
     
 # Criando data frame de evolução do quadro do cadastro de obras de acordo com o tempo
-evolucao_tempo <- obras.98 %>%
+evolucao_tempo <- obras.completo %>%
     select(id, data_cadastro, data_ultima_alteracao) %>%
+    filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
     collect(n = Inf) %>%
     left_join(obra_georef, by = "id", all.x = TRUE) %>%
     mutate(data_cadastro = data_cadastro) %>%
@@ -206,7 +210,7 @@ colnames(obra_georef) <- c("fk_obra","tem_georeferenciamento")
 
 acompanhamento_tempo <- acompanhamento %>%
     select(fk_obra, data_cadastro, tipo_georeferenciamento) %>%
-    filter(!is.na(data_cadastro), data_cadastro > min_date) %>%
+    filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
     collect(n = Inf) %>%
     left_join(obra_georef, by = "fk_obra") %>%
     group_by(data_cadastro) %>%
@@ -227,10 +231,57 @@ dygraph(acompanhamento_tempo_xts) %>%
     dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
 ```
 
+### Registros Mensais de Acompanhamento de Obras
+
+```{r}
+acompanhamento_mensal <- acompanhamento %>% filter(!is.na(data_cadastro), data_cadastro >= min_date) %>% 
+    mutate(mes_ano = format(data_cadastro,"%Y-%m")) %>%  left_join(obra_georef, by = "fk_obra", x.all = TRUE) %>%
+    group_by(mes_ano) %>%
+    summarise(n_obras = n(),
+              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
+              n_nao_georeferenciadas = n() - n_georeferenciadas) 
+
+acompanhamento_mensal <- acompanhamento_mensal %>% mutate(mes_ano = paste(mes_ano,"1",sep = "-",collapse = NULL)) %>% 
+    mutate(mes_ano = as.Date(mes_ano,"%Y-%m-%d"))
+
+acompanhamento_mensal_xts <- xts(select(acompanhamento_mensal, 2), acompanhamento_mensal$mes_ano)
+
+dygraph(acompanhamento_mensal_xts) %>%
+    dySeries("n_obras", label = "Registros") %>%
+    dyAxis("x", label = "Mês de cadastro") %>%
+    dyAxis("y", label = "Quantidade de registros de acompanhamento") %>%
+    dyOptions(useDataTimezone = TRUE, fillGraph = TRUE, plotter = 
+              "function barChartPlotter(e) {
+                var ctx = e.drawingContext;
+                var points = e.points;
+                var y_bottom = e.dygraph.toDomYCoord(0);  // see     http://dygraphs.com/jsdoc/symbols/Dygraph.html#toDomYCoord
+
+                // This should really be based on the minimum gap
+                var bar_width = 2/3 * (points[1].canvasx - points[0].canvasx);
+                ctx.fillStyle = e.color;
+
+                // Do the actual plotting.
+                for (var i = 0; i < points.length; i++) {
+                  var p = points[i];
+                  var center_x = p.canvasx;  // center of the bar
+
+                  ctx.fillRect(center_x - bar_width / 2, p.canvasy,
+                               bar_width, y_bottom - p.canvasy);
+                  ctx.strokeRect(center_x - bar_width / 2, p.canvasy,
+                                 bar_width, y_bottom - p.canvasy);
+                }
+              }") %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+
+
+```
+
 ### Registro do Acompanhamento de Obras Georreferenciadas ao Longo do Tempo
 
 ```{r}
 acompanhamento_tempo_xts1 <- xts(select(acompanhamento_tempo, 3), acompanhamento_tempo$data_cadastro)
+
 
 dygraph(acompanhamento_tempo_xts1) %>%
     dySeries("n_georeferenciadas", label = "Total de registros") %>%
