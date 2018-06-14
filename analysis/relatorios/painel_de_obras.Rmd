@@ -1,0 +1,284 @@
+---
+title: "Painel de obras - PB"
+#output: html_document
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    theme: cosmo
+---
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = FALSE)
+#install.packages(c("openxlsx", "config", "RPostgreSQL", #"tidyverse","rgdal","DT","formattable","htmltools","viridis","ggplot2","plotly"))
+#install.packages("devtools")
+
+#devtools::install_github("analytics-ufcg/geopbutils")
+#devtools::install_github("walkerke/bsselectR")
+library (openxlsx)
+library (config)
+library(RPostgreSQL)
+library(tidyverse)
+library(rgdal)
+source("../utils/get-functions.R")
+library(GeoPBUtils)
+library(DT)
+library(formattable)
+library(htmltools)
+library(bsselectR)
+library(viridis)
+library(ggplot2)
+library(plotly)
+library(dygraphs)
+library(xts)
+library(dplyr)
+library(flexdashboard)
+library(scales)
+
+# Importa tabelas csv
+tipos.das.obras <<- read.csv("../dados/tipos_obra.csv")
+municipios.pb <- read.csv("../dados/municipios_pb.csv")
+mapa_paraiba <<- readOGR("../dados/mapa-paraiba-ibge/Municipios.shp")
+
+# Pega dados
+drv <- DBI::dbDriver("PostgreSQL")
+
+CONFIG_FILE_PATH = "../config/config.yml"
+
+con1 <- DBI::dbConnect(drv,
+                       host = config::get("host", file = CONFIG_FILE_PATH),
+                       port = config::get("port", file = CONFIG_FILE_PATH),
+                       user = config::get("user", file = CONFIG_FILE_PATH),
+                       password = config::get("password", file = CONFIG_FILE_PATH),
+                       dbname = config::get("dbname3", file = CONFIG_FILE_PATH)
+)
+
+con2 <- DBI::dbConnect(drv,
+                       host = config::get("host", file = CONFIG_FILE_PATH),
+                       port = config::get("port", file = CONFIG_FILE_PATH),
+                       user = config::get("user", file = CONFIG_FILE_PATH),
+                       password = config::get("password", file = CONFIG_FILE_PATH),
+                       dbname = config::get("dbname2", file = CONFIG_FILE_PATH)
+)
+
+GeoPBUtils::get.data.faltantes(con1, con2, mapa_paraiba)
+
+dbDisconnect(con1)
+dbDisconnect(con2)
+
+municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, 
+                         lat = coordinates(mapa_paraiba)[,2], 
+                         lon = coordinates(mapa_paraiba)[,1])
+
+obras.98 <- get.georreferencia.inputada(obra, localidade, tipos.das.obras, municipios,
+                                          obra.georref.centroide.sumarizado, 1998) %>% 
+    filter(codigo_ibge != 0)
+
+min_zoom_date <- as.Date("2018-01-01", "%Y-%m-%d")
+max_zoom_date <- max(evolucao$data_cadastro, na.rm = TRUE)
+min_date <- as.Date("1998-01-01", "%Y-%m-%d")
+
+obra_georef <- acompanhamento %>%
+    group_by(fk_obra) %>%
+    summarise(tem_georeferenciamento = any(tipo_georeferenciamento != 0))
+```
+
+Quantidade de obras
+=============================================================
+
+
+Row
+-------------------------------------------------------------
+
+### Obras Cadastradas
+
+```{r}
+n_obras <- obra %>%
+    filter(!cancelled) %>%
+    nrow()
+
+valueBox(n_obras)
+```
+
+### Obras em Andamento
+
+```{r}
+n_ativas <- evolucao %>%
+    filter(andamento == 1, !is.na(data_inicio_obra), is.na(data_conclusao_obra)) %>%
+    nrow()
+perc_ativas <- round(100 * n_ativas / n_obras, 2)
+
+#valueBox(n_ativas, color = "warning")
+
+gauge(n_ativas, min = 0, max = n_obras,
+      gaugeSectors(danger = c(0, 0.33 * n_obras),
+                   warning = c(0.34 * n_obras, 0.66 * n_obras),
+                   success = c(0.67 * n_obras, n_obras)))
+```
+
+### Obras Georreferenciadas
+
+```{r}
+perc_georef <- round(100 * sum(obra_georef$tem_georeferenciamento) / nrow(obra_georef), 2)
+
+gauge(perc_georef, min = 0, max = 100, symbol = "%",
+      gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
+```
+
+### Obras Finalizadas
+
+```{r}
+n_final<- evolucao %>%
+    filter(!is.na(data_conclusao_obra), !is.na(data_recebimento_obra)) %>%
+    nrow()
+perc_final <- round(100 * n_final / n_obras, 2)
+
+#valueBox(n_ativas, color = "warning")
+
+gauge(n_final, min = 0, max = n_obras,
+      gaugeSectors(danger = c(0, 0.33 * n_obras),
+                   warning = c(0.34 * n_obras, 0.66 * n_obras),
+                   success = c(0.67 * n_obras, n_obras)))
+```
+
+Row
+-------------------------------------------------------------
+
+### Registro do Cadastro de Obras ao Longo do Tempo
+
+```{r evolucao tempo}
+
+# Quando não existe resposta é porque não existe georreferenciamento
+obra_georef$tem_georeferenciamento[is.na(obra_georef$tem_georeferenciamento)] <- FALSE;
+
+colnames(obra_georef) <- c("id","tem_georeferenciamento")
+    
+# Criando data frame de evolução do quadro do cadastro de obras de acordo com o tempo
+evolucao_tempo <- obras.98 %>%
+    select(id, data_cadastro, data_ultima_alteracao) %>%
+    collect(n = Inf) %>%
+    left_join(obra_georef, by = "id", all.x = TRUE) %>%
+    mutate(data_cadastro = data_cadastro) %>%
+    group_by(data_cadastro) %>%
+    summarise(n_obras = n(),
+              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
+              n_nao_georeferenciadas = n() - n_georeferenciadas) %>%
+    mutate(n_obras = cumsum(n_obras),
+           n_georeferenciadas = cumsum(n_georeferenciadas),
+           n_nao_georeferenciadas = cumsum(n_nao_georeferenciadas))
+
+evolucao_tempo <- na.omit(evolucao_tempo)
+
+evolucao_tempo_xts <- xts(select(evolucao_tempo, 2), evolucao_tempo$data_cadastro)
+
+dygraph(evolucao_tempo_xts) %>%
+    dySeries("n_obras", label = "Total de obras", color='#0e0672') %>%
+    dyAxis("x", label = "Período de Tempo") %>%
+    dyAxis("y", label = "Quantidade de obras (acumulada)") %>%
+    dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+```
+
+### Registro do Cadastro de Obras Georreferenciadas ao Longo do Tempo
+
+``` {r}
+
+evolucao_tempo_xts1 <- xts(select(evolucao_tempo, 3), evolucao_tempo$data_cadastro)
+
+dygraph(evolucao_tempo_xts1) %>%
+    dySeries("n_georeferenciadas", label = "Total de Obras Georreferenciadas", color = '#470656') %>%
+    dyAxis("x", label = "Período de Tempo") %>%
+    dyAxis("y", label = "Quantidade de Obras Georreferenciadas (acumulada)") %>%
+    dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+```
+
+Row
+-----------------------------------------------------------
+
+### Registro do Acompanhamento de Obras ao Longo do Tempo
+
+```{r acompanhamento tempo}
+
+colnames(obra_georef) <- c("fk_obra","tem_georeferenciamento")
+
+acompanhamento_tempo <- acompanhamento %>%
+    select(fk_obra, data_cadastro, tipo_georeferenciamento) %>%
+    filter(!is.na(data_cadastro), data_cadastro > min_date) %>%
+    collect(n = Inf) %>%
+    left_join(obra_georef, by = "fk_obra") %>%
+    group_by(data_cadastro) %>%
+    summarise(n_obras = n(),
+              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
+              n_nao_georeferenciadas = n() - n_georeferenciadas) %>%
+    mutate(n_obras = cumsum(n_obras),
+           n_georeferenciadas = cumsum(n_georeferenciadas),
+           n_nao_georeferenciadas = cumsum(n_nao_georeferenciadas))
+
+acompanhamento_tempo_xts <- xts(select(acompanhamento_tempo, 2), acompanhamento_tempo$data_cadastro)
+
+dygraph(acompanhamento_tempo_xts) %>%
+    dySeries("n_obras", label = "Total de registros", color= '#0f2611') %>%
+    dyAxis("x", label = "Data de cadastro") %>%
+    dyAxis("y", label = "Quantidade de registros de acompanhamento (acumulada)") %>%
+    dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+```
+
+### Registro do Acompanhamento de Obras Georreferenciadas ao Longo do Tempo
+
+```{r}
+acompanhamento_tempo_xts1 <- xts(select(acompanhamento_tempo, 3), acompanhamento_tempo$data_cadastro)
+
+dygraph(acompanhamento_tempo_xts1) %>%
+    dySeries("n_georeferenciadas", label = "Total de registros") %>%
+    dyAxis("x", label = "Data de cadastro") %>%
+    dyAxis("y", label = "Quantidade de registros de acompanhamento (acumulada)") %>%
+    dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+```
+
+Row
+-----------------------------------------------------------
+
+### Resumo de Obras Cadastradas por Município
+
+```{r}
+tabela_obras <- acompanhamento %>%
+    select(fk_obra, data_cadastro, tipo_georeferenciamento) %>%
+    filter(!is.na(data_cadastro), data_cadastro > min_date) %>%
+    collect(n = Inf) %>%
+    left_join(obra_georef, by = "fk_obra") %>%
+    group_by(data_cadastro) %>%
+    summarise(n_obras = n(),
+              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
+              n_nao_georeferenciadas = n() - n_georeferenciadas) %>%
+    mutate(n_obras = cumsum(n_obras),
+           n_georeferenciadas = cumsum(n_georeferenciadas),
+           n_nao_georeferenciadas = cumsum(n_nao_georeferenciadas))
+
+
+tabela_obras_municipio <- obra %>%
+    left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id")) %>%
+    left_join(evolucao, by = c("id" = "fk_obra")) %>%
+    left_join(obra_georef, by = c("id" = "fk_obra")) %>%
+    group_by(`Municipio / Estado` = municipio_importacao) %>%
+    summarise(
+        `Obras cadastradas` = n(),
+        `Em andamento` = sum(andamento == 1 & !is.na(data_inicio_obra) & is.na(data_conclusao_obra)),
+        `Finalizadas` = sum(!is.na(data_conclusao_obra) & !is.na(data_recebimento_obra)),
+        `Georreferenciadas` = sum(tem_georeferenciamento, na.rm = TRUE) / n()
+    ) %>% arrange(desc(`Obras cadastradas`))
+
+datatable(tabela_obras_municipio, extensions = c('Buttons', 'Responsive'),
+          options = list(
+              dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
+              )) %>%
+    formatPercentage("Georreferenciadas", 2)
+```
+
+Custo de obras
+=====================================================
