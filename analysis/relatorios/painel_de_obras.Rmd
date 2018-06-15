@@ -7,6 +7,32 @@ output:
     vertical_layout: scroll
     theme: cosmo
 ---
+<style type="text/css">
+
+.chart-title {  /* chart_title  */
+   font-size: 30px;
+   text-align: center
+}
+.value-box .icon {
+    position: absolute !important;
+    top: 49% !important;
+    right: 44% !important;
+    font-size: 70px !important;
+
+}
+.value-box .caption {
+    font-size: 25px;
+    text-align: center
+}
+.value-box .value {
+font-size: 38px;
+font-weight: bold;
+margin: 0 0 3px 0;
+white-space: nowrap;
+text-align: center
+}
+
+</style>
 
 ```{r setup, include=FALSE}
 #knitr::opts_chunk$set(echo = FALSE)
@@ -100,7 +126,7 @@ n_obras <- obra %>%
     filter(!cancelled) %>%
     nrow()
 
-valueBox(n_obras)
+valueBox(n_obras, icon = "far fa-building")
 ```
 
 ### Obras em Andamento
@@ -176,7 +202,7 @@ evolucao_tempo <- na.omit(evolucao_tempo)
 evolucao_tempo_xts <- xts(select(evolucao_tempo, 2), evolucao_tempo$data_cadastro)
 
 dygraph(evolucao_tempo_xts) %>%
-    dySeries("n_obras", label = "Total de obras", color='#0e0672') %>%
+    dySeries("n_obras", label = "Total de obras", color='#141163') %>%
     dyAxis("x", label = "Período de Tempo") %>%
     dyAxis("y", label = "Quantidade de obras (acumulada)") %>%
     dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
@@ -191,7 +217,7 @@ dygraph(evolucao_tempo_xts) %>%
 evolucao_tempo_xts1 <- xts(select(evolucao_tempo, 3), evolucao_tempo$data_cadastro)
 
 dygraph(evolucao_tempo_xts1) %>%
-    dySeries("n_georeferenciadas", label = "Total de Obras Georreferenciadas", color = '#470656') %>%
+    dySeries("n_georeferenciadas", label = "Total de Obras Georreferenciadas", color = '#188a8d') %>%
     dyAxis("x", label = "Período de Tempo") %>%
     dyAxis("y", label = "Quantidade de Obras Georreferenciadas (acumulada)") %>%
     dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
@@ -224,7 +250,7 @@ acompanhamento_tempo <- acompanhamento %>%
 acompanhamento_tempo_xts <- xts(select(acompanhamento_tempo, 2), acompanhamento_tempo$data_cadastro)
 
 dygraph(acompanhamento_tempo_xts) %>%
-    dySeries("n_obras", label = "Total de registros", color= '#0f2611') %>%
+    dySeries("n_obras", label = "Total de registros", color= '#4baa6e') %>%
     dyAxis("x", label = "Data de cadastro") %>%
     dyAxis("y", label = "Quantidade de registros de acompanhamento (acumulada)") %>%
     dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
@@ -244,13 +270,16 @@ acompanhamento_mensal <- acompanhamento %>% filter(!is.na(data_cadastro), data_c
 acompanhamento_mensal <- acompanhamento_mensal %>% mutate(mes_ano = paste(mes_ano,"1",sep = "-",collapse = NULL)) %>% 
     mutate(mes_ano = as.Date(mes_ano,"%Y-%m-%d"))
 
-acompanhamento_mensal_xts <- xts(select(acompanhamento_mensal, 2), acompanhamento_mensal$mes_ano)
+acompanhamento_mensal_xts <- xts(select(acompanhamento_mensal, 3,4), acompanhamento_mensal$mes_ano)
+
+min_zoom_date <- as.Date("2017-12-01", "%Y-%m-%d")
 
 dygraph(acompanhamento_mensal_xts) %>%
-    dySeries("n_obras", label = "Registros") %>%
+    dySeries("n_georeferenciadas", label = "Obras Georreferenciadas", color = '#3f9f7f') %>%
+    dySeries("n_nao_georeferenciadas", label = "Obras Não Georreferenciadas", color = '#17577e') %>%
     dyAxis("x", label = "Mês de cadastro") %>%
     dyAxis("y", label = "Quantidade de registros de acompanhamento") %>%
-    dyOptions(useDataTimezone = TRUE, fillGraph = TRUE, plotter = 
+    dyOptions(useDataTimezone = TRUE, fillGraph = TRUE, stackedGraph = TRUE, plotter = 
               "function barChartPlotter(e) {
                 var ctx = e.drawingContext;
                 var points = e.points;
@@ -277,20 +306,6 @@ dygraph(acompanhamento_mensal_xts) %>%
 
 ```
 
-### Registro do Acompanhamento de Obras Georreferenciadas ao Longo do Tempo
-
-```{r}
-acompanhamento_tempo_xts1 <- xts(select(acompanhamento_tempo, 3), acompanhamento_tempo$data_cadastro)
-
-
-dygraph(acompanhamento_tempo_xts1) %>%
-    dySeries("n_georeferenciadas", label = "Total de registros") %>%
-    dyAxis("x", label = "Data de cadastro") %>%
-    dyAxis("y", label = "Quantidade de registros de acompanhamento (acumulada)") %>%
-    dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
-    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
-
-```
 
 Row
 -----------------------------------------------------------
@@ -329,6 +344,8 @@ datatable(tabela_obras_municipio, extensions = c('Buttons', 'Responsive'),
               dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
               )) %>%
     formatPercentage("Georreferenciadas", 2)
+
+
 ```
 
 Custo de obras
