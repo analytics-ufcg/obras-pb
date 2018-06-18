@@ -21,7 +21,7 @@ conf/application.conf
 # Data
 analysis/data/
 analysis/config/config.yml
-analysis/**/*.html
+
 # R
 **/*.RData
 **/*.Rhistory
