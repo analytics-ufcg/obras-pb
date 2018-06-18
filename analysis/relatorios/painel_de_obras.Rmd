@@ -236,7 +236,7 @@ dygraph(evolucao_tempo_xts) %>%
 
 ```
 
-### Registro do Cadastro de Obras Georreferenciadas ao Longo do Tempo
+### Registros Mensais de Cadastros de Obras 
 
 ``` {r}
 
