@@ -408,6 +408,69 @@ datatable(tabela_obras_municipio, extensions = c('Buttons', 'Responsive'),
 Custo de obras
 =====================================================
 
+# Row
+-------------------------------------------------------------
+
+### Mapa de Custos Por Município
+
+```{r}
+library(leaflet)
+
+tabela_gastos_municipio <- obras.completo %>%
+    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
+    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
+    group_by(`Municipio / Estado` = `nome`) %>%
+    summarise(
+        media_custo = mean(valor_obra, na.rm = TRUE),
+        n_obras = n(),
+        custo_habitante = mean(valor_obra, na.rm = TRUE)/ max(`População.estimada...pessoas`, na.rm = TRUE),
+        codigo_ibge = max(codigo_ibge)
+    ) %>% arrange(desc(media_custo))
+
+
+        
+mapa_paraiba_quantidade_obras <- mapa_paraiba
+
+mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
+    left_join(tabela_gastos_municipio,
+              by = c("GEOCODIG_M" = "codigo_ibge"))
+
+bins <- c(0, 1000, 10000, 100000, 300000, 500000, 1000000, 4000000, 6000000, Inf)
+pal <- colorBin("YlOrRd", domain = mapa_paraiba_quantidade_obras$media_custo, bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>Gasto Médio em Reais: %g </sup>",
+  mapa_paraiba_quantidade_obras$Nome_Munic, mapa_paraiba_quantidade_obras$media_custo
+) %>% lapply(htmltools::HTML)
+
+leaflet(mapa_paraiba_quantidade_obras) %>%
+    addTiles() %>% 
+  addProviderTiles("MapBox", options = providerTileOptions(
+    id = "mapbox.light",
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) %>%
+  addPolygons(
+    fillColor = ~pal(media_custo),
+    weight = 2,
+    opacity = 1,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    highlight = highlightOptions(
+      weight = 3,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto")) %>%
+  addLegend(pal = pal, values = ~media_custo, opacity = 0.7, title = NULL,
+    position = "bottomright")
+
+```
+
 Row
 -------------------------------------------------------------
 
@@ -437,7 +500,67 @@ datatable(tabela_gastos_municipio, extensions = c('Buttons', 'Responsive'),
 
 ```
 
+Row
+-------------------------------------------------------------
 
+### Mapa de Custos Por Habitante (Município)
+
+```{r}
+library(leaflet)
+
+tabela_gastos_municipio <- obras.completo %>%
+    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
+    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
+    group_by(`Municipio / Estado` = `nome`) %>%
+    summarise(
+        media_custo = mean(valor_obra, na.rm = TRUE),
+        n_obras = n(),
+        custo_habitante = mean(valor_obra, na.rm = TRUE)/ max(`População.estimada...pessoas`, na.rm = TRUE),
+        codigo_ibge = max(codigo_ibge)
+    ) %>% arrange(desc(media_custo))
+
+bins <- c(0, 1, 10, 100, 1000, Inf)
+        
+mapa_paraiba_quantidade_obras <- mapa_paraiba
+
+mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
+    left_join(tabela_gastos_municipio,
+              by = c("GEOCODIG_M" = "codigo_ibge"))
+
+pal <- colorBin("YlOrRd", domain = mapa_paraiba_quantidade_obras$custo_habitante, bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>Gasto Médio por Habitante em Reais: %g </sup>",
+  mapa_paraiba_quantidade_obras$Nome_Munic, mapa_paraiba_quantidade_obras$custo_habitante
+) %>% lapply(htmltools::HTML)
+
+leaflet(mapa_paraiba_quantidade_obras) %>%
+    addTiles() %>% 
+  addProviderTiles("MapBox", options = providerTileOptions(
+    id = "mapbox.light",
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) %>%
+  addPolygons(
+    fillColor = ~pal(custo_habitante),
+    weight = 2,
+    opacity = 1,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    highlight = highlightOptions(
+      weight = 3,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto")) %>%
+  addLegend(pal = pal, values = ~media_custo, opacity = 0.7, title = NULL,
+    position = "bottomright")
+
+```
 
 Row
 -------------------------------------------------------------
