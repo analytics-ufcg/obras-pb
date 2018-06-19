@@ -437,32 +437,7 @@ datatable(tabela_gastos_municipio, extensions = c('Buttons', 'Responsive'),
 
 ```
 
-# Row
--------------------------------------------------------------
 
-```{r}
-#tabela_gastos_municipio <- obras.completo %>%
-#    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
-#    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
-#    group_by(`Municipio / Estado` = `nome`) %>%
-#    summarise(
-#        media_custo = mean(valor_obra, na.rm = TRUE),
-#        n_obras = n(),
-#        custo_habitante = mean(valor_obra, na.rm = TRUE)/ max(`População.estimada...pessoas`, na.rm = TRUE),
-#        codigo_ibge = max(codigo_ibge)
-#    ) %>% arrange(desc(media_custo))
-
-
-#mapa_paraiba@data <- mapa_paraiba@data %>%
-#    left_join(tabela_gastos_municipio,
-#              by = c("GEOCODIG_M" = "codigo_ibge"))
-
-        
-#mapa_paraiba$media_custo[is.na(mapa_paraiba$media_custo)]<-0;
-
-plot(mapa_paraiba, col="lightgrey")
-
-```
 
 Row
 -------------------------------------------------------------
