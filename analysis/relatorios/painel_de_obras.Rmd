@@ -131,7 +131,7 @@ obra_georef <- acompanhamento %>%
     group_by(fk_obra) %>%
     summarise(tem_georeferenciamento = any(tipo_georeferenciamento != 0))
 
-obras.completo <- obra %>% left_join(evolucao, by="id", all.x = TRUE)
+obras.completo <- obra %>% left_join(evolucao, by=c("id" = "fk_obra"), all.x = TRUE)
 
 cores <- c('#fdcea0','#fb8d3d','#f05542','#d54b04','#7f2704','#34485c')
 
@@ -206,14 +206,13 @@ Row
 # Quando não existe resposta é porque não existe georreferenciamento
 obra_georef$tem_georeferenciamento[is.na(obra_georef$tem_georeferenciamento)] <- FALSE;
 
-colnames(obra_georef) <- c("id","tem_georeferenciamento")
     
 # Criando data frame de evolução do quadro do cadastro de obras de acordo com o tempo
 evolucao_tempo <- obras.completo %>%
     select(id, data_cadastro, data_ultima_alteracao) %>%
     filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
     collect(n = Inf) %>%
-    left_join(obra_georef, by = "id", all.x = TRUE) %>%
+    left_join(obra_georef, by = c("id" = "fk_obra"), all.x = TRUE) %>%
     mutate(data_cadastro = data_cadastro) %>%
     group_by(data_cadastro) %>%
     summarise(n_obras = n(),
@@ -241,7 +240,7 @@ dygraph(evolucao_tempo_xts) %>%
 ``` {r}
 
 evolucao_mensal <- obras.completo %>% filter(!is.na(data_cadastro), data_cadastro >= min_date) %>% 
-    mutate(mes_ano = format(data_cadastro,"%Y-%m")) %>%  left_join(obra_georef, by = "id", x.all = TRUE) %>%
+    mutate(mes_ano = format(data_cadastro,"%Y-%m")) %>%  left_join(obra_georef, by = c("id" = "fk_obra"), x.all = TRUE) %>%
     group_by(mes_ano) %>%
     summarise(n_obras = n(),
               n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
@@ -404,8 +403,91 @@ datatable(tabela_obras_municipio, extensions = c('Buttons', 'Responsive'),
               )) %>%
     formatPercentage("Georreferenciadas", 2)
 
-
 ```
 
 Custo de obras
 =====================================================
+
+Row
+-------------------------------------------------------------
+
+### Resumo dos Custos por Município
+
+```{r}
+
+lat.lon <- read_delim("~/Documents/obras-pb/analysis/dados/cidades.csv", 
+    ";", escape_double = FALSE, trim_ws = TRUE) %>% filter(uf == "PB")
+
+municipios.pb <- municipios.pb %>% left_join(lat.lon, by = c(`Nome.do.Município` = "municipio"))
+
+tabela_gastos_municipio <- obras.completo %>%
+    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
+    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
+    group_by(`Municipio / Estado` = `nome`) %>%
+    summarise(
+        `Média de Custo` = mean(valor_obra, na.rm = TRUE),
+        `Obras cadastradas` = n(),
+        `Média de Custo por Habitante` = mean(valor_obra, na.rm = TRUE)/ max(`População.estimada...pessoas`, na.rm = TRUE)
+    ) %>% arrange(desc(`Média de Custo`))
+
+datatable(tabela_gastos_municipio, extensions = c('Buttons', 'Responsive'),
+          options = list(
+              dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
+              )) %>% formatCurrency(2,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(4,"R$",mark = ".", dec.mark = ",")
+
+```
+
+# Row
+-------------------------------------------------------------
+
+```{r}
+#tabela_gastos_municipio <- obras.completo %>%
+#    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
+#    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
+#    group_by(`Municipio / Estado` = `nome`) %>%
+#    summarise(
+#        media_custo = mean(valor_obra, na.rm = TRUE),
+#        n_obras = n(),
+#        custo_habitante = mean(valor_obra, na.rm = TRUE)/ max(`População.estimada...pessoas`, na.rm = TRUE),
+#        codigo_ibge = max(codigo_ibge)
+#    ) %>% arrange(desc(media_custo))
+
+
+#mapa_paraiba@data <- mapa_paraiba@data %>%
+#    left_join(tabela_gastos_municipio,
+#              by = c("GEOCODIG_M" = "codigo_ibge"))
+
+        
+#mapa_paraiba$media_custo[is.na(mapa_paraiba$media_custo)]<-0;
+
+plot(mapa_paraiba, col="lightgrey")
+
+```
+
+Row
+-------------------------------------------------------------
+
+### Resumo dos Custos por Obra
+
+```{r}
+
+tabela_gastos_obras <- obras.completo %>%
+    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
+    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
+    left_join(tipos.das.obras, by=c("fk_tipo_obra" = "id")) %>% 
+    mutate(
+        `Descrição` = descricao_sucinta_obra,
+        `Custo da Obra` = valor_obra,
+        `Custo Efetivo por Dimensão` = valor_obra/dimensao,
+        `Unidade de Medida` = unidadeMedida,
+        `Municipio / Estado` = `Nome.do.Município`
+    ) %>% select(`Descrição`,`Custo da Obra`,`Custo Efetivo por Dimensão`,`Unidade de Medida`,`Municipio / Estado`) %>% arrange(desc(`Custo da Obra`))
+
+tabela_gastos_obras_1000 <- top_n(tabela_gastos_obras, 1000, `Custo da Obra`) %>% arrange(desc(`Custo da Obra`))
+
+datatable(tabela_gastos_obras_1000, extensions = c('Buttons', 'Responsive'),
+          options = list(
+              dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
+              )) %>% formatCurrency(2,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(3,"R$",mark = ".", dec.mark = ",")
+
+```
