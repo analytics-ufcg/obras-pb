@@ -119,19 +119,21 @@ municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M,
                          lat = coordinates(mapa_paraiba)[,2], 
                          lon = coordinates(mapa_paraiba)[,1])
 
-obras.98 <- get.georreferencia.inputada(obra, localidade, tipos.das.obras, municipios,
-                                          obra.georref.centroide.sumarizado, 1998) %>% 
-    filter(codigo_ibge != 0)
+
 
 min_zoom_date <- as.Date("2018-01-01", "%Y-%m-%d")
 max_zoom_date <- max(evolucao$data_cadastro, na.rm = TRUE)
-min_date <- as.Date("1998-01-01", "%Y-%m-%d")
+min_date <- as.Date("2012-01-01", "%Y-%m-%d")
 
-obra_georef <- acompanhamento %>%
+acompanhamento <- acompanhamento %>% filter(data_cadastro >= min_date)
+
+obra_georef <- acompanhamento %>% filter(data_cadastro >= min_date) %>%
     group_by(fk_obra) %>%
     summarise(tem_georeferenciamento = any(tipo_georeferenciamento != 0))
 
-obras.completo <- obra %>% left_join(evolucao, by=c("id" = "fk_obra"), all.x = TRUE)
+obras.completo <- obra %>% left_join(evolucao, by=c("id" = "fk_obra"), all.x = TRUE) %>% filter(data_cadastro >= min_date & data_inicio_obra >= min_date & !cancelled.x)
+
+
 
 cores <- c('#fdcea0','#fb8d3d','#f05542','#d54b04','#7f2704','#34485c')
 
@@ -147,8 +149,7 @@ Row
 ### Obras Cadastradas
 
 ```{r}
-n_obras <- obra %>%
-    filter(!cancelled) %>%
+n_obras <- obras.completo %>%
     nrow()
 
 valueBox(n_obras, icon = "fas fa-building")
@@ -157,9 +158,11 @@ valueBox(n_obras, icon = "fas fa-building")
 ### Obras em Andamento
 
 ```{r}
-n_ativas <- evolucao %>%
-    filter(andamento == 1, !is.na(data_inicio_obra), is.na(data_conclusao_obra)) %>%
+
+n_ativas <- obras.completo %>%
+    filter(andamento == 1, !is.na(data_inicio_obra), is.na(data_conclusao_obra), is.na(data_recebimento_obra)) %>%
     nrow()
+
 perc_ativas <- round(100 * n_ativas / n_obras, 2)
 
 #valueBox(n_ativas, color = "warning")
@@ -173,7 +176,8 @@ gauge(n_ativas, min = 0, max = n_obras,
 ### Obras Finalizadas
 
 ```{r}
-n_final<- evolucao %>%
+
+n_final<- obras.completo %>%
     filter(!is.na(data_conclusao_obra), !is.na(data_recebimento_obra)) %>%
     nrow()
 perc_final <- round(100 * n_final / n_obras, 2)
@@ -290,8 +294,6 @@ Row
 
 ```{r acompanhamento tempo}
 
-colnames(obra_georef) <- c("fk_obra","tem_georeferenciamento")
-
 acompanhamento_tempo <- acompanhamento %>%
     select(fk_obra, data_cadastro, tipo_georeferenciamento) %>%
     filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
@@ -371,19 +373,6 @@ Row
 ### Resumo de Obras Cadastradas por Município
 
 ```{r}
-tabela_obras <- acompanhamento %>%
-    select(fk_obra, data_cadastro, tipo_georeferenciamento) %>%
-    filter(!is.na(data_cadastro), data_cadastro > min_date) %>%
-    collect(n = Inf) %>%
-    left_join(obra_georef, by = "fk_obra") %>%
-    group_by(data_cadastro) %>%
-    summarise(n_obras = n(),
-              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
-              n_nao_georeferenciadas = n() - n_georeferenciadas) %>%
-    mutate(n_obras = cumsum(n_obras),
-           n_georeferenciadas = cumsum(n_georeferenciadas),
-           n_nao_georeferenciadas = cumsum(n_nao_georeferenciadas))
-
 
 tabela_obras_municipio <- obra %>%
     left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id")) %>%
@@ -421,13 +410,13 @@ tabela_gastos_municipio <- obras.completo %>%
     left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
     group_by(`Municipio / Estado` = `nome`) %>%
     summarise(
-        media_custo = mean(valor_obra, na.rm = TRUE),
-        n_obras = n(),
-        custo_habitante = mean(valor_obra, na.rm = TRUE)/ max(`População.estimada...pessoas`, na.rm = TRUE),
-        codigo_ibge = max(codigo_ibge)
-    ) %>% arrange(desc(media_custo))
-
-
+         custo_total = sum(valor_obra, na.rm = TRUE),
+        `Média de Custo` = mean(valor_obra, na.rm = TRUE),
+         n_obras = n(),
+        `População Estimada` = max(`População.estimada...pessoas`, na.rm = TRUE),
+         custo_habitante = mean(valor_obra, na.rm = TRUE)/ max(`População.estimada...pessoas`, na.rm = TRUE),
+         codigo_ibge = max(codigo_ibge)
+    ) %>% arrange(desc(custo_total))
         
 mapa_paraiba_quantidade_obras <- mapa_paraiba
 
@@ -435,12 +424,11 @@ mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
     left_join(tabela_gastos_municipio,
               by = c("GEOCODIG_M" = "codigo_ibge"))
 
-bins <- c(0, 1000, 10000, 100000, 300000, 500000, 1000000, 4000000, 6000000, Inf)
-pal <- colorBin("YlOrRd", domain = mapa_paraiba_quantidade_obras$media_custo, bins = bins)
+pal <- colorQuantile("YlOrRd", mapa_paraiba_quantidade_obras$custo_total, n = 7)
 
 labels <- sprintf(
-  "<strong>%s</strong><br/>Gasto Médio em Reais: %g </sup>",
-  mapa_paraiba_quantidade_obras$Nome_Munic, mapa_paraiba_quantidade_obras$media_custo
+  "<strong>%s</strong><br/>Gasto Total em Reais: %g </sup>",
+  mapa_paraiba_quantidade_obras$Nome_Munic, mapa_paraiba_quantidade_obras$custo_total
 ) %>% lapply(htmltools::HTML)
 
 leaflet(mapa_paraiba_quantidade_obras) %>%
@@ -449,7 +437,7 @@ leaflet(mapa_paraiba_quantidade_obras) %>%
     id = "mapbox.light",
     accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) %>%
   addPolygons(
-    fillColor = ~pal(media_custo),
+    fillColor = ~pal(custo_total),
     weight = 2,
     opacity = 1,
     color = "white",
@@ -466,7 +454,7 @@ leaflet(mapa_paraiba_quantidade_obras) %>%
       style = list("font-weight" = "normal", padding = "3px 8px"),
       textsize = "15px",
       direction = "auto")) %>%
-  addLegend(pal = pal, values = ~media_custo, opacity = 0.7, title = NULL,
+  addLegend(pal = pal, values = ~custo_total, opacity = 0.7, title = NULL,
     position = "bottomright")
 
 ```
@@ -478,25 +466,15 @@ Row
 
 ```{r}
 
-lat.lon <- read_delim("~/Documents/obras-pb/analysis/dados/cidades.csv", 
-    ";", escape_double = FALSE, trim_ws = TRUE) %>% filter(uf == "PB")
+colnames(tabela_gastos_municipio) = c("Município / Estado", "Custo Total", "Média de Custo", "Obras Cadastradas", "População Estimada", "Média de Custo por Habitante", "Código IBGE")
 
-municipios.pb <- municipios.pb %>% left_join(lat.lon, by = c(`Nome.do.Município` = "municipio"))
-
-tabela_gastos_municipio <- obras.completo %>%
-    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
-    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
-    group_by(`Municipio / Estado` = `nome`) %>%
-    summarise(
-        `Média de Custo` = mean(valor_obra, na.rm = TRUE),
-        `Obras cadastradas` = n(),
-        `Média de Custo por Habitante` = mean(valor_obra, na.rm = TRUE)/ max(`População.estimada...pessoas`, na.rm = TRUE)
-    ) %>% arrange(desc(`Média de Custo`))
+tabela_gastos_municipio <- tabela_gastos_municipio %>% select("Município / Estado", "Custo Total", "Média de Custo", "Obras Cadastradas", "População Estimada", "Média de Custo por Habitante")
 
 datatable(tabela_gastos_municipio, extensions = c('Buttons', 'Responsive'),
           options = list(
               dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
-              )) %>% formatCurrency(2,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(4,"R$",mark = ".", dec.mark = ",")
+              )) %>% formatCurrency(2,"R$",mark = ".", dec.mark = ",") %>% 
+  formatCurrency(3,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(6,"R$",mark = ".", dec.mark = ",")
 
 ```
 
@@ -508,26 +486,8 @@ Row
 ```{r}
 library(leaflet)
 
-tabela_gastos_municipio <- obras.completo %>%
-    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
-    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
-    group_by(`Municipio / Estado` = `nome`) %>%
-    summarise(
-        media_custo = mean(valor_obra, na.rm = TRUE),
-        n_obras = n(),
-        custo_habitante = mean(valor_obra, na.rm = TRUE)/ max(`População.estimada...pessoas`, na.rm = TRUE),
-        codigo_ibge = max(codigo_ibge)
-    ) %>% arrange(desc(media_custo))
 
-bins <- c(0, 1, 10, 100, 1000, Inf)
-        
-mapa_paraiba_quantidade_obras <- mapa_paraiba
-
-mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
-    left_join(tabela_gastos_municipio,
-              by = c("GEOCODIG_M" = "codigo_ibge"))
-
-pal <- colorBin("YlOrRd", domain = mapa_paraiba_quantidade_obras$custo_habitante, bins = bins)
+pal <- colorQuantile("YlOrRd", mapa_paraiba_quantidade_obras$custo_habitante, n = 7)
 
 labels <- sprintf(
   "<strong>%s</strong><br/>Gasto Médio por Habitante em Reais: %g </sup>",
@@ -557,7 +517,7 @@ leaflet(mapa_paraiba_quantidade_obras) %>%
       style = list("font-weight" = "normal", padding = "3px 8px"),
       textsize = "15px",
       direction = "auto")) %>%
-  addLegend(pal = pal, values = ~media_custo, opacity = 0.7, title = NULL,
+  addLegend(pal = pal, values = ~custo_habitante, opacity = 0.7, title = NULL,
     position = "bottomright")
 
 ```
