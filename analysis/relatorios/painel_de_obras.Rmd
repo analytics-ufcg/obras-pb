@@ -397,7 +397,52 @@ datatable(tabela_obras_municipio, extensions = c('Buttons', 'Responsive'),
 Custo de obras
 =====================================================
 
-# Row
+Row
+-------------------------------------------------------------
+
+### Foi o Total Gasto em Obras (A partir de 2012)
+
+```{r}
+
+valor_obras <- sum(obras.completo$valor_obra,na.rm = TRUE)
+
+valueBox(valor_obras, icon = "far fa-money-bill-alt")
+
+```
+
+### Investimento em Obras em Andamento
+
+```{r}
+
+ativas <- obras.completo %>%
+    filter(andamento == 1, !is.na(data_inicio_obra), is.na(data_conclusao_obra), is.na(data_recebimento_obra)) 
+
+valor_ativas <- sum(ativas$valor_obra)
+
+perc_ativas <- round(100 * valor_ativas / valor_obras, 2)
+
+gauge(perc_ativas, min = 0, max = 100, symbol = "%",
+      gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
+
+```
+
+### Investimento em Obras Finalizadas
+
+```{r}
+
+finalizadas <- obras.completo %>%
+    filter(!is.na(data_inicio_obra), !is.na(data_conclusao_obra), !is.na(data_recebimento_obra)) 
+
+valor_finalizadas <- sum(finalizadas$valor_obra)
+
+perc_finalizadas <- round(100 * valor_finalizadas / valor_obras, 2)
+
+gauge(perc_finalizadas, min = 0, max = 100, symbol = "%",
+      gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
+
+```
+
+Row
 -------------------------------------------------------------
 
 ### Mapa de Custos Por Município
@@ -458,6 +503,85 @@ leaflet(mapa_paraiba_quantidade_obras) %>%
     position = "bottomright")
 
 ```
+
+Row
+-------------------------------------------------------------
+
+### Crescimento dos Custos
+
+```{r}
+
+# Criando data frame de evolução do quadro do cadastro de obras de acordo com o tempo
+custo_tempo <- obras.completo %>%
+    select(id, data_cadastro, valor_obra, data_inicio_obra) %>%
+    filter(!is.na(data_inicio_obra), data_inicio_obra >= min_date) %>%
+    collect(n = Inf) %>%
+    group_by(data_inicio_obra) %>%
+    summarise(custo_total = sum(valor_obra, na.rm = TRUE)) %>%
+    mutate(custo_total = cumsum(custo_total))
+
+custo_tempo <- na.omit(custo_tempo)
+
+custo_tempo_xts <- xts(select(custo_tempo, 2), custo_tempo$data_inicio_obra)
+
+dygraph(custo_tempo_xts) %>%
+    dySeries("custo_total", label = "Total Gasto em Obras", color='#34485c') %>%
+    dyAxis("x", label = "Período de Tempo") %>%
+    dyAxis("y", label = "Valor Gasto em Obras (acumulado)") %>%
+    dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+
+
+```
+
+### Gastos Anuais
+
+```{r}
+custos_anuais <- obras.completo %>% filter(!is.na(data_cadastro), data_cadastro >= min_date) %>% 
+    mutate(ano = format(data_inicio_obra,"%Y")) %>%  left_join(obra_georef, by = c("id" = "fk_obra"), x.all = TRUE) %>%
+    group_by(ano) %>%
+    summarise(n_obras = n(),
+              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
+              n_nao_georeferenciadas = n() - n_georeferenciadas,
+              custo_total = sum(valor_obra)) 
+
+custos_anuais <- custos_anuais %>% mutate(ano = paste(ano,"-1-1",sep = "",collapse = NULL)) %>% 
+    mutate(ano = as.Date(ano,"%Y-%m-%d"))
+
+custos_anuais_xts <- xts(select(custos_anuais, 5), custos_anuais$ano)
+
+min_zoom_date <- as.Date("2012-01-01", "%Y-%m-%d")
+
+dygraph(custos_anuais_xts) %>%
+    dySeries("custo_total", label = "Total Gasto", color = '#f05542') %>%
+    dyAxis("x", label = "Ano") %>%
+    dyAxis("y", label = "Quantidade de Gastos Anuais") %>%
+    dyOptions(useDataTimezone = TRUE, fillGraph = TRUE, stackedGraph = TRUE, plotter = 
+              "function barChartPlotter(e) {
+                var ctx = e.drawingContext;
+                var points = e.points;
+                var y_bottom = e.dygraph.toDomYCoord(0);  // see     http://dygraphs.com/jsdoc/symbols/Dygraph.html#toDomYCoord
+
+                // This should really be based on the minimum gap
+                var bar_width = 2/3 * (points[1].canvasx - points[0].canvasx);
+                ctx.fillStyle = e.color;
+
+                // Do the actual plotting.
+                for (var i = 0; i < points.length; i++) {
+                  var p = points[i];
+                  var center_x = p.canvasx;  // center of the bar
+
+                  ctx.fillRect(center_x - bar_width / 2, p.canvasy,
+                               bar_width, y_bottom - p.canvasy);
+                  ctx.strokeRect(center_x - bar_width / 2, p.canvasy,
+                                 bar_width, y_bottom - p.canvasy);
+                }
+              }") %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+```
+
 
 Row
 -------------------------------------------------------------
