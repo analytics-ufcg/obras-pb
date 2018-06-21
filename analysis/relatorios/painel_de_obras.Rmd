@@ -538,23 +538,27 @@ dygraph(custo_tempo_xts) %>%
 ### Gastos Anuais
 
 ```{r}
-custos_anuais <- obras.completo %>% filter(!is.na(data_cadastro), data_cadastro >= min_date) %>% 
-    mutate(ano = format(data_inicio_obra,"%Y")) %>%  left_join(obra_georef, by = c("id" = "fk_obra"), x.all = TRUE) %>%
-    group_by(ano) %>%
-    summarise(n_obras = n(),
-              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
-              n_nao_georeferenciadas = n() - n_georeferenciadas,
-              custo_total = sum(valor_obra)) 
+localidade_estado <- obras.completo %>% filter(!is.na(data_cadastro), data_cadastro >= min_date) %>% 
+    left_join(localidade, by= c("fk_localidade" = "id")) %>% group_by(id) %>% 
+    summarise(obra_estadual = (nome == "Paraíba (ESTADO)"), valor_obra = valor_obra, data_inicio_obra = data_inicio_obra)
 
-custos_anuais <- custos_anuais %>% mutate(ano = paste(ano,"-1-1",sep = "",collapse = NULL)) %>% 
-    mutate(ano = as.Date(ano,"%Y-%m-%d"))
+custos_anuais <- localidade_estado %>% filter(!is.na(data_inicio_obra), data_inicio_obra >= min_date) %>% 
+    mutate(ano = format(data_inicio_obra,"%Y")) %>% mutate(ano = paste(ano,"-1-1",sep = "",collapse = NULL)) %>% 
+    mutate(ano = as.Date(ano,"%Y-%m-%d")) %>% 
+    group_by(ano, obra_estadual) %>%
+    summarise(custo_total = sum(valor_obra)) 
 
-custos_anuais_xts <- xts(select(custos_anuais, 5), custos_anuais$ano)
+custos_anuais <- custos_anuais %>% filter(obra_estadual == FALSE) %>% mutate(custo_municipal = custo_total) %>%  left_join((custos_anuais %>% filter(obra_estadual == TRUE) %>% mutate(custo_estadual = custo_total)), by = "ano")  %>% select("ano", "custo_municipal", "custo_estadual") %>% ungroup()
+
+custos_anuais$custo_estadual[is.na(custos_anuais$custo_estadual)] <- 0;
+
+custos_anuais_xts <- xts(select(custos_anuais, 2, 3), custos_anuais$ano)
 
 min_zoom_date <- as.Date("2012-01-01", "%Y-%m-%d")
 
 dygraph(custos_anuais_xts) %>%
-    dySeries("custo_total", label = "Total Gasto", color = '#f05542') %>%
+    dySeries("custo_estadual", label = "Total Gasto Pelo Estado", color = '#34485c') %>%
+    dySeries("custo_municipal", label = "Total Gasto Pelos Municípios", color = '#f05542') %>%
     dyAxis("x", label = "Ano") %>%
     dyAxis("y", label = "Quantidade de Gastos Anuais") %>%
     dyOptions(useDataTimezone = TRUE, fillGraph = TRUE, stackedGraph = TRUE, plotter = 
