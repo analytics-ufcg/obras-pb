@@ -10,7 +10,7 @@ output:
 <style type="text/css">
 
 .chart-title {  /* chart_title  */
-   font-size: 30px;
+   font-size: 25px;
    text-align: center
 }
 .value-box .icon {
@@ -795,6 +795,78 @@ dygraph(evolucao_tipos_vxts) %>%
     dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
 
 
+```
+
+### Custos Anuais Por Tipo de Obra
+
+```{r}
+
+cria.tabela.evolucao <- function(tab1, tipo_obra, nome){
+    evolucao_tipos <- tab1 %>%
+        select(id, data_cadastro, fk_tipo_obra, valor_obra) %>%
+        filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
+        collect(n = Inf) %>%
+        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
+        filter(fk_tipo_obra %in% c(tipo_obra)) %>%
+        group_by(data_cadastro) %>%
+        summarise(n_obras = n(), valor_total = sum(valor_obra)) %>% 
+        mutate(nome = nome)
+    
+        return(evolucao_tipos)
+}
+
+evolucao_tipos <- cria.tabela.evolucao(obras.completo, 24, "OUTRAS")
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 10, "GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 7, "ESCOLA"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 15, "PAVIMENTAÇÃO PARALEPÍPEDO"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 19, "POSTO DE SAÚDE"))
+
+evolucao_tipos_v <- spread((evolucao_tipos %>% select("nome","valor_total","data_cadastro")), nome, valor_total) %>% ungroup()
+
+
+evolucao_tipos_v<- substitui.na(evolucao_tipos_v,2)
+evolucao_tipos_v<- substitui.na(evolucao_tipos_v,3)
+evolucao_tipos_v<- substitui.na(evolucao_tipos_v,4)
+evolucao_tipos_v<- substitui.na(evolucao_tipos_v,5)
+evolucao_tipos_v<- substitui.na(evolucao_tipos_v,6)
+if (FALSE){
+custos_anuais_tipos <- evolucao_tipos_v %>% 
+    mutate(ano = format(data_inicio_obra,"%Y")) %>% mutate(ano = paste(ano,"-1-1",sep = "",collapse = NULL)) %>% 
+    mutate(ano = as.Date(ano,"%Y-%m-%d")) %>% 
+    group_by(ano, obra_estadual) %>%
+    summarise(custo_total = sum(valor_obra)) 
+
+custos_anuais <- custos_anuais %>% filter(obra_estadual == FALSE) %>% mutate(custo_municipal = custo_total) %>%  left_join((custos_anuais %>% filter(obra_estadual == TRUE) %>% mutate(custo_estadual = custo_total)), by = "ano")  %>% select("ano", "custo_municipal", "custo_estadual") %>% ungroup()
+
+dygraph(custos_anuais_xts) %>%
+    dySeries("custo_estadual", label = "Total Gasto Pelo Estado", color = '#34485c') %>%
+    dySeries("custo_municipal", label = "Total Gasto Pelos Municípios", color = '#f05542') %>%
+    dyAxis("x", label = "Ano") %>%
+    dyAxis("y", label = "Quantidade de Gastos Anuais") %>%
+    dyOptions(useDataTimezone = TRUE, fillGraph = TRUE, stackedGraph = TRUE, plotter = 
+              "function barChartPlotter(e) {
+                var ctx = e.drawingContext;
+                var points = e.points;
+                var y_bottom = e.dygraph.toDomYCoord(0);  // see     http://dygraphs.com/jsdoc/symbols/Dygraph.html#toDomYCoord
+
+                // This should really be based on the minimum gap
+                var bar_width = 2/3 * (points[1].canvasx - points[0].canvasx);
+                ctx.fillStyle = e.color;
+
+                // Do the actual plotting.
+                for (var i = 0; i < points.length; i++) {
+                  var p = points[i];
+                  var center_x = p.canvasx;  // center of the bar
+
+                  ctx.fillRect(center_x - bar_width / 2, p.canvasy,
+                               bar_width, y_bottom - p.canvasy);
+                  ctx.strokeRect(center_x - bar_width / 2, p.canvasy,
+                                 bar_width, y_bottom - p.canvasy);
+                }
+              }") %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+}
 ```
 
 Row
