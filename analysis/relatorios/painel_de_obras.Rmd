@@ -135,7 +135,7 @@ obras.completo <- obra %>% left_join(evolucao, by=c("id" = "fk_obra"), all.x = T
 
 
 
-cores <- c('#fdcea0','#fb8d3d','#f05542','#d54b04','#7f2704','#34485c')
+
 
 ```
 
@@ -675,5 +675,113 @@ datatable(tabela_gastos_obras_1000, extensions = c('Buttons', 'Responsive'),
           options = list(
               dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
               )) %>% formatCurrency(2,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(3,"R$",mark = ".", dec.mark = ",")
+
+```
+
+
+Tipos de Obras
+=============================================================
+
+Row
+-------------------------------------------------------------
+
+### Ranking dos Tipos de Obras 
+
+```{r}
+tipo.ranking <- obras.completo %>% select(id, data_cadastro, fk_tipo_obra, valor_obra) %>%
+        filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
+        collect(n = Inf) %>%
+        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
+        group_by(nome) %>% summarise(`Obras cadastradas` = n(), `Total Gasto` = sum(valor_obra)) %>%  
+        arrange(desc(`Obras cadastradas`))
+
+colnames(tipo.ranking) <- c("Tipo da Obra", "Obras Cadastradas", "Total Gasto")
+
+datatable(tipo.ranking, extensions = c('Buttons', 'Responsive'),
+          options = list(
+              dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
+              )) %>% formatCurrency(3,"R$",mark = ".", dec.mark = ",") 
+```
+
+
+Row
+-------------------------------------------------------------
+
+### Crescimento do Cadastro de Cada Tipo de Obra
+
+```{r}
+
+cria.tabela.evolucao <- function(tab1, tipo_obra, nome){
+    evolucao_tipos <- tab1 %>%
+        select(id, data_cadastro, fk_tipo_obra, valor_obra) %>%
+        filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
+        collect(n = Inf) %>%
+        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
+        filter(fk_tipo_obra %in% c(tipo_obra)) %>%
+        group_by(data_cadastro) %>%
+        summarise(n_obras = n(), valor_total = sum(valor_obra)) %>%
+        mutate(n_obras = cumsum(n_obras), nome = nome, valor_total = cumsum(valor_total))
+    
+        return(evolucao_tipos)
+}
+
+evolucao_tipos <- cria.tabela.evolucao(obras.completo, 24, "OUTRAS")
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 10, "GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 7, "ESCOLA"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 15, "PAVIMENTAÇÃO PARALEPÍPEDO"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 19, "POSTO DE SAÚDE"))
+
+evolucao_tipos_n <- spread((evolucao_tipos %>% select("nome","n_obras","data_cadastro")), nome, n_obras) %>% ungroup()
+
+substitui.na <- function(tab, col){
+    for (i in 1:nrow(tab)) {
+    if(is.na(tab[i,col])){
+        tab[i,col] <- tab[i-1, col] 
+    }
+    }
+    return(tab)
+}
+
+evolucao_tipos_n<- substitui.na(evolucao_tipos_n,2)
+evolucao_tipos_n<- substitui.na(evolucao_tipos_n,3)
+evolucao_tipos_n<- substitui.na(evolucao_tipos_n,4)
+evolucao_tipos_n<- substitui.na(evolucao_tipos_n,5)
+evolucao_tipos_n<- substitui.na(evolucao_tipos_n,6)
+
+evolucao_tipos_nxts <- xts(select(evolucao_tipos_n,2,3,4,5,6), evolucao_tipos_n$data_cadastro)
+
+cores <- c('#7f2704','#fb8d3d','#34485c','#d54b04','#f05542','#34485c')
+
+dygraph(evolucao_tipos_nxts) %>%
+    dyAxis("x", label = "Período de Tempo") %>%
+    dyAxis("y", label = "Quantidade de obras (acumulada)") %>%
+    dyOptions(drawPoints = TRUE, colors = cores) %>%
+    dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
+
+
+```
+
+### Crescimento dos Custos de Cada Tipo de Obra
+
+```{r}
+evolucao_tipos_v <- spread((evolucao_tipos %>% select("nome","valor_total","data_cadastro")), nome, valor_total) %>% ungroup()
+
+
+evolucao_tipos_v<- substitui.na(evolucao_tipos_v,2)
+evolucao_tipos_v<- substitui.na(evolucao_tipos_v,3)
+evolucao_tipos_v<- substitui.na(evolucao_tipos_v,4)
+evolucao_tipos_v<- substitui.na(evolucao_tipos_v,5)
+evolucao_tipos_v<- substitui.na(evolucao_tipos_v,6)
+
+evolucao_tipos_vxts <- xts(select(evolucao_tipos_v,2,3,4,5,6), evolucao_tipos_v$data_cadastro)
+
+cores <- c('#7f2704','#fb8d3d','#34485c','#d54b04','#f05542','#34485c')
+
+dygraph(evolucao_tipos_vxts) %>%
+    dyAxis("x", label = "Período de Tempo") %>%
+    dyAxis("y", label = "Valor Das Obras (Acumulado)") %>%
+    dyOptions(drawPoints = TRUE, colors = cores) %>%
+    dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
+
 
 ```
