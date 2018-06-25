@@ -685,24 +685,35 @@ Tipos de Obras
 Row
 -------------------------------------------------------------
 
-### Ranking dos Tipos de Obras 
+### Investimento em Escolas
 
 ```{r}
-tipo.ranking <- obras.completo %>% select(id, data_cadastro, fk_tipo_obra, valor_obra) %>%
-        filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
-        collect(n = Inf) %>%
-        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
-        group_by(nome) %>% summarise(`Obras cadastradas` = n(), `Total Gasto` = sum(valor_obra)) %>%  
-        arrange(desc(`Obras cadastradas`))
+perc_escola <- obras.completo %>%  left_join(tipos.das.obras, by= c("fk_tipo_obra" = "id")) %>% filter(fk_tipo_obra == 7) 
+perc_escola <- round((sum(perc_escola$valor_obra)/ sum(obras.completo$valor_obra)) * 100)
 
-colnames(tipo.ranking) <- c("Tipo da Obra", "Obras Cadastradas", "Total Gasto")
-
-datatable(tipo.ranking, extensions = c('Buttons', 'Responsive'),
-          options = list(
-              dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
-              )) %>% formatCurrency(3,"R$",mark = ".", dec.mark = ",") 
+gauge(perc_escola, min = 0, max = 100, symbol = "%",
+      gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
 ```
 
+### Investimento em Pavimentação
+
+```{r}
+perc_pav<- obras.completo %>%  left_join(tipos.das.obras, by= c("fk_tipo_obra" = "id")) %>% filter(fk_tipo_obra == 14 | fk_tipo_obra == 15 ) 
+perc_pav <- round((sum(perc_pav$valor_obra)/ sum(obras.completo$valor_obra)) * 100)
+
+gauge(perc_pav, min = 0, max = 100, symbol = "%",
+      gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
+```
+
+### Investimento em Postos de Saúde
+
+```{r}
+perc_saude <- obras.completo %>%  left_join(tipos.das.obras, by= c("fk_tipo_obra" = "id")) %>% filter(fk_tipo_obra == 19) 
+perc_saude <- round((sum(perc_saude$valor_obra)/ sum(obras.completo$valor_obra)) * 100)
+
+gauge(perc_saude, min = 0, max = 100, symbol = "%",
+      gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
+```
 
 Row
 -------------------------------------------------------------
@@ -784,4 +795,25 @@ dygraph(evolucao_tipos_vxts) %>%
     dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
 
 
+```
+
+Row
+-------------------------------------------------------------
+
+### Ranking dos Tipos de Obras 
+
+```{r}
+tipo.ranking <- obras.completo %>% select(id, data_cadastro, fk_tipo_obra, valor_obra) %>%
+        filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
+        collect(n = Inf) %>%
+        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
+        group_by(nome) %>% summarise(`Obras cadastradas` = n(), `Total Gasto` = sum(valor_obra)) %>%  
+        arrange(desc(`Obras cadastradas`))
+
+colnames(tipo.ranking) <- c("Tipo da Obra", "Obras Cadastradas", "Total Gasto")
+
+datatable(tipo.ranking, extensions = c('Buttons', 'Responsive'),
+          options = list(
+              dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
+              )) %>% formatCurrency(3,"R$",mark = ".", dec.mark = ",") 
 ```
