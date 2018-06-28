@@ -823,52 +823,26 @@ for (i in c(2:11)) {
 
 evolucao_tipos_a <- evolucao_tipos_a[c("ano","ESCOLA", "PAVIMENTAÇÃO PARALEPÍPEDO", "POSTO DE SAÚDE","GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES","PRAÇA","CRECHE","PSF","ABASTECIMENTO DE ÁGUA","REDE COLETORA DE ESGOTO","UNIDADE HABITACIONAL")]
 
-evolucao_tipos_axts <- xts(select(evolucao_tipos_a,2,3,4,5,6,7,8,9,10,11), evolucao_tipos_a$ano)
 
 
-dygraph(evolucao_tipos_axts) %>%
-
-    dyAxis("x", label = "Ano") %>%
-    dyAxis("y", label = "Quantidade de Gastos Anuais") %>%
-    dyOptions(useDataTimezone = TRUE, colors = cores, fillGraph = TRUE, stackedGraph = TRUE, plotter = 
-              "function barChartPlotter(e) {
-                var ctx = e.drawingContext;
-                var points = e.points;
-                var y_bottom = e.dygraph.toDomYCoord(0);  // see     http://dygraphs.com/jsdoc/symbols/Dygraph.html#toDomYCoord
-
-                // This should really be based on the minimum gap
-                var bar_width = 2/3 * (points[1].canvasx - points[0].canvasx);
-                ctx.fillStyle = e.color;
-
-                // Do the actual plotting.
-                for (var i = 0; i < points.length; i++) {
-                  var p = points[i];
-                  var center_x = p.canvasx;  // center of the bar
-
-                  ctx.fillRect(center_x - bar_width / 2, p.canvasy,
-                               bar_width, y_bottom - p.canvasy);
-                  ctx.strokeRect(center_x - bar_width / 2, p.canvasy,
-                                 bar_width, y_bottom - p.canvasy);
-                }
-              }") %>%
-    dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
-
-
+p <- plot_ly(evolucao_tipos, x =~ano, y = ~custo_total, color = ~nome, type = 'bar', orientation = 'v'
+        ) %>%
+  layout(barmode = 'stack',
+         xaxis = list(title = ""),
+         yaxis = list(title =""),showlegend = FALSE)
+p
 ```
 
-### Investimento Decidado a Cada Tipo de Obra
+### Investimento Dedicado a Cada Tipo de Obra (Desde 2012)
 
 ```{r}
 
 evolucao_tipos_a <- evolucao_tipos %>% group_by(nome) %>% summarise(valor_total = sum(custo_total)) %>% mutate( perc = (valor_total / valor_obras)*100)
 
-p <- plot_ly(evolucao_tipos_a, x =~valor_total , y = ~nome, type = 'bar', orientation = 'h', name = 'SF Zoo',
-        marker = list(color = 'rgba(246, 78, 139, 0.6)',
-                      line = list(color = 'rgba(246, 78, 139, 1.0)',
-                                  width = 3))) %>%
-  layout(barmode = 'stack',
-         xaxis = list(title = ""),
+p <- plot_ly(evolucao_tipos_a, x =~valor_total , y = ~nome, color = ~nome, type = 'bar', orientation = 'h'
+        ) %>% layout(showlegend = FALSE,         xaxis = list(title = ""),
          yaxis = list(title =""))
+  
 p
 ```
 
