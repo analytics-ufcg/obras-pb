@@ -419,9 +419,7 @@ ativas <- obras.completo %>%
 
 valor_ativas <- sum(ativas$valor_obra)
 
-perc_ativas <- round(100 * valor_ativas / valor_obras, 2)
-
-gauge(perc_ativas, min = 0, max = 100, symbol = "%",
+gauge(valor_ativas, min = 0, max = valor_obras,
       gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
 
 ```
@@ -435,9 +433,8 @@ finalizadas <- obras.completo %>%
 
 valor_finalizadas <- sum(finalizadas$valor_obra)
 
-perc_finalizadas <- round(100 * valor_finalizadas / valor_obras, 2)
 
-gauge(perc_finalizadas, min = 0, max = 100, symbol = "%",
+gauge(valor_finalizadas, min = 0, max = valor_obras,
       gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
 
 ```
