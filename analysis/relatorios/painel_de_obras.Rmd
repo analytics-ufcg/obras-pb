@@ -683,106 +683,9 @@ Tipos de Obras
 Row
 -------------------------------------------------------------
 
-### Crescimento do Cadastro de Cada Tipo de Obra
+### Investimento Dedicado a Cada Tipo de Obra (Desde 2012)
 
 ```{r}
-library(RColorBrewer)
-
-cria.tabela.evolucao <- function(tab1, tipo_obra, nome){
-    evolucao_tipos <- tab1 %>%
-        select(id, data_cadastro, fk_tipo_obra, valor_obra) %>%
-        filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
-        collect(n = Inf) %>%
-        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
-        filter(fk_tipo_obra %in% c(tipo_obra)) %>%
-        group_by(data_cadastro) %>%
-        summarise(n_obras = n(), valor_total = sum(valor_obra)) %>%
-        mutate(n_obras = cumsum(n_obras), nome = nome, valor_total = cumsum(valor_total))
-    
-        return(evolucao_tipos)
-}
-
-substitui.na <- function(tab, col){
-    for (i in 1:nrow(tab)) {
-        if(is.na(tab[i,col])){
-            if(i-1 == 0){
-                tab[i,col] <- 0
-            }else{
-                tab[i,col] <- tab[i-1, col]        
-            }
-        }
-    }
-    return(tab)
-}
-
-
-evolucao_tipos <- cria.tabela.evolucao(obras.completo, 20, "PRAÇA")
-evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 10, "GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES"))
-evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 7, "ESCOLA"))
-evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 15, "PAVIMENTAÇÃO PARALEPÍPEDO"))
-evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 19, "POSTO DE SAÚDE"))
-evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 5, "CRECHE"))
-evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 36, "PSF"))
-evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 1, "ABASTECIMENTO DE ÁGUA"))
-evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 22, "REDE COLETORA DE ESGOTO"))
-evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 23, "UNIDADE HABITACIONAL"))
-
-
-evolucao_tipos_n <- spread((evolucao_tipos %>% select("nome","n_obras","data_cadastro")), nome, n_obras) %>% ungroup()
-
-
-for (i in c(2:11)) {
-    evolucao_tipos_n <- substitui.na(evolucao_tipos_n,i) 
-}
-
-
-evolucao_tipos_n <- evolucao_tipos_n[c("data_cadastro","ESCOLA", "PAVIMENTAÇÃO PARALEPÍPEDO", "POSTO DE SAÚDE","GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES","PRAÇA","CRECHE","PSF","ABASTECIMENTO DE ÁGUA","REDE COLETORA DE ESGOTO","UNIDADE HABITACIONAL")]
-
-evolucao_tipos_nxts <- xts(select(evolucao_tipos_n,2,3,4,5,6,7,8,9,10,11), evolucao_tipos_n$data_cadastro)
-
-cores <- colorRampPalette(brewer.pal(9,"YlOrRd"))(13)
-cores <- cores[3:12]
-
-dygraph(evolucao_tipos_nxts) %>%
-    dyAxis("x", label = "Período de Tempo") %>%
-    dyAxis("y", label = "Quantidade de obras (acumulada)") %>%
-    dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE) %>%
-     dyLegend(show = "follow", hideOnMouseOut = TRUE)   %>% 
-    dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
-
-
-```
-
-### Crescimento dos Custos de Cada Tipo de Obra
-
-```{r}
-evolucao_tipos_v <- spread((evolucao_tipos %>% select("nome","valor_total","data_cadastro")), nome, valor_total) %>% ungroup()
-
-evolucao_tipos_v <- evolucao_tipos_v[c("data_cadastro","ESCOLA", "PAVIMENTAÇÃO PARALEPÍPEDO", "POSTO DE SAÚDE","GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES","PRAÇA","CRECHE","PSF","ABASTECIMENTO DE ÁGUA","REDE COLETORA DE ESGOTO","UNIDADE HABITACIONAL")]
-
-for (i in c(2:11)) {
-    evolucao_tipos_v <- substitui.na(evolucao_tipos_v,i) 
-}
-
-evolucao_tipos_vxts <- xts(select(evolucao_tipos_v,2,3,4,5,6,7,8,9,10,11), evolucao_tipos_v$data_cadastro)
-
-dygraph(evolucao_tipos_vxts) %>%
-    dyAxis("x", label = "Período de Tempo") %>%
-    dyAxis("y", label = "Valor Das Obras (Acumulado)") %>%
-    dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE) %>%
-    dyLegend(show = "follow", hideOnMouseOut = TRUE)   %>% 
-    dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
-
-
-```
-
-Row
--------------------------------------------------------------
-
-### Custos Anuais Por Tipo de Obra
-
-```{r}
-
 cria.tabela.evolucao <- function(tab1, tipo_obra, nome){
     evolucao_tipos <- tab1 %>%
         select(id, data_cadastro, fk_tipo_obra, valor_obra, data_inicio_obra) %>%
@@ -804,6 +707,24 @@ cria.tabela.evolucao <- function(tab1, tipo_obra, nome){
         return(evolucao_tipo_anual)
 }
 
+substitui.na <- function(tab, col){
+    for (i in 1:nrow(tab)) {
+        if(is.na(tab[i,col])){
+            if(i-1 == 0){
+                tab[i,col] <- 0
+            }else{
+                tab[i,col] <- tab[i-1, col]        
+            }
+        }
+    }
+    return(tab)
+}
+other <- c(1:36)
+remove <- c(20,10,7,15,19,5,36,1,22,23)
+other <- other[! other %in% remove]
+
+cores <-c("#aad3df","#aaabd1","#d790c5","#c54861","#e7523f","#f68d40","#c8983c","#d2966c","#cdb590","#a2a19f","#324558")
+
 evolucao_tipos <- cria.tabela.evolucao(obras.completo, 20, "PRAÇA")
 evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 10, "GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES"))
 evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 7, "ESCOLA"))
@@ -814,37 +735,125 @@ evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 36,
 evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 1, "ABASTECIMENTO DE ÁGUA"))
 evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 22, "REDE COLETORA DE ESGOTO"))
 evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 23, "UNIDADE HABITACIONAL"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, other, "OUTRAS"))
+
+
 
 evolucao_tipos_a <- spread((evolucao_tipos %>% select("nome","custo_total","ano")), nome, custo_total) %>% ungroup()
 
-for (i in c(2:11)) {
+for (i in c(2:12)) {
     evolucao_tipos_a <- substitui.na(evolucao_tipos_a,i) 
 }
 
-evolucao_tipos_a <- evolucao_tipos_a[c("ano","ESCOLA", "PAVIMENTAÇÃO PARALEPÍPEDO", "POSTO DE SAÚDE","GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES","PRAÇA","CRECHE","PSF","ABASTECIMENTO DE ÁGUA","REDE COLETORA DE ESGOTO","UNIDADE HABITACIONAL")]
 
+evolucao_tipos_a <- evolucao_tipos %>% group_by(nome) %>% summarise(valor_total = sum(custo_total)) %>% mutate( perc = (valor_total / valor_obras)*100) %>% arrange(desc(valor_total))
 
+evolucao_tipos_a$perc <- as.numeric(format(round(evolucao_tipos_a$perc, 2), nsmall = 2))
 
-p <- plot_ly(evolucao_tipos, x =~ano, y = ~custo_total, color = ~nome, type = 'bar', orientation = 'v'
-        ) %>%
+p <- plot_ly(evolucao_tipos_a, x =~perc , y = ~nome, color = ~nome, type = 'bar', orientation = 'h', 
+             marker = list(
+                       color = cores)
+        ) %>% layout(showlegend = FALSE,         xaxis = list(title = "% Total de Investimento (Desde 2012)"),
+         yaxis = list(title ="")) 
+  
+p
+```
+
+### Custos Anuais Por Tipo de Obra
+
+```{r}
+
+p <- plot_ly(evolucao_tipos, x =~ano, y = ~custo_total, color = ~nome, type = 'bar', orientation = 'v',colors = "Reds") %>%
   layout(barmode = 'stack',
          xaxis = list(title = ""),
          yaxis = list(title =""),showlegend = FALSE)
 p
 ```
 
-### Investimento Dedicado a Cada Tipo de Obra (Desde 2012)
+Row
+-------------------------------------------------------------
+
+
+### Crescimento do Cadastro de Cada Tipo de Obra
 
 ```{r}
+library(RColorBrewer)
 
-evolucao_tipos_a <- evolucao_tipos %>% group_by(nome) %>% summarise(valor_total = sum(custo_total)) %>% mutate( perc = (valor_total / valor_obras)*100)
+cria.tabela.evolucao <- function(tab1, tipo_obra, nome){
+    evolucao_tipos <- tab1 %>%
+        select(id, data_cadastro, fk_tipo_obra, valor_obra) %>%
+        filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
+        collect(n = Inf) %>%
+        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
+        filter(fk_tipo_obra %in% c(tipo_obra)) %>%
+        group_by(data_cadastro) %>%
+        summarise(n_obras = n(), valor_total = sum(valor_obra)) %>%
+        mutate(n_obras = cumsum(n_obras), nome = nome, valor_total = cumsum(valor_total))
+    
+        return(evolucao_tipos)
+}
 
-p <- plot_ly(evolucao_tipos_a, x =~valor_total , y = ~nome, color = ~nome, type = 'bar', orientation = 'h'
-        ) %>% layout(showlegend = FALSE,         xaxis = list(title = ""),
-         yaxis = list(title =""))
-  
-p
+evolucao_tipos <- cria.tabela.evolucao(obras.completo, 20, "PRAÇA")
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 10, "GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 7, "ESCOLA"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 15, "PAVIMENTAÇÃO PARALEPÍPEDO"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 19, "POSTO DE SAÚDE"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 5, "CRECHE"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 36, "PSF"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 1, "ABASTECIMENTO DE ÁGUA"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 22, "REDE COLETORA DE ESGOTO"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 23, "UNIDADE HABITACIONAL"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, other, "OUTRAS"))
+
+
+evolucao_tipos_n <- spread((evolucao_tipos %>% select("nome","n_obras","data_cadastro")), nome, n_obras) %>% ungroup()
+
+
+for (i in c(2:12)) {
+    evolucao_tipos_n <- substitui.na(evolucao_tipos_n,i) 
+}
+
+
+evolucao_tipos_n <- evolucao_tipos_n[c("data_cadastro","OUTRAS","ESCOLA", "PAVIMENTAÇÃO PARALEPÍPEDO", "POSTO DE SAÚDE","GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES","PRAÇA","CRECHE","PSF","ABASTECIMENTO DE ÁGUA","REDE COLETORA DE ESGOTO","UNIDADE HABITACIONAL")]
+
+evolucao_tipos_nxts <- xts(select(evolucao_tipos_n,2,3,4,5,6,7,8,9,10,11,12), evolucao_tipos_n$data_cadastro)
+
+
+dygraph(evolucao_tipos_nxts) %>%
+    dyAxis("x", label = "Período de Tempo") %>%
+    dyAxis("y", label = "Quantidade de obras (acumulada)") %>%
+    dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE) %>%
+     dyLegend(show = "follow", hideOnMouseOut = TRUE)   %>% 
+    dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
+
+
 ```
+
+### Crescimento dos Custos de Cada Tipo de Obra
+
+```{r}
+evolucao_tipos_v <- spread((evolucao_tipos %>% select("nome","valor_total","data_cadastro")), nome, valor_total) %>% ungroup()
+
+evolucao_tipos_v <- evolucao_tipos_v[c("data_cadastro","ESCOLA", "OUTRAS", "PAVIMENTAÇÃO PARALEPÍPEDO", "POSTO DE SAÚDE","GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES","PRAÇA","CRECHE","PSF","ABASTECIMENTO DE ÁGUA","REDE COLETORA DE ESGOTO","UNIDADE HABITACIONAL")]
+
+for (i in c(2:12)) {
+    evolucao_tipos_v <- substitui.na(evolucao_tipos_v,i) 
+}
+
+evolucao_tipos_vxts <- xts(select(evolucao_tipos_v,2,3,4,5,6,7,8,9,10,11,12), evolucao_tipos_v$data_cadastro)
+
+dygraph(evolucao_tipos_vxts) %>%
+    dyAxis("x", label = "Período de Tempo") %>%
+    dyAxis("y", label = "Valor Das Obras (Acumulado)") %>%
+    dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE) %>%
+    dyLegend(show = "follow", hideOnMouseOut = TRUE)   %>% 
+    dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
+
+
+```
+
+
+
 
 Row
 -------------------------------------------------------------
