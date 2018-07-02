@@ -751,10 +751,8 @@ evolucao_tipos_a <- evolucao_tipos %>% group_by(nome) %>% summarise(valor_total 
 evolucao_tipos_a$perc <- as.numeric(format(round(evolucao_tipos_a$perc, 2), nsmall = 2))
 
 p <- plot_ly(evolucao_tipos_a, x =~perc , y = ~nome, color = ~nome, type = 'bar', orientation = 'h', 
-             marker = list(
-                       color = cores)
-        ) %>% layout(showlegend = FALSE,         xaxis = list(title = "% Total de Investimento (Desde 2012)"),
-         yaxis = list(title ="")) 
+    marker = list(color = cores), text = paste(evolucao_tipos_a$perc,"%",sep=""), hoverinfo= "text") %>% 
+    layout(margin = list(l = 305, r = 50, b = 50, t = 50, pad = 4),showlegend = FALSE, xaxis = list(title = "% Total de Investimento (Desde 2012)"), yaxis = list(title ="")) 
   
 p
 ```
@@ -762,12 +760,18 @@ p
 ### Custos Anuais Por Tipo de Obra
 
 ```{r}
+min_zoom_date <- as.Date("2013-06-01", "%Y-%m-%d")
+max_zoom_date <- as.Date("2018-07-01", "%Y-%m-%d")
 
-p <- plot_ly(evolucao_tipos, x =~ano, y = ~custo_total, color = ~nome, type = 'bar', orientation = 'v',colors = "Reds") %>%
-  layout(barmode = 'stack',
-         xaxis = list(title = ""),
-         yaxis = list(title =""),showlegend = FALSE)
+p <- plot_ly(evolucao_tipos, x =~ano, y = ~custo_total, color = ~nome, type = 'bar', orientation = 'v',colors = cores, 
+             text = paste(paste("R$", evolucao_tipos$custo_total,sep="")," Investido em ", evolucao_tipos$nome, " no ano de ",   format(evolucao_tipos$ano,"%Y"), sep = ""), hoverinfo= "text") %>%
+  layout(barmode = 'group',
+         yaxis = list(title =""),showlegend = FALSE,
+         xaxis = list(title = "Ano",
+      rangeselector = list(),
+      rangeslider = list(type = "date"))) %>% rangeslider(start = min_zoom_date, end = max_zoom_date )
 p
+
 ```
 
 Row
@@ -777,7 +781,6 @@ Row
 ### Crescimento do Cadastro de Cada Tipo de Obra
 
 ```{r}
-library(RColorBrewer)
 
 cria.tabela.evolucao <- function(tab1, tipo_obra, nome){
     evolucao_tipos <- tab1 %>%
