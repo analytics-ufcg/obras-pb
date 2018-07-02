@@ -9,6 +9,9 @@ output:
 ---
 <style type="text/css">
 
+.dygraph-legend {
+  left: 70px !important;
+}
 .chart-title {  /* chart_title  */
    font-size: 25px;
    text-align: center
@@ -822,11 +825,13 @@ evolucao_tipos_n <- evolucao_tipos_n[c("data_cadastro","OUTRAS","ESCOLA", "PAVIM
 evolucao_tipos_nxts <- xts(select(evolucao_tipos_n,2,3,4,5,6,7,8,9,10,11,12), evolucao_tipos_n$data_cadastro)
 
 
+cores <- c("#e7523f","#d790c5","#f68d40","#c8983c","#c54861","#d2966c","#aaabd1","#cdb590","#aad3df","#a2a19f","#324558")
+
 dygraph(evolucao_tipos_nxts) %>%
-    dyAxis("x", label = "Período de Tempo") %>%
+    dyAxis("x", label = "Período de Tempo", drawGrid = FALSE) %>%
     dyAxis("y", label = "Quantidade de obras (acumulada)") %>%
     dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE) %>%
-     dyLegend(show = "follow", hideOnMouseOut = TRUE)   %>% 
+     dyLegend(show = "onmouseover", hideOnMouseOut = TRUE)   %>% 
     dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
 
 
@@ -842,14 +847,16 @@ evolucao_tipos_v <- evolucao_tipos_v[c("data_cadastro","ESCOLA", "OUTRAS", "PAVI
 for (i in c(2:12)) {
     evolucao_tipos_v <- substitui.na(evolucao_tipos_v,i) 
 }
+cores <-
+    c("#d790c5","#e7523f","#f68d40","#c8983c","#c54861","#d2966c","#aaabd1","#cdb590","#aad3df","#a2a19f","#324558")
 
 evolucao_tipos_vxts <- xts(select(evolucao_tipos_v,2,3,4,5,6,7,8,9,10,11,12), evolucao_tipos_v$data_cadastro)
 
 dygraph(evolucao_tipos_vxts) %>%
-    dyAxis("x", label = "Período de Tempo") %>%
+    dyAxis("x", label = "Período de Tempo", drawGrid = FALSE) %>%
     dyAxis("y", label = "Valor Das Obras (Acumulado)") %>%
-    dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE) %>%
-    dyLegend(show = "follow", hideOnMouseOut = TRUE)   %>% 
+    dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE, maxNumberWidth = 20 ) %>%
+    dyLegend(show = "onmouseover", hideOnMouseOut = TRUE)   %>% 
     dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
 
 
