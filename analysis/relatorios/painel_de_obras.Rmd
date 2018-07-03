@@ -423,13 +423,13 @@ Custo de obras
 Row
 -------------------------------------------------------------
 
-### Foi o Total Gasto em Obras (A partir de 2012)
+### Foi o Total Gasto em Obras 
 
 ```{r}
 
 valor_obras <- sum(obras.completo$valor_obra,na.rm = TRUE)
 
-valueBox(valor_obras, icon = "far fa-money-bill-alt")
+valueBox(currency(valor_obras, "R$", big.mark = ".", decimal.mark = ","), icon = "far fa-money-bill-alt")
 
 ```
 
@@ -706,7 +706,7 @@ Tipos de Obras
 Row
 -------------------------------------------------------------
 
-### Investimento Dedicado a Cada Tipo de Obra (Desde 2012)
+### Investimento Dedicado a Cada Tipo de Obra 
 
 ```{r}
 cria.tabela.evolucao <- function(tab1, tipo_obra, nome){
@@ -775,9 +775,10 @@ evolucao_tipos_a$perc <- as.numeric(format(round(evolucao_tipos_a$perc, 2), nsma
 
 p <- plot_ly(evolucao_tipos_a, x =~perc , y = ~nome, color = ~nome, type = 'bar', orientation = 'h', 
     marker = list(color = cores), text = paste(evolucao_tipos_a$perc,"%",sep=""), hoverinfo= "text") %>% 
-    layout(margin = list(l = 305, r = 50, b = 50, t = 50, pad = 4),showlegend = FALSE, xaxis = list(title = "% Total de Investimento (Desde 2012)"), yaxis = list(title ="")) 
+    layout(margin = list(l = 305, r = 50, b = 50, t = 50, pad = 4),showlegend = FALSE, xaxis = list(title = "% Total de Investimento"), yaxis = list(title ="")) 
   
 p
+
 ```
 
 ### Custos Anuais Por Tipo de Obra
@@ -787,7 +788,7 @@ min_zoom_date <- as.Date("2013-06-01", "%Y-%m-%d")
 max_zoom_date <- as.Date("2018-07-01", "%Y-%m-%d")
 
 p <- plot_ly(evolucao_tipos, x =~ano, y = ~custo_total, color = ~nome, type = 'bar', orientation = 'v',colors = cores, 
-             text = paste(paste("R$", evolucao_tipos$custo_total,sep="")," Investido em ", evolucao_tipos$nome, " no ano de ",   format(evolucao_tipos$ano,"%Y"), sep = ""), hoverinfo= "text") %>%
+             text = paste(currency(evolucao_tipos$custo_total, "R$", big.mark = ".", decimal.mark = ",")," gasto em ", evolucao_tipos$nome, " (",   format(evolucao_tipos$ano,"%Y"),")", sep = ""), hoverinfo= "text") %>%
   layout(barmode = 'group',
          yaxis = list(title =""),showlegend = FALSE,
          xaxis = list(title = "Ano",
@@ -847,7 +848,7 @@ evolucao_tipos_nxts <- xts(select(evolucao_tipos_n,2,3,4,5,6,7,8,9,10,11,12), ev
 dygraph(evolucao_tipos_nxts) %>%
     dyAxis("x", label = "Período de Tempo", drawGrid = FALSE) %>%
     dyAxis("y", label = "Quantidade de obras (acumulada)") %>%
-    dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE) %>%
+    dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE,  fillAlpha = 1) %>%
      dyLegend(show = "onmouseover", hideOnMouseOut = TRUE)   %>% 
     dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
 
@@ -868,7 +869,7 @@ evolucao_tipos_vxts <- xts(select(evolucao_tipos_v,2,3,4,5,6,7,8,9,10,11,12), ev
 dygraph(evolucao_tipos_vxts) %>%
     dyAxis("x", label = "Período de Tempo", drawGrid = FALSE) %>%
     dyAxis("y", label = "Valor Das Obras (Acumulado)") %>%
-    dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE, maxNumberWidth = 20 ) %>%
+    dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE, maxNumberWidth = 20,  fillAlpha = 1 ) %>%
     dyLegend(show = "onmouseover", hideOnMouseOut = TRUE)   %>% 
     dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
 
