@@ -144,7 +144,7 @@ municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M,
 
 
 
-min_zoom_date <- as.Date("2018-01-01", "%Y-%m-%d")
+min_zoom_date <- as.Date("2017-06-01", "%Y-%m-%d")
 max_zoom_date <- max(evolucao$data_cadastro, na.rm = TRUE)
 min_date <- as.Date("2012-01-01", "%Y-%m-%d")
 
@@ -278,7 +278,7 @@ evolucao_mensal <- evolucao_mensal %>% mutate(mes_ano = paste(mes_ano,"1",sep = 
 
 evolucao_mensal_xts <- xts(select(evolucao_mensal, 3,4), evolucao_mensal$mes_ano)
 
-min_zoom_date <- as.Date("2017-12-01", "%Y-%m-%d")
+
 
 dygraph(evolucao_mensal_xts) %>%
     dySeries("n_georeferenciadas", label = "Obras Georreferenciadas", color = '#f05542') %>%
@@ -354,8 +354,6 @@ acompanhamento_mensal <- acompanhamento_mensal %>% mutate(mes_ano = paste(mes_an
     mutate(mes_ano = as.Date(mes_ano,"%Y-%m-%d"))
 
 acompanhamento_mensal_xts <- xts(select(acompanhamento_mensal, 3,4), acompanhamento_mensal$mes_ano)
-
-min_zoom_date <- as.Date("2017-12-01", "%Y-%m-%d")
 
 dygraph(acompanhamento_mensal_xts) %>%
     dySeries("n_georeferenciadas", label = "Obras Georreferenciadas", color = '#c44c4e') %>%
@@ -441,10 +439,11 @@ ativas <- obras.completo %>%
     filter(andamento == 1, !is.na(data_inicio_obra), is.na(data_conclusao_obra), is.na(data_recebimento_obra)) 
 
 valor_ativas <- sum(ativas$valor_obra)
+valor_ativas_bi <- round(valor_ativas / 1000000000, 2)
+valor_obras_bi <- round(valor_obras / 1000000000, 2)
 
-gauge(valor_ativas, min = 0, max = valor_obras,
+gauge(valor_ativas_bi, min = 0, max = valor_obras_bi, symbol = " Bi", label = "Bilhões de reais",
       gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
-
 ```
 
 ### Investimento em Obras Finalizadas
@@ -456,8 +455,9 @@ finalizadas <- obras.completo %>%
 
 valor_finalizadas <- sum(finalizadas$valor_obra)
 
+valor_finalizadas_bi <- round(valor_finalizadas / 1000000000, 2)
 
-gauge(valor_finalizadas, min = 0, max = valor_obras,
+gauge(valor_finalizadas_bi, min = 0, max = valor_obras_bi, symbol = " Bi", label = "Bilhões de reais",
       gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
 
 ```
@@ -538,16 +538,16 @@ custo_tempo <- obras.completo %>%
     collect(n = Inf) %>%
     group_by(data_inicio_obra) %>%
     summarise(custo_total = sum(valor_obra, na.rm = TRUE)) %>%
-    mutate(custo_total = cumsum(custo_total))
+    mutate(custo_total = cumsum(custo_total)/1000000)
 
 custo_tempo <- na.omit(custo_tempo)
 
 custo_tempo_xts <- xts(select(custo_tempo, 2), custo_tempo$data_inicio_obra)
 
 dygraph(custo_tempo_xts) %>%
-    dySeries("custo_total", label = "Total Gasto em Obras", color='#34485c') %>%
+    dySeries("custo_total", label = "Total Gasto em Obras (em milhões)", color='#34485c') %>%
     dyAxis("x", label = "Período de Tempo") %>%
-    dyAxis("y", label = "Valor Gasto em Obras (acumulado)") %>%
+    dyAxis("y", label = "Valor Gasto em Obras (em Milhões, Acumulado)") %>%
     dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
     dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
 
@@ -568,19 +568,19 @@ custos_anuais <- localidade_estado %>% filter(!is.na(data_inicio_obra), data_ini
     group_by(ano, obra_estadual) %>%
     summarise(custo_total = sum(valor_obra)) 
 
-custos_anuais <- custos_anuais %>% filter(obra_estadual == FALSE) %>% mutate(custo_municipal = custo_total) %>%  left_join((custos_anuais %>% filter(obra_estadual == TRUE) %>% mutate(custo_estadual = custo_total)), by = "ano")  %>% select("ano", "custo_municipal", "custo_estadual") %>% ungroup()
+custos_anuais <- custos_anuais %>% filter(obra_estadual == FALSE) %>% mutate(custo_municipal = custo_total / 1000000) %>%  left_join((custos_anuais %>% filter(obra_estadual == TRUE) %>% mutate(custo_estadual = custo_total/1000000)), by = "ano")  %>% select("ano", "custo_municipal", "custo_estadual") %>% ungroup()
 
 custos_anuais$custo_estadual[is.na(custos_anuais$custo_estadual)] <- 0;
 
 custos_anuais_xts <- xts(select(custos_anuais, 2, 3), custos_anuais$ano)
 
-min_zoom_date <- as.Date("2012-01-01", "%Y-%m-%d")
+min_zoom_date <- as.Date("2014-10-01", "%Y-%m-%d")
 
 dygraph(custos_anuais_xts) %>%
     dySeries("custo_estadual", label = "Total Gasto Pelo Estado", color = '#34485c') %>%
     dySeries("custo_municipal", label = "Total Gasto Pelos Municípios", color = '#f05542') %>%
     dyAxis("x", label = "Ano") %>%
-    dyAxis("y", label = "Quantidade de Gastos Anuais") %>%
+    dyAxis("y", label = "Quantidade de Gastos Anuais (em Milhões)") %>%
     dyOptions(useDataTimezone = TRUE, fillGraph = TRUE, stackedGraph = TRUE, plotter = 
               "function barChartPlotter(e) {
                 var ctx = e.drawingContext;
@@ -858,6 +858,7 @@ dygraph(evolucao_tipos_nxts) %>%
 ### Crescimento dos Custos de Cada Tipo de Obra
 
 ```{r}
+evolucao_tipos <- evolucao_tipos %>% mutate(valor_total = valor_total / 1000000)
 evolucao_tipos_v <- spread((evolucao_tipos %>% select("nome","valor_total","data_cadastro")), nome, valor_total) %>% ungroup()
 
 for (i in c(2:12)) {
@@ -868,7 +869,7 @@ evolucao_tipos_vxts <- xts(select(evolucao_tipos_v,2,3,4,5,6,7,8,9,10,11,12), ev
 
 dygraph(evolucao_tipos_vxts) %>%
     dyAxis("x", label = "Período de Tempo", drawGrid = FALSE) %>%
-    dyAxis("y", label = "Valor Das Obras (Acumulado)") %>%
+    dyAxis("y", label = "Valor Das Obras (em Milhões, Acumulado)") %>%
     dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE, maxNumberWidth = 20,  fillAlpha = 1 ) %>%
     dyLegend(show = "onmouseover", hideOnMouseOut = TRUE)   %>% 
     dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
