@@ -222,6 +222,64 @@ gauge(perc_georef, min = 0, max = 100, symbol = "%",
       gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
 ```
 
+Row
+-------------------------------------------------------------
+
+### Quantidade de Obras Cadastradas por Município
+
+```{r}
+library(leaflet)
+
+tabela_obras_municipio <- obras.completo %>%
+    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
+    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
+    group_by(`Municipio / Estado` = `nome`) %>%
+    summarise(
+         n_obras = n(),
+        `População Estimada` = max(`População.estimada...pessoas`, na.rm = TRUE),
+         codigo_ibge = max(codigo_ibge)
+    ) %>% arrange(desc(n_obras))
+        
+mapa_paraiba_obras <- mapa_paraiba
+
+mapa_paraiba_obras@data <- mapa_paraiba_obras@data %>%
+    left_join(tabela_obras_municipio,
+              by = c("GEOCODIG_M" = "codigo_ibge"))
+
+pal <- colorQuantile("YlOrRd", mapa_paraiba_obras$n_obras, n = 7)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>Número de Obras: %g </sup>",
+  mapa_paraiba_obras$Nome_Munic, mapa_paraiba_obras$n_obras
+) %>% lapply(htmltools::HTML)
+
+leaflet(mapa_paraiba_obras) %>%
+    addTiles() %>% 
+  addProviderTiles("MapBox", options = providerTileOptions(
+    id = "mapbox.light",
+    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) %>%
+  addPolygons(
+    fillColor = ~pal(n_obras),
+    weight = 2,
+    opacity = 1,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    highlight = highlightOptions(
+      weight = 3,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto")) %>%
+  addLegend(pal = pal, values = ~n_obras, opacity = 0.7, title = NULL,
+    position = "bottomright")
+
+```
 
 Row
 -------------------------------------------------------------
@@ -475,7 +533,7 @@ tabela_gastos_municipio <- obras.completo %>%
     left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
     group_by(`Municipio / Estado` = `nome`) %>%
     summarise(
-         custo_total = sum(valor_obra, na.rm = TRUE),
+         custo_total = sum(valor_obra / 1000000, na.rm = TRUE),
         `Média de Custo` = mean(valor_obra, na.rm = TRUE),
          n_obras = n(),
         `População Estimada` = max(`População.estimada...pessoas`, na.rm = TRUE),
@@ -492,7 +550,7 @@ mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
 pal <- colorQuantile("YlOrRd", mapa_paraiba_quantidade_obras$custo_total, n = 7)
 
 labels <- sprintf(
-  "<strong>%s</strong><br/>Gasto Total em Reais: %g </sup>",
+  "<strong>%s</strong><br/>Gasto Total em Milhões de Reais: %g </sup>",
   mapa_paraiba_quantidade_obras$Nome_Munic, mapa_paraiba_quantidade_obras$custo_total
 ) %>% lapply(htmltools::HTML)
 
