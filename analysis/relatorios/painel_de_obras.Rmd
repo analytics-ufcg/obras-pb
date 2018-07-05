@@ -35,7 +35,7 @@ white-space: nowrap;
 text-align: center
 }
 .value-box {
-background-color: #34485c !important;
+background-color: #5d5d5d !important;
 }
 .navbar {
 background-color: rgba(255,255,255,0.8) !important;
@@ -246,7 +246,10 @@ mapa_paraiba_obras@data <- mapa_paraiba_obras@data %>%
     left_join(tabela_obras_municipio,
               by = c("GEOCODIG_M" = "codigo_ibge"))
 
-pal <- colorQuantile("YlOrRd", mapa_paraiba_obras$n_obras, n = 7)
+bins <- c(0,14,19,24,29,36,52,341)
+
+pal <- colorBin( "YlOrRd", bins=bins)
+
 
 labels <- sprintf(
   "<strong>%s</strong><br/>Número de Obras: %g </sup>",
@@ -546,8 +549,10 @@ mapa_paraiba_quantidade_obras <- mapa_paraiba
 mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
     left_join(tabela_gastos_municipio,
               by = c("GEOCODIG_M" = "codigo_ibge"))
+bins <- c(0, 1.468, 2.334, 3.172, 4.389, 6.568, 11.722, 1016.841)
 
-pal <- colorQuantile("YlOrRd", mapa_paraiba_quantidade_obras$custo_total, n = 7)
+#pal <- colorQuantile("YlOrRd", mapa_paraiba_quantidade_obras$custo_total, n = 7)
+pal <- colorBin( "YlOrRd", bins=bins)
 
 labels <- sprintf(
   "<strong>%s</strong><br/>Gasto Total em Milhões de Reais: %g </sup>",
@@ -692,8 +697,10 @@ Row
 ```{r}
 library(leaflet)
 
+bins <- c(0, 5.324, 11.039, 20.166, 30.181, 47.964, 7398.111)
+pal <- colorBin( "YlOrRd", bins=bins)
 
-pal <- colorQuantile("YlOrRd", mapa_paraiba_quantidade_obras$custo_habitante, n = 7)
+#pal <- colorQuantile("YlOrRd", mapa_paraiba_quantidade_obras$custo_habitante, n = 7)
 
 labels <- sprintf(
   "<strong>%s</strong><br/>Gasto Médio por Habitante em Reais: %g </sup>",
