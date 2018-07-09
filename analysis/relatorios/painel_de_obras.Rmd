@@ -258,9 +258,6 @@ labels <- sprintf(
 
 leaflet(mapa_paraiba_obras) %>%
     addTiles() %>% 
-  addProviderTiles("MapBox", options = providerTileOptions(
-    id = "mapbox.light",
-    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) %>%
   addPolygons(
     fillColor = ~pal(n_obras),
     weight = 2,
@@ -561,9 +558,6 @@ labels <- sprintf(
 
 leaflet(mapa_paraiba_quantidade_obras) %>%
     addTiles() %>% 
-  addProviderTiles("MapBox", options = providerTileOptions(
-    id = "mapbox.light",
-    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) %>%
   addPolygons(
     fillColor = ~pal(custo_total),
     weight = 2,
@@ -708,10 +702,7 @@ labels <- sprintf(
 ) %>% lapply(htmltools::HTML)
 
 leaflet(mapa_paraiba_quantidade_obras) %>%
-    addTiles() %>% 
-  addProviderTiles("MapBox", options = providerTileOptions(
-    id = "mapbox.light",
-    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) %>%
+    addTiles()  %>%
   addPolygons(
     fillColor = ~pal(custo_habitante),
     weight = 2,
@@ -1011,17 +1002,15 @@ Row
 ### Ranking dos Tipos de Obras 
 
 ```{r}
-tipo.ranking <- obras.completo %>% select(id, data_cadastro, fk_tipo_obra, valor_obra) %>%
+tipo.ranking <- obras.completo %>%
         filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
         collect(n = Inf) %>%
-        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
-        group_by(nome) %>% summarise(`Obras cadastradas` = n(), `Total Gasto` = sum(valor_obra)) %>%  
-        arrange(desc(`Obras cadastradas`))
+        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% left_join(localidade, by = c("fk_localidade" = "id")) %>% group_by(nome.y,nome.x) %>% summarise(`Obras cadastradas` = n(),`Custo Unitário Médio` = mean(valor_obra)/mean(dimensao) , `Unidade de Medida`=  unique(unidadeMedida) ,`Custo Total` = sum(valor_obra)) %>% arrange(nome.x, desc(`Custo Unitário Médio`))
 
-colnames(tipo.ranking) <- c("Tipo da Obra", "Obras Cadastradas", "Total Gasto")
+colnames(tipo.ranking) <- c("Município / Estado", "Tipo de Obra", "Obras Cadastradas", "Custo Unitário Médio", "Unidade de Medida", "Custo Total")
 
 datatable(tipo.ranking, extensions = c('Buttons', 'Responsive'),
           options = list(
               dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
-              )) %>% formatCurrency(3,"R$",mark = ".", dec.mark = ",") 
+              )) %>% formatCurrency(4,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(6,"R$",mark = ".", dec.mark = ",")
 ```
