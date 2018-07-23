@@ -829,28 +829,25 @@ evolucao_tipos_a <- evolucao_tipos %>% group_by(nome) %>% summarise(valor_total 
 
 evolucao_tipos_a$perc <- as.numeric(format(round(evolucao_tipos_a$perc, 2), nsmall = 2))
 
-p <- plot_ly(evolucao_tipos_a, x =~perc , y = ~nome, color = ~nome, type = 'bar', orientation = 'h', 
-    marker = list(color = cores), text = paste(evolucao_tipos_a$perc,"%",sep=""), hoverinfo= "text") %>% 
-    layout(margin = list(l = 305, r = 50, b = 50, t = 50, pad = 4),showlegend = FALSE, xaxis = list(title = "% Total de Investimento"), yaxis = list(title ="")) 
-  
-p
+ggplot(evolucao_tipos_a,aes(x= nome, y=perc, fill = nome),legend.position="none") + geom_bar(stat='identity') + guides(fill=FALSE) + coord_flip() +
+  xlab("") + ylab("Percentual")
+
+
 
 ```
 
-### Custos Anuais Por Tipo de Obra
+### Custos Anuais Por Tipo de Obra (Em Milhões)
 
 ```{r}
 min_zoom_date <- as.Date("2013-06-01", "%Y-%m-%d")
 max_zoom_date <- as.Date("2018-07-01", "%Y-%m-%d")
 
-p <- plot_ly(evolucao_tipos, x =~ano, y = ~custo_total, color = ~nome, type = 'bar', orientation = 'v',colors = cores, 
-             text = paste(currency(evolucao_tipos$custo_total, "R$", big.mark = ".", decimal.mark = ",")," gasto em ", evolucao_tipos$nome, " (",   format(evolucao_tipos$ano,"%Y"),")", sep = ""), hoverinfo= "text") %>%
-  layout(barmode = 'group',
-         yaxis = list(title =""),showlegend = FALSE,
-         xaxis = list(title = "Ano",
-      rangeselector = list(),
-      rangeslider = list(type = "date"))) %>% rangeslider(start = min_zoom_date, end = max_zoom_date )
-p
+evolucao_tipos <- evolucao_tipos %>% mutate(custo_total = custo_total / 1000000)
+
+ggplot(evolucao_tipos ,aes(x= ano, y=custo_total, fill = nome),legend.position="none") + geom_bar(stat='identity', position=position_dodge()) +
+  xlab("Período de Tempo") + ylab("Custo") + guides(fill=FALSE)
+
+
 
 ```
 
@@ -933,68 +930,8 @@ dygraph(evolucao_tipos_vxts) %>%
 
 ```
 
-Row
--------------------------------------------------------------
-
-### Dimensão x Custo da obra (Metros)
-
-```{r}
-tabela_dimensão_obras <- obras.completo %>%
-    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
-    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
-    left_join(tipos.das.obras, by=c("fk_tipo_obra" = "id")) 
-
-m <- tabela_dimensão_obras %>% filter(grepl("(m)", unidadeMedida) & !grepl("m2", unidadeMedida) & !grepl("m3", unidadeMedida) & !grepl("km", unidadeMedida))
-m2 <- tabela_dimensão_obras %>% filter(grepl("m2", unidadeMedida)) 
-m3 <- tabela_dimensão_obras %>% filter(grepl("m3", unidadeMedida))
-km <- tabela_dimensão_obras %>% filter(grepl("km", unidadeMedida))
 
 
-p <- plot_ly(data = m, x = ~dimensao, y = ~valor_obra, type = 'scatter', marker = list(color = "#66c2a5" ), text = paste("\nDimensão: ", m$dimensao, "m","\nValor: R$",m$valor_obra, "\nMunicípio: ", m$nome.x,  "\nDescrição Obra: ", gsub('(.{1,30})(\\s|$)', '\\1\n', m$descricao_sucinta_obra), sep=""), hoverinfo= "text") %>% 
-    layout(showlegend = FALSE, xaxis = list(title = "Dimensão"), yaxis = list(title ="Custo")) 
-
-p
-
-```
-
-### Dimensão x Custo da obra (Metros Quadrados)
-
-```{r}
-
-p <- plot_ly(data = m2, x = ~dimensao, y = ~valor_obra, type = 'scatter', marker = list(color = "#fc8d62" ), text = paste("\nDimensão: ", m2$dimensao, "m²","\nValor: R$",m2$valor_obra, "\nMunicípio: ", m2$nome.x,  "\nDescrição Obra: ", gsub('(.{1,30})(\\s|$)', '\\1\n', gsub('(.{1,30})(\\s|$)', '\\1\n', m2$descricao_sucinta_obra)), sep=""), hoverinfo= "text") %>% 
-    layout(showlegend = FALSE, xaxis = list(title = "Dimensão"), yaxis = list(title ="Custo")) 
-
-p
-
-```
-
-
-Row
--------------------------------------------------------------
-
-### Dimensão x Custo da obra (Metros Cúbicos)
-
-```{r}
-
-p <- plot_ly(data = m3, x = ~dimensao, y = ~valor_obra, type = 'scatter', marker = list(color = "#8da0cb" ), text = paste("\nDimensão: ", m3$dimensao, "m³","\nValor: R$",m3$valor_obra, "\nMunicípio: ", m3$nome.x,  "\nDescrição Obra: ", gsub('(.{1,30})(\\s|$)', '\\1\n', m3$descricao_sucinta_obra), sep=""), hoverinfo= "text") %>% 
-    layout(showlegend = FALSE, xaxis = list(title = "Dimensão"), yaxis = list(title ="Custo")) 
-
-p
-
-
-```
-
-### Dimensão x Custo da obra (Quilometros)
-
-```{r}
-
-p <- plot_ly(data = km, x = ~dimensao, y = ~valor_obra, type = 'scatter', marker = list(color = "#e78ac3" ), text = paste("\nDimensão: ", km$dimensao, "km","\nValor: R$",km$valor_obra, "\nMunicípio: ", km$nome.x,  "\nDescrição Obra: ", gsub('(.{1,30})(\\s|$)', '\\1\n', km$descricao_sucinta_obra), sep=""), hoverinfo= "text") %>% 
-    layout(showlegend = FALSE, xaxis = list(title = "Dimensão"), yaxis = list(title ="Custo")) 
-
-p
-
-
-```
 
 Row
 -------------------------------------------------------------
@@ -1005,12 +942,13 @@ Row
 tipo.ranking <- obras.completo %>%
         filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
         collect(n = Inf) %>%
-        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% left_join(localidade, by = c("fk_localidade" = "id")) %>% group_by(nome.y,nome.x) %>% summarise(`Obras cadastradas` = n(),`Custo Unitário Médio` = mean(valor_obra)/mean(dimensao) , `Unidade de Medida`=  unique(unidadeMedida) ,`Custo Total` = sum(valor_obra)) %>% arrange(nome.x, desc(`Custo Unitário Médio`))
+        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% left_join(localidade, by = c("fk_localidade" = "id")) %>% group_by(nome.y,nome.x) %>% summarise(`Obras cadastradas` = n(),`Custo Unitário Médio` = mean(valor_obra)/mean(dimensao) ,`Custo Médio` = mean(valor_obra),  `Unidade de Medida`=  unique(unidadeMedida) ,`Custo Total` = sum(valor_obra)) %>% arrange(nome.x, desc(`Custo Unitário Médio`))
 
-colnames(tipo.ranking) <- c("Município / Estado", "Tipo de Obra", "Obras Cadastradas", "Custo Unitário Médio", "Unidade de Medida", "Custo Total")
+colnames(tipo.ranking) <- c("Município / Estado", "Tipo de Obra", "Obras Cadastradas", "Custo Unitário Médio", "Custo Médio","Unidade de Medida", "Custo Total")
 
 datatable(tipo.ranking, extensions = c('Buttons', 'Responsive'),
           options = list(
               dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
-              )) %>% formatCurrency(4,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(6,"R$",mark = ".", dec.mark = ",")
+              )) %>% formatCurrency(4,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(7,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(5,"R$",mark = ".", dec.mark = ",")
+
 ```
