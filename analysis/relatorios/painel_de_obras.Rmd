@@ -671,6 +671,8 @@ Row
 
 ```{r}
 
+tabela_gastos_municipio <- tabela_gastos_municipio %>% mutate(custo_total = custo_total * 1000000)
+
 colnames(tabela_gastos_municipio) = c("Município / Estado", "Custo Total", "Média de Custo", "Obras Cadastradas", "População Estimada", "Média de Custo por Habitante", "Código IBGE")
 
 tabela_gastos_municipio <- tabela_gastos_municipio %>% select("Município / Estado", "Custo Total", "Média de Custo", "Obras Cadastradas", "População Estimada", "Média de Custo por Habitante")
