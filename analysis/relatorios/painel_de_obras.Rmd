@@ -825,12 +825,11 @@ for (i in c(2:12)) {
 }
 
 
-evolucao_tipos_a <- evolucao_tipos %>% group_by(nome) %>% summarise(valor_total = sum(custo_total)) %>% mutate( perc = (valor_total / valor_obras)*100) %>% arrange(desc(valor_total))
+evolucao_tipos_a <- evolucao_tipos %>% group_by(nome) %>% summarise(valor_total = sum(custo_total)) %>% mutate( perc = (valor_total / valor_obras)*100) %>% arrange(desc(valor_total)) 
 
 evolucao_tipos_a$perc <- as.numeric(format(round(evolucao_tipos_a$perc, 2), nsmall = 2))
 
-ggplot(evolucao_tipos_a,aes(x= nome, y=perc, fill = nome),legend.position="none") + geom_bar(stat='identity') + guides(fill=FALSE) + coord_flip() +
-  xlab("") + ylab("Percentual")
+ggplot(evolucao_tipos_a,aes(x= reorder(nome, perc), y=perc, fill = nome),legend.position="none") + geom_bar(stat='identity') + guides(fill=FALSE) + coord_flip() + xlab("") + ylab("Percentual")
 
 
 
