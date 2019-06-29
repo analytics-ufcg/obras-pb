@@ -1,0 +1,955 @@
+---
+title: ""
+#output: html_document
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    theme: cosmo
+---
+<style type="text/css">
+
+.dygraph-legend {
+  left: 70px !important;
+}
+.chart-title {  /* chart_title  */
+   font-size: 25px;
+   text-align: center
+}
+.value-box .icon {
+    position: absolute !important;
+    top: 49% !important;
+    right: 44% !important;
+    font-size: 70px !important;
+
+}
+.value-box .caption {
+    font-size: 25px;
+    text-align: center
+}
+.value-box .value {
+font-size: 38px;
+font-weight: bold;
+margin: 0 0 3px 0;
+white-space: nowrap;
+text-align: center
+}
+.value-box {
+background-color: #5d5d5d !important;
+}
+.navbar {
+background-color: rgba(255,255,255,0.8) !important;
+border-color: rgba(255,255,255,0.8) !important
+-webkit-box-shadow: 1px 2px 2px 2px #ccc;  
+-moz-box-shadow:    1px 2px 2px 2px #ccc;  
+box-shadow:         1px 2px 2px 2px #ccc;  
+}
+.navbar-inverse {
+    border-color: rgba(255,255,255,0.8) !important; 
+}
+.nav {
+    margin-bottom: 0;
+    padding-left: 35% !important;
+    list-style: none;
+}
+.navbar-inverse .navbar-nav>li>a {
+    #1c1a1a !important;
+}
+
+.navbar a{
+color: #1c1a1a !important;
+align: center !important;
+}
+.nav>.active>a:hover, .navbar-inverse .navbar-nav>.active>a:focus {
+color: #1c1a1a !important;
+background-color: #ffffff !important;
+}
+.navbar-inverse .navbar-nav>li>a:hover, .navbar-inverse .navbar-nav>li>a:focus {
+color: #1c1a1a !important;
+background-color:#ffffff !important;
+}
+.navbar-inverse .navbar-collapse, .navbar-inverse .navbar-form {
+border-color: #ffffff !important;
+}
+.navbar-inverse .navbar-nav>.active>a, .navbar-inverse .navbar-nav>.active>a:hover, .navbar-inverse .navbar-nav>.active>a:focus{
+background-color: #5d5d5d !important;
+color: #ffffff !important;
+}
+
+
+</style>
+
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = FALSE)
+#install.packages(c("openxlsx", "config", "RPostgreSQL", #"tidyverse","rgdal","DT","formattable","htmltools","viridis","ggplot2","plotly"))
+#install.packages("devtools")
+
+#devtools::install_github("analytics-ufcg/geopbutils")
+#devtools::install_github("walkerke/bsselectR")
+library (openxlsx)
+library (config)
+library(RPostgreSQL)
+library(tidyverse)
+library(rgdal)
+source("../utils/get-functions.R")
+library(GeoPBUtils)
+library(DT)
+library(formattable)
+library(htmltools)
+library(bsselectR)
+library(viridis)
+library(ggplot2)
+library(plotly)
+library(dygraphs)
+library(xts)
+library(dplyr)
+library(flexdashboard)
+library(scales)
+
+# Importa tabelas csv
+tipos.das.obras <<- read.csv("../dados/tipos_obra.csv")
+municipios.pb <- read.csv("../dados/municipios_pb.csv")
+mapa_paraiba <<- readOGR("../dados/mapa-paraiba-ibge/Municipios.shp")
+
+# Pega dados
+drv <- DBI::dbDriver("PostgreSQL")
+
+CONFIG_FILE_PATH = "../config/config.yml"
+
+con1 <- DBI::dbConnect(drv,
+                       host = config::get("host", file = CONFIG_FILE_PATH),
+                       port = config::get("port", file = CONFIG_FILE_PATH),
+                       user = config::get("user", file = CONFIG_FILE_PATH),
+                       password = config::get("password", file = CONFIG_FILE_PATH),
+                       dbname = config::get("dbname3", file = CONFIG_FILE_PATH)
+)
+
+con2 <- DBI::dbConnect(drv,
+                       host = config::get("host", file = CONFIG_FILE_PATH),
+                       port = config::get("port", file = CONFIG_FILE_PATH),
+                       user = config::get("user", file = CONFIG_FILE_PATH),
+                       password = config::get("password", file = CONFIG_FILE_PATH),
+                       dbname = config::get("dbname2", file = CONFIG_FILE_PATH)
+)
+
+GeoPBUtils::get.data.faltantes(con1, con2, mapa_paraiba)
+
+dbDisconnect(con1)
+dbDisconnect(con2)
+
+municipios <- data.frame(codigo_ibge = mapa_paraiba$GEOCODIG_M, 
+                         lat = coordinates(mapa_paraiba)[,2], 
+                         lon = coordinates(mapa_paraiba)[,1])
+
+
+
+min_zoom_date <- as.Date("2017-06-01", "%Y-%m-%d")
+max_zoom_date <- max(evolucao$data_cadastro, na.rm = TRUE)
+min_date <- as.Date("2012-01-01", "%Y-%m-%d")
+
+acompanhamento <- acompanhamento %>% filter(data_cadastro >= min_date)
+
+obra_georef <- acompanhamento %>% filter(data_cadastro >= min_date) %>%
+    group_by(fk_obra) %>%
+    summarise(tem_georeferenciamento = any(tipo_georeferenciamento != 0))
+
+obras.completo <- obra %>% left_join(evolucao, by=c("id" = "fk_obra"), all.x = TRUE) %>% filter(data_cadastro >= min_date & data_inicio_obra >= min_date & !cancelled.x)
+
+
+
+
+
+```
+
+Quantidade de obras
+=============================================================
+
+
+Row
+-------------------------------------------------------------
+
+### Obras Cadastradas
+
+```{r}
+n_obras <- obras.completo %>%
+    nrow()
+
+valueBox(n_obras, icon = "fas fa-building")
+```
+
+### Obras em Andamento
+
+```{r}
+
+n_ativas <- obras.completo %>%
+    filter(andamento == 1, !is.na(data_inicio_obra), is.na(data_conclusao_obra), is.na(data_recebimento_obra)) %>%
+    nrow()
+
+perc_ativas <- round(100 * n_ativas / n_obras, 2)
+
+#valueBox(n_ativas, color = "warning")
+
+gauge(n_ativas, min = 0, max = n_obras,
+      gaugeSectors(danger = c(0, 0.33 * n_obras),
+                   warning = c(0.34 * n_obras, 0.66 * n_obras),
+                   success = c(0.67 * n_obras, n_obras)))
+```
+
+### Obras Finalizadas
+
+```{r}
+
+n_final<- obras.completo %>%
+    filter(!is.na(data_conclusao_obra), !is.na(data_recebimento_obra)) %>%
+    nrow()
+perc_final <- round(100 * n_final / n_obras, 2)
+
+#valueBox(n_ativas, color = "warning")
+
+gauge(n_final, min = 0, max = n_obras,
+      gaugeSectors(danger = c(0, 0.33 * n_obras),
+                   warning = c(0.34 * n_obras, 0.66 * n_obras),
+                   success = c(0.67 * n_obras, n_obras)))
+```
+
+### Obras Georreferenciadas
+
+```{r}
+perc_georef <- round(100 * sum(obra_georef$tem_georeferenciamento) / nrow(obra_georef), 2)
+
+gauge(perc_georef, min = 0, max = 100, symbol = "%",
+      gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
+```
+
+Row
+-------------------------------------------------------------
+
+### Quantidade de Obras Cadastradas por Município
+
+```{r}
+library(leaflet)
+
+tabela_obras_municipio <- obras.completo %>%
+    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
+    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
+    group_by(`Municipio / Estado` = `nome`) %>%
+    summarise(
+         n_obras = n(),
+        `População Estimada` = max(`População.estimada...pessoas`, na.rm = TRUE),
+         codigo_ibge = max(codigo_ibge)
+    ) %>% arrange(desc(n_obras))
+        
+mapa_paraiba_obras <- mapa_paraiba
+
+mapa_paraiba_obras@data <- mapa_paraiba_obras@data %>%
+    left_join(tabela_obras_municipio,
+              by = c("GEOCODIG_M" = "codigo_ibge"))
+
+bins <- c(0,14,19,24,29,36,52,341)
+
+pal <- colorBin( "YlOrRd", bins=bins)
+
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>Número de Obras: %g </sup>",
+  mapa_paraiba_obras$Nome_Munic, mapa_paraiba_obras$n_obras
+) %>% lapply(htmltools::HTML)
+
+leaflet(mapa_paraiba_obras) %>%
+    addTiles() %>% 
+  addPolygons(
+    fillColor = ~pal(n_obras),
+    weight = 2,
+    opacity = 1,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    highlight = highlightOptions(
+      weight = 3,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto")) %>%
+  addLegend(pal = pal, values = ~n_obras, opacity = 0.7, title = NULL,
+    position = "bottomright")
+
+```
+
+Row
+-------------------------------------------------------------
+
+### Registro do Cadastro de Obras ao Longo do Tempo
+
+```{r evolucao tempo}
+
+# Quando não existe resposta é porque não existe georreferenciamento
+obra_georef$tem_georeferenciamento[is.na(obra_georef$tem_georeferenciamento)] <- FALSE;
+
+    
+# Criando data frame de evolução do quadro do cadastro de obras de acordo com o tempo
+evolucao_tempo <- obras.completo %>%
+    select(id, data_cadastro, data_ultima_alteracao) %>%
+    filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
+    collect(n = Inf) %>%
+    left_join(obra_georef, by = c("id" = "fk_obra"), all.x = TRUE) %>%
+    mutate(data_cadastro = data_cadastro) %>%
+    group_by(data_cadastro) %>%
+    summarise(n_obras = n(),
+              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
+              n_nao_georeferenciadas = n() - n_georeferenciadas) %>%
+    mutate(n_obras = cumsum(n_obras),
+           n_georeferenciadas = cumsum(n_georeferenciadas),
+           n_nao_georeferenciadas = cumsum(n_nao_georeferenciadas))
+
+evolucao_tempo <- na.omit(evolucao_tempo)
+
+evolucao_tempo_xts <- xts(select(evolucao_tempo, 2), evolucao_tempo$data_cadastro)
+
+dygraph(evolucao_tempo_xts) %>%
+    dySeries("n_obras", label = "Total de obras", color='#34485c') %>%
+    dyAxis("x", label = "Período de Tempo") %>%
+    dyAxis("y", label = "Quantidade de obras (acumulada)") %>%
+    dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+```
+
+### Registros Mensais de Cadastros de Obras 
+
+``` {r}
+
+evolucao_mensal <- obras.completo %>% filter(!is.na(data_cadastro), data_cadastro >= min_date) %>% 
+    mutate(mes_ano = format(data_cadastro,"%Y-%m")) %>%  left_join(obra_georef, by = c("id" = "fk_obra"), x.all = TRUE) %>%
+    group_by(mes_ano) %>%
+    summarise(n_obras = n(),
+              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
+              n_nao_georeferenciadas = n() - n_georeferenciadas) 
+
+evolucao_mensal <- evolucao_mensal %>% mutate(mes_ano = paste(mes_ano,"1",sep = "-",collapse = NULL)) %>% 
+    mutate(mes_ano = as.Date(mes_ano,"%Y-%m-%d"))
+
+evolucao_mensal_xts <- xts(select(evolucao_mensal, 3,4), evolucao_mensal$mes_ano)
+
+
+
+dygraph(evolucao_mensal_xts) %>%
+    dySeries("n_georeferenciadas", label = "Obras Georreferenciadas", color = '#f05542') %>%
+    dySeries("n_nao_georeferenciadas", label = "Obras Não Georreferenciadas", color = '#34485c') %>%
+    dyAxis("x", label = "Mês de cadastro") %>%
+    dyAxis("y", label = "Quantidade de Cadastros Mensais") %>%
+    dyOptions(useDataTimezone = TRUE, fillGraph = TRUE, stackedGraph = TRUE, plotter = 
+              "function barChartPlotter(e) {
+                var ctx = e.drawingContext;
+                var points = e.points;
+                var y_bottom = e.dygraph.toDomYCoord(0);  // see     http://dygraphs.com/jsdoc/symbols/Dygraph.html#toDomYCoord
+
+                // This should really be based on the minimum gap
+                var bar_width = 2/3 * (points[1].canvasx - points[0].canvasx);
+                ctx.fillStyle = e.color;
+
+                // Do the actual plotting.
+                for (var i = 0; i < points.length; i++) {
+                  var p = points[i];
+                  var center_x = p.canvasx;  // center of the bar
+
+                  ctx.fillRect(center_x - bar_width / 2, p.canvasy,
+                               bar_width, y_bottom - p.canvasy);
+                  ctx.strokeRect(center_x - bar_width / 2, p.canvasy,
+                                 bar_width, y_bottom - p.canvasy);
+                }
+              }") %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+```
+
+Row
+-----------------------------------------------------------
+
+### Registro do Acompanhamento de Obras ao Longo do Tempo
+
+```{r acompanhamento tempo}
+
+acompanhamento_tempo <- acompanhamento %>%
+    select(fk_obra, data_cadastro, tipo_georeferenciamento) %>%
+    filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
+    collect(n = Inf) %>%
+    left_join(obra_georef, by = "fk_obra") %>%
+    group_by(data_cadastro) %>%
+    summarise(n_obras = n(),
+              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
+              n_nao_georeferenciadas = n() - n_georeferenciadas) %>%
+    mutate(n_obras = cumsum(n_obras),
+           n_georeferenciadas = cumsum(n_georeferenciadas),
+           n_nao_georeferenciadas = cumsum(n_nao_georeferenciadas))
+
+acompanhamento_tempo_xts <- xts(select(acompanhamento_tempo, 2), acompanhamento_tempo$data_cadastro)
+
+dygraph(acompanhamento_tempo_xts) %>%
+    dySeries("n_obras", label = "Total de registros", color= '#f05542') %>%
+    dyAxis("x", label = "Data de cadastro") %>%
+    dyAxis("y", label = "Quantidade de registros de acompanhamento (acumulada)") %>%
+    dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+```
+
+### Registros Mensais de Acompanhamento de Obras
+
+```{r}
+acompanhamento_mensal <- acompanhamento %>% filter(!is.na(data_cadastro), data_cadastro >= min_date) %>% 
+    mutate(mes_ano = format(data_cadastro,"%Y-%m")) %>%  left_join(obra_georef, by = "fk_obra", x.all = TRUE) %>%
+    group_by(mes_ano) %>%
+    summarise(n_obras = n(),
+              n_georeferenciadas = sum(tem_georeferenciamento, na.rm = TRUE),
+              n_nao_georeferenciadas = n() - n_georeferenciadas) 
+
+acompanhamento_mensal <- acompanhamento_mensal %>% mutate(mes_ano = paste(mes_ano,"1",sep = "-",collapse = NULL)) %>% 
+    mutate(mes_ano = as.Date(mes_ano,"%Y-%m-%d"))
+
+acompanhamento_mensal_xts <- xts(select(acompanhamento_mensal, 3,4), acompanhamento_mensal$mes_ano)
+
+dygraph(acompanhamento_mensal_xts) %>%
+    dySeries("n_georeferenciadas", label = "Obras Georreferenciadas", color = '#c44c4e') %>%
+    dySeries("n_nao_georeferenciadas", label = "Obras Não Georreferenciadas", color = '#445463') %>%
+    dyAxis("x", label = "Mês de cadastro") %>%
+    dyAxis("y", label = "Quantidade de registros de acompanhamento") %>%
+    dyOptions(useDataTimezone = TRUE, fillGraph = TRUE, stackedGraph = TRUE, plotter = 
+              "function barChartPlotter(e) {
+                var ctx = e.drawingContext;
+                var points = e.points;
+                var y_bottom = e.dygraph.toDomYCoord(0);  // see     http://dygraphs.com/jsdoc/symbols/Dygraph.html#toDomYCoord
+
+                // This should really be based on the minimum gap
+                var bar_width = 2/3 * (points[1].canvasx - points[0].canvasx);
+                ctx.fillStyle = e.color;
+
+                // Do the actual plotting.
+                for (var i = 0; i < points.length; i++) {
+                  var p = points[i];
+                  var center_x = p.canvasx;  // center of the bar
+
+                  ctx.fillRect(center_x - bar_width / 2, p.canvasy,
+                               bar_width, y_bottom - p.canvasy);
+                  ctx.strokeRect(center_x - bar_width / 2, p.canvasy,
+                                 bar_width, y_bottom - p.canvasy);
+                }
+              }") %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+
+
+```
+
+
+Row
+-----------------------------------------------------------
+
+### Resumo de Obras Cadastradas por Município
+
+```{r}
+
+tabela_obras_municipio <- obra %>%
+    left_join(jurisdicionado_db2, by = c("fk_jurisdicionado" = "id")) %>%
+    left_join(evolucao, by = c("id" = "fk_obra")) %>%
+    left_join(obra_georef, by = c("id" = "fk_obra")) %>%
+    group_by(`Municipio / Estado` = municipio_importacao) %>%
+    summarise(
+        `Obras cadastradas` = n(),
+        `Em andamento` = sum(andamento == 1 & !is.na(data_inicio_obra) & is.na(data_conclusao_obra)),
+        `Finalizadas` = sum(!is.na(data_conclusao_obra) & !is.na(data_recebimento_obra)),
+        `Georreferenciadas` = sum(tem_georeferenciamento, na.rm = TRUE) / n()
+    ) %>% arrange(desc(`Obras cadastradas`))
+
+datatable(tabela_obras_municipio, extensions = c('Buttons', 'Responsive'),
+          options = list(
+              dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
+              )) %>%
+    formatPercentage("Georreferenciadas", 2)
+
+```
+
+Custo de obras
+=====================================================
+
+Row
+-------------------------------------------------------------
+
+### Foi o Total Gasto em Obras 
+
+```{r}
+
+valor_obras <- sum(obras.completo$valor_obra,na.rm = TRUE)
+
+valueBox(currency(valor_obras, "R$", big.mark = ".", decimal.mark = ","), icon = "far fa-money-bill-alt")
+
+```
+
+### Investimento em Obras em Andamento
+
+```{r}
+
+ativas <- obras.completo %>%
+    filter(andamento == 1, !is.na(data_inicio_obra), is.na(data_conclusao_obra), is.na(data_recebimento_obra)) 
+
+valor_ativas <- sum(ativas$valor_obra)
+valor_ativas_bi <- round(valor_ativas / 1000000000, 2)
+valor_obras_bi <- round(valor_obras / 1000000000, 2)
+
+gauge(valor_ativas_bi, min = 0, max = valor_obras_bi, symbol = " Bi", label = "Bilhões de reais",
+      gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
+```
+
+### Investimento em Obras Finalizadas
+
+```{r}
+
+finalizadas <- obras.completo %>%
+    filter(!is.na(data_inicio_obra), !is.na(data_conclusao_obra), !is.na(data_recebimento_obra)) 
+
+valor_finalizadas <- sum(finalizadas$valor_obra)
+
+valor_finalizadas_bi <- round(valor_finalizadas / 1000000000, 2)
+
+gauge(valor_finalizadas_bi, min = 0, max = valor_obras_bi, symbol = " Bi", label = "Bilhões de reais",
+      gaugeSectors(danger = c(0, 33), warning = c(34, 66), success = c(67, 100)))
+
+```
+
+Row
+-------------------------------------------------------------
+
+### Mapa de Custos Por Município
+
+```{r}
+library(leaflet)
+
+tabela_gastos_municipio <- obras.completo %>%
+    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
+    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
+    group_by(`Municipio / Estado` = `nome`) %>%
+    summarise(
+         custo_total = sum(valor_obra / 1000000, na.rm = TRUE),
+        `Média de Custo` = mean(valor_obra, na.rm = TRUE),
+         n_obras = n(),
+        `População Estimada` = max(`População.estimada...pessoas`, na.rm = TRUE),
+         custo_habitante = mean(valor_obra, na.rm = TRUE)/ max(`População.estimada...pessoas`, na.rm = TRUE),
+         codigo_ibge = max(codigo_ibge)
+    ) %>% arrange(desc(custo_total))
+        
+mapa_paraiba_quantidade_obras <- mapa_paraiba
+
+mapa_paraiba_quantidade_obras@data <- mapa_paraiba_quantidade_obras@data %>%
+    left_join(tabela_gastos_municipio,
+              by = c("GEOCODIG_M" = "codigo_ibge"))
+bins <- c(0, 1.468, 2.334, 3.172, 4.389, 6.568, 11.722, 1016.841)
+
+#pal <- colorQuantile("YlOrRd", mapa_paraiba_quantidade_obras$custo_total, n = 7)
+pal <- colorBin( "YlOrRd", bins=bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>Gasto Total em Milhões de Reais: %g </sup>",
+  mapa_paraiba_quantidade_obras$Nome_Munic, mapa_paraiba_quantidade_obras$custo_total
+) %>% lapply(htmltools::HTML)
+
+leaflet(mapa_paraiba_quantidade_obras) %>%
+    addTiles() %>% 
+  addPolygons(
+    fillColor = ~pal(custo_total),
+    weight = 2,
+    opacity = 1,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    highlight = highlightOptions(
+      weight = 3,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto")) %>%
+  addLegend(pal = pal, values = ~custo_total, opacity = 0.7, title = NULL,
+    position = "bottomright")
+
+```
+
+Row
+-------------------------------------------------------------
+
+### Crescimento dos Custos
+
+```{r}
+
+# Criando data frame de evolução do quadro do cadastro de obras de acordo com o tempo
+custo_tempo <- obras.completo %>%
+    select(id, data_cadastro, valor_obra, data_inicio_obra) %>%
+    filter(!is.na(data_inicio_obra), data_inicio_obra >= min_date) %>%
+    collect(n = Inf) %>%
+    group_by(data_inicio_obra) %>%
+    summarise(custo_total = sum(valor_obra, na.rm = TRUE)) %>%
+    mutate(custo_total = cumsum(custo_total)/1000000)
+
+custo_tempo <- na.omit(custo_tempo)
+
+custo_tempo_xts <- xts(select(custo_tempo, 2), custo_tempo$data_inicio_obra)
+
+dygraph(custo_tempo_xts) %>%
+    dySeries("custo_total", label = "Total Gasto em Obras (em milhões)", color='#34485c') %>%
+    dyAxis("x", label = "Período de Tempo") %>%
+    dyAxis("y", label = "Valor Gasto em Obras (em Milhões, Acumulado)") %>%
+    dyOptions(fillGraph = TRUE, stepPlot = TRUE, drawPoints = TRUE) %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+
+
+```
+
+### Gastos Anuais
+
+```{r}
+localidade_estado <- obras.completo %>% filter(!is.na(data_cadastro), data_cadastro >= min_date) %>% 
+    left_join(localidade, by= c("fk_localidade" = "id")) %>% group_by(id) %>% 
+    summarise(obra_estadual = (nome == "Paraíba (ESTADO)"), valor_obra = valor_obra, data_inicio_obra = data_inicio_obra)
+
+custos_anuais <- localidade_estado %>% filter(!is.na(data_inicio_obra), data_inicio_obra >= min_date) %>% 
+    mutate(ano = format(data_inicio_obra,"%Y")) %>% mutate(ano = paste(ano,"-1-1",sep = "",collapse = NULL)) %>% 
+    mutate(ano = as.Date(ano,"%Y-%m-%d")) %>% 
+    group_by(ano, obra_estadual) %>%
+    summarise(custo_total = sum(valor_obra)) 
+
+custos_anuais <- custos_anuais %>% filter(obra_estadual == FALSE) %>% mutate(custo_municipal = custo_total / 1000000) %>%  left_join((custos_anuais %>% filter(obra_estadual == TRUE) %>% mutate(custo_estadual = custo_total/1000000)), by = "ano")  %>% select("ano", "custo_municipal", "custo_estadual") %>% ungroup()
+
+custos_anuais$custo_estadual[is.na(custos_anuais$custo_estadual)] <- 0;
+
+custos_anuais_xts <- xts(select(custos_anuais, 2, 3), custos_anuais$ano)
+
+min_zoom_date <- as.Date("2014-10-01", "%Y-%m-%d")
+
+dygraph(custos_anuais_xts) %>%
+    dySeries("custo_estadual", label = "Total Gasto Pelo Estado", color = '#34485c') %>%
+    dySeries("custo_municipal", label = "Total Gasto Pelos Municípios", color = '#f05542') %>%
+    dyAxis("x", label = "Ano") %>%
+    dyAxis("y", label = "Quantidade de Gastos Anuais (em Milhões)") %>%
+    dyOptions(useDataTimezone = TRUE, fillGraph = TRUE, stackedGraph = TRUE, plotter = 
+              "function barChartPlotter(e) {
+                var ctx = e.drawingContext;
+                var points = e.points;
+                var y_bottom = e.dygraph.toDomYCoord(0);  // see     http://dygraphs.com/jsdoc/symbols/Dygraph.html#toDomYCoord
+
+                // This should really be based on the minimum gap
+                var bar_width = 2/3 * (points[1].canvasx - points[0].canvasx);
+                ctx.fillStyle = e.color;
+
+                // Do the actual plotting.
+                for (var i = 0; i < points.length; i++) {
+                  var p = points[i];
+                  var center_x = p.canvasx;  // center of the bar
+
+                  ctx.fillRect(center_x - bar_width / 2, p.canvasy,
+                               bar_width, y_bottom - p.canvasy);
+                  ctx.strokeRect(center_x - bar_width / 2, p.canvasy,
+                                 bar_width, y_bottom - p.canvasy);
+                }
+              }") %>%
+    dyRangeSelector(dateWindow = c(min_zoom_date, max_zoom_date + 1), height = 20)
+
+```
+
+
+Row
+-------------------------------------------------------------
+
+### Resumo dos Custos por Município
+
+```{r}
+
+tabela_gastos_municipio <- tabela_gastos_municipio %>% mutate(custo_total = custo_total * 1000000)
+
+colnames(tabela_gastos_municipio) = c("Município / Estado", "Custo Total", "Média de Custo", "Obras Cadastradas", "População Estimada", "Média de Custo por Habitante", "Código IBGE")
+
+tabela_gastos_municipio <- tabela_gastos_municipio %>% select("Município / Estado", "Custo Total", "Média de Custo", "Obras Cadastradas", "População Estimada", "Média de Custo por Habitante")
+
+datatable(tabela_gastos_municipio, extensions = c('Buttons', 'Responsive'),
+          options = list(
+              dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
+              )) %>% formatCurrency(2,"R$",mark = ".", dec.mark = ",") %>% 
+  formatCurrency(3,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(6,"R$",mark = ".", dec.mark = ",")
+
+```
+
+Row
+-------------------------------------------------------------
+
+### Mapa de Custos Por Habitante (Município)
+
+```{r}
+library(leaflet)
+
+bins <- c(0, 5.324, 11.039, 20.166, 30.181, 47.964, 7398.111)
+pal <- colorBin( "YlOrRd", bins=bins)
+
+#pal <- colorQuantile("YlOrRd", mapa_paraiba_quantidade_obras$custo_habitante, n = 7)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>Gasto Médio por Habitante em Reais: %g </sup>",
+  mapa_paraiba_quantidade_obras$Nome_Munic, mapa_paraiba_quantidade_obras$custo_habitante
+) %>% lapply(htmltools::HTML)
+
+leaflet(mapa_paraiba_quantidade_obras) %>%
+    addTiles()  %>%
+  addPolygons(
+    fillColor = ~pal(custo_habitante),
+    weight = 2,
+    opacity = 1,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    highlight = highlightOptions(
+      weight = 3,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE),
+    label = labels,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto")) %>%
+  addLegend(pal = pal, values = ~custo_habitante, opacity = 0.7, title = NULL,
+    position = "bottomright")
+
+```
+
+Row
+-------------------------------------------------------------
+
+### Resumo dos Custos por Obra
+
+```{r}
+
+tabela_gastos_obras <- obras.completo %>%
+    left_join(localidade, by =  c("fk_localidade" = "id")) %>%
+    left_join(municipios.pb, by= c("codigo_ibge" = "Código")) %>% 
+    left_join(tipos.das.obras, by=c("fk_tipo_obra" = "id")) %>% 
+    mutate(
+        `Descrição` = descricao_sucinta_obra,
+        `Custo da Obra` = valor_obra,
+        `Custo Efetivo por Dimensão` = valor_obra/dimensao,
+        `Unidade de Medida` = unidadeMedida,
+        `Municipio / Estado` = `Nome.do.Município`
+    ) %>% select(`Descrição`,`Custo da Obra`,`Custo Efetivo por Dimensão`,`Unidade de Medida`,`Municipio / Estado`) %>% arrange(desc(`Custo da Obra`))
+
+tabela_gastos_obras_1000 <- top_n(tabela_gastos_obras, 1000, `Custo da Obra`) %>% arrange(desc(`Custo da Obra`))
+
+datatable(tabela_gastos_obras_1000, extensions = c('Buttons', 'Responsive'),
+          options = list(
+              dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
+              )) %>% formatCurrency(2,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(3,"R$",mark = ".", dec.mark = ",")
+
+```
+
+
+Tipos de Obras
+=============================================================
+
+
+Row
+-------------------------------------------------------------
+
+### Investimento Dedicado a Cada Tipo de Obra 
+
+```{r}
+cria.tabela.evolucao <- function(tab1, tipo_obra, nome){
+    evolucao_tipos <- tab1 %>%
+        select(id, data_cadastro, fk_tipo_obra, valor_obra, data_inicio_obra) %>%
+        filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
+        collect(n = Inf) %>%
+        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
+        filter(fk_tipo_obra %in% c(tipo_obra)) %>%
+        group_by(data_inicio_obra) %>%
+        summarise(n_obras = n(), valor_total = sum(valor_obra)) %>% 
+        mutate(nome = nome)
+    
+        evolucao_tipo_anual <- evolucao_tipos %>% 
+        mutate(ano = format(data_inicio_obra,"%Y")) %>% 
+        group_by(ano) %>%
+        summarise(custo_total = sum(valor_total)) %>% mutate(nome = nome) %>% 
+        mutate(ano = paste(ano,"-1-1",sep = "",collapse = NULL)) %>% 
+        mutate(ano = as.Date(ano,"%Y-%m-%d")) %>% ungroup()
+    
+        return(evolucao_tipo_anual)
+}
+
+substitui.na <- function(tab, col){
+    for (i in 1:nrow(tab)) {
+        if(is.na(tab[i,col])){
+            if(i-1 == 0){
+                tab[i,col] <- 0
+            }else{
+                tab[i,col] <- tab[i-1, col]        
+            }
+        }
+    }
+    return(tab)
+}
+other <- c(1:36)
+remove <- c(20,10,7,15,19,5,36,1,22,23)
+other <- other[! other %in% remove]
+
+cores <-c('#6b7e19','#81a341','#dfc27d','#a8caab','#93c2c7','#b2abd2','#ddb3d7','#f4b0bd','#f4a582','#ca5146','#ba1846')
+
+evolucao_tipos <- cria.tabela.evolucao(obras.completo, 20, "PRAÇA")
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 10, "GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 7, "ESCOLA"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 15, "PAVIMENTAÇÃO PARALEPÍPEDO"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 19, "POSTO DE SAÚDE"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 5, "CRECHE"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 36, "PSF"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 1, "ABASTECIMENTO DE ÁGUA"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 22, "REDE COLETORA DE ESGOTO"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 23, "UNIDADE HABITACIONAL"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, other, "OUTRAS"))
+
+
+
+evolucao_tipos_a <- spread((evolucao_tipos %>% select("nome","custo_total","ano")), nome, custo_total) %>% ungroup()
+
+for (i in c(2:12)) {
+    evolucao_tipos_a <- substitui.na(evolucao_tipos_a,i) 
+}
+
+
+evolucao_tipos_a <- evolucao_tipos %>% group_by(nome) %>% summarise(valor_total = sum(custo_total)) %>% mutate( perc = (valor_total / valor_obras)*100) %>% arrange(desc(valor_total)) 
+
+evolucao_tipos_a$perc <- as.numeric(format(round(evolucao_tipos_a$perc, 2), nsmall = 2))
+
+ggplot(evolucao_tipos_a,aes(x= reorder(nome, perc), y=perc, fill = nome),legend.position="none") + geom_bar(stat='identity') + guides(fill=FALSE) + coord_flip() + xlab("") + ylab("Percentual")
+
+
+
+```
+
+### Custos Anuais Por Tipo de Obra (Em Milhões)
+
+```{r}
+min_zoom_date <- as.Date("2013-06-01", "%Y-%m-%d")
+max_zoom_date <- as.Date("2018-07-01", "%Y-%m-%d")
+
+evolucao_tipos <- evolucao_tipos %>% mutate(custo_total = custo_total / 1000000)
+
+ggplot(evolucao_tipos ,aes(x= ano, y=custo_total, fill = nome),legend.position="none") + geom_bar(stat='identity', position=position_dodge()) +
+  xlab("Período de Tempo") + ylab("Custo") + guides(fill=FALSE)
+
+
+
+```
+
+Row
+-------------------------------------------------------------
+
+
+### Crescimento do Cadastro de Cada Tipo de Obra
+
+```{r}
+
+cria.tabela.evolucao <- function(tab1, tipo_obra, nome){
+    evolucao_tipos <- tab1 %>%
+        select(id, data_cadastro, fk_tipo_obra, valor_obra) %>%
+        filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
+        collect(n = Inf) %>%
+        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% 
+        filter(fk_tipo_obra %in% c(tipo_obra)) %>%
+        group_by(data_cadastro) %>%
+        summarise(n_obras = n(), valor_total = sum(valor_obra)) %>%
+        mutate(n_obras = cumsum(n_obras), nome = nome, valor_total = cumsum(valor_total))
+    
+        return(evolucao_tipos)
+}
+
+evolucao_tipos <- cria.tabela.evolucao(obras.completo, 20, "PRAÇA")
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 10, "GINÁSIO POLIESPORTIVO / QUADRA DE ESPORTES"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 7, "ESCOLA"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 15, "PAVIMENTAÇÃO PARALEPÍPEDO"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 19, "POSTO DE SAÚDE"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 5, "CRECHE"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 36, "PSF"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 1, "ABASTECIMENTO DE ÁGUA"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 22, "REDE COLETORA DE ESGOTO"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, 23, "UNIDADE HABITACIONAL"))
+evolucao_tipos <- rbind(evolucao_tipos, cria.tabela.evolucao(obras.completo, other, "OUTRAS"))
+
+
+evolucao_tipos_n <- spread((evolucao_tipos %>% select("nome","n_obras","data_cadastro")), nome, n_obras) %>% ungroup()
+
+
+for (i in c(2:12)) {
+    evolucao_tipos_n <- substitui.na(evolucao_tipos_n,i) 
+}
+
+
+evolucao_tipos_nxts <- xts(select(evolucao_tipos_n,2,3,4,5,6,7,8,9,10,11,12), evolucao_tipos_n$data_cadastro)
+
+
+
+dygraph(evolucao_tipos_nxts) %>%
+    dyAxis("x", label = "Período de Tempo", drawGrid = FALSE) %>%
+    dyAxis("y", label = "Quantidade de obras (acumulada)") %>%
+    dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE,  fillAlpha = 1) %>%
+     dyLegend(show = "onmouseover", hideOnMouseOut = TRUE)   %>% 
+    dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
+
+
+```
+
+### Crescimento dos Custos de Cada Tipo de Obra
+
+```{r}
+evolucao_tipos <- evolucao_tipos %>% mutate(valor_total = valor_total / 1000000)
+evolucao_tipos_v <- spread((evolucao_tipos %>% select("nome","valor_total","data_cadastro")), nome, valor_total) %>% ungroup()
+
+for (i in c(2:12)) {
+    evolucao_tipos_v <- substitui.na(evolucao_tipos_v,i) 
+}
+
+evolucao_tipos_vxts <- xts(select(evolucao_tipos_v,2,3,4,5,6,7,8,9,10,11,12), evolucao_tipos_v$data_cadastro)
+
+dygraph(evolucao_tipos_vxts) %>%
+    dyAxis("x", label = "Período de Tempo", drawGrid = FALSE) %>%
+    dyAxis("y", label = "Valor Das Obras (em Milhões, Acumulado)") %>%
+    dyOptions(drawPoints = TRUE, colors = cores, stackedGraph = TRUE, maxNumberWidth = 20,  fillAlpha = 1 ) %>%
+    dyLegend(show = "onmouseover", hideOnMouseOut = TRUE)   %>% 
+    dyRangeSelector(dateWindow = c(min_date, max_zoom_date + 1), height = 20)
+
+
+```
+
+
+
+
+Row
+-------------------------------------------------------------
+
+### Ranking dos Tipos de Obras 
+
+```{r}
+tipo.ranking <- obras.completo %>%
+        filter(!is.na(data_cadastro), data_cadastro >= min_date) %>%
+        collect(n = Inf) %>%
+        left_join(tipos.das.obras, by = c("fk_tipo_obra" = "id")) %>% left_join(localidade, by = c("fk_localidade" = "id")) %>% group_by(nome.y,nome.x) %>% summarise(`Obras cadastradas` = n(),`Custo Unitário Médio` = mean(valor_obra)/mean(dimensao) ,`Custo Médio` = mean(valor_obra),  `Unidade de Medida`=  unique(unidadeMedida) ,`Custo Total` = sum(valor_obra)) %>% arrange(nome.x, desc(`Custo Unitário Médio`))
+
+colnames(tipo.ranking) <- c("Município / Estado", "Tipo de Obra", "Obras Cadastradas", "Custo Unitário Médio", "Custo Médio","Unidade de Medida", "Custo Total")
+
+datatable(tipo.ranking, extensions = c('Buttons', 'Responsive'),
+          options = list(
+              dom = 'Bfrtip', buttons = c('csv', 'excel', 'print')
+              )) %>% formatCurrency(4,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(7,"R$",mark = ".", dec.mark = ",") %>% formatCurrency(5,"R$",mark = ".", dec.mark = ",")
+
+```
